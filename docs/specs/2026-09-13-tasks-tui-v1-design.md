@@ -30,12 +30,22 @@ done, drop. Everything else stays in the CLI.
 - **The JSON contract is consumed as documented, never inferred.** Every field the TUI
   reads is named in §4. Unknown fields are ignored; a missing named field is a typed
   error, not a zero value.
-- **A subprocess is run with an explicit environment.** `TASKS_FORMAT`, `TASKS_COLOR`,
-  `TASKS_AGENT`, and `TASKS_MAX_COMPLEXITY` are removed from every child's
-  environment: the TUI needs JSON, is operated by a person rather than an agent, and
-  must show the whole ready list. `TASKS_SESSION=tasks-tui:<pid>` and
-  `TASKS_SESSION_PID=<pid>` are set so a claim made from the TUI is attributable and
-  its liveness follows the TUI process.
+- **A tracker subprocess runs with an explicit environment.** Every `tasks`
+  invocation gets the TUI's environment minus `TASKS_FORMAT`, `TASKS_COLOR`,
+  `TASKS_AGENT`, `TASKS_MODEL`, and `TASKS_MAX_COMPLEXITY`, plus
+  `TASKS_SESSION=tasks-tui:<pid>` and `TASKS_SESSION_PID=<pid>`. The TUI needs JSON;
+  a person operates it, so neither `add` nor `done` may stamp a harness or model
+  onto a record; the ready list must be whole; and a claim made from the TUI is
+  attributable, with liveness following the TUI process. A launched harness (§7) is a
+  different kind of child and gets a different environment; the two rules are stated
+  where each applies.
+- **Every task command runs in the task's checkout.** A task's checkout is the
+  worktree its park record names, else the worktree its live claim names, else the
+  registered root (§4.1). `show`, `start`, `park`, `done`, and `drop` all run
+  `-C <checkout>`, and launch opens it. Rejected: writing at the registered root —
+  `park` records the invoking checkout as `park.worktree`, so a park from main would
+  redirect the task's next launch away from the worktree holding its work, and
+  `show` from main cannot resolve a spec that exists only on the task's branch.
 - **Launch never changes a task's status.** The launched agent runs `tasks start`
   itself, so ownership and the claim belong to the session doing the work, not to the
   window that opened it. Rejected: `start` on launch — the TUI would hold a live
@@ -103,17 +113,46 @@ Reads, and the fields consumed:
 | Call | Fields used |
 |---|---|
 | `projects` | `projects[]`: `prefix`, `root`, `reachable`, `counts.{idea,todo,doing,blocked}`, `last_activity` |
-| `prime --project <p>` | `doing[]`, `parked[]`, `ready[]`, `counts`; rows are list rows |
+| `prime --project <p>` | `doing[]` and `ready[]` list rows, `parked[]` parked rows, `counts` |
 | `ready --project <p>` | `tasks[]` list rows |
-| `list --project <p> [--status …] [--sort updated]` | `tasks[]` list rows, `warnings[]` |
-| `list --all-projects --status doing` and `--parked` | list rows across projects |
+| `list --project <p> [--status …] [--sort updated]` | `tasks[]` list rows |
+| `list --all-projects --status doing` | list rows across projects |
+| `list --all-projects --parked` and `list --project <p> --parked` | `tasks[]` parked rows |
 | `show <id>` | `task.{id,title,status,priority,size,complexity,process,every,owner,created,updated,started,completed,tags,source,spec,plan,step,body,notes[]}`, `spec_path`, `plan_path`, `depends_on[]`, `parent`, `children[]`, `claim`, `park`, `escalation`, `periodic` |
 | `root <id>` | the registered root of the task's project |
 
-A list row's consumed fields: `id, title, status, priority, size, complexity,
+Every response carries `warnings[]`; §11 says what happens to them.
+
+A **list row** (`TaskSummary`) has `id, title, status, priority, size, complexity,
 process, owner, updated, tags, parent, child_count, open_descendant_count, claim,
-park, periodic`. Row `claim` gives `owner, session, worktree`; row `park` gives
-`next_step, waiting_on, reason, worktree, at`.
+park, periodic`; `status`, `title`, `updated`, and the counts are always present.
+Row `claim` gives `owner, session, worktree`; row `park` gives `next_step,
+waiting_on, reason, worktree, at`.
+
+A **parked row** (`ParkedRow`) is a different shape and is decoded by a different
+type: it has no `periodic`, adds `phase`, and its `status, priority, size,
+complexity, process, owner, created, updated, started, completed, child_count,
+open_descendant_count` are all nullable, because a park record can outlive the task
+file in the checkout that answers (a task parked on a branch main has not merged, or
+a dropped record). An unresolved row has `id`, `title` (from the park), `park`, and
+nulls elsewhere; the TUI renders it from the park alone with an `unresolved` marker
+and offers no transition on it, since no command can find the record from here.
+
+### 4.1 A task's checkout
+
+`checkoutFor(row)` is one function used by every task command and by launch:
+
+1. `park.worktree` when the row is parked and that directory exists;
+2. else `claim.worktree` when the row carries a claim and that directory exists;
+3. else the registered root.
+
+When a recorded worktree is missing (a merged and pruned branch), the choice falls
+to the next rule and the status line says which path was gone, so a person sees why
+a transition landed on main. Rows are the source of the record; a view that opens a
+task passes its row's checkout along rather than re-deriving it from `show`.
+`tasks-tui <id>`, which has no row, runs `show` at the registered root first to learn
+the park and claim, derives the checkout from that response, and shows from there
+when it differs.
 
 Writes:
 
@@ -126,8 +165,9 @@ Writes:
 | drop | `drop <id> ["<message>"]` |
 
 `--project` is always passed on `add`; the TUI's own working directory never decides
-where a task lands. Write commands run with `-C <registered root>` so `owner` records
-the branch of the main checkout, as a person at that checkout would get.
+where a task lands. Every other command above, and `show`, runs `-C <checkout>` from
+§4.1, so `owner` and `park.worktree` record the checkout the work lives in, and the
+spec and plan resolve against the branch that holds them.
 
 ## 5. Views and keys
 
@@ -146,8 +186,8 @@ time, and a dimmed row with `✗` when unreachable. Default order is last activi
 newest first; `s` toggles prefix order. `/` filters rows by prefix or name.
 
 To the right, a pane for the highlighted project from `prime --project <p>`:
-`doing` rows with their claim owner, `parked` rows with waiting-on and the next step,
-and the first eight `ready` rows. It loads on a 150 ms debounce after the highlight
+`doing` rows with their claim owner, `parked` rows (the parked shape of §4) with
+waiting-on and the next step, and the first eight `ready` rows. It loads on a 150 ms debounce after the highlight
 moves. `enter` opens the project. `a` quick-adds into the highlighted project.
 
 Below the table, a strip: `list --all-projects --status doing` and `--parked`
@@ -158,7 +198,7 @@ in one line whether anything is waiting on them.
 
 A header with the accent bar, prefix, name, root, and counts. Under it a tabbed
 list: **Ready** (default; `ready --project`), **Doing** (`list --status doing`
-followed by `list --parked`, parked rows tagged), **Open** (`list`, the default
+followed by `list --parked`, the second decoded as parked rows and marked), **Open** (`list`, the default
 statuses by priority), **Ideas** (`list --status idea`), **Done** (`list --status
 done --sort updated`, most recent first). `1`–`5` and `tab`/`shift+tab` switch tabs;
 `/` filters by id, title, or tag substring.
@@ -252,15 +292,17 @@ window running that harness in the task's checkout with an initial prompt, detac
 it, and reports "launched <harness> on <id> in <dir>" in the status line. The task's
 status is untouched (§2).
 
-**Checkout:** the park record's `worktree` when the task is parked and that path
-exists, else the registered root from `root <id>`. A parked worktree that no longer
-exists is an error naming it, not a fallback.
+**Checkout:** `checkoutFor(row)` of §4.1, the same directory the task's commands
+run in; a missing recorded worktree is reported there.
 
 **Command:** `terminal` with `{dir}` substituted, then the harness `command` with
 `{prompt}` substituted, as one argv. A harness command without `{prompt}` runs
 without one and the status line says so. The process is started in its own session
-(`Setsid`), stdio to `/dev/null`, environment inherited minus `TASKS_SESSION`,
-`TASKS_SESSION_PID`, and plus the harness's `env`. Spawn failure is an error;
+(`Setsid`), stdio to `/dev/null`. Its environment is the TUI's own, untouched by the
+§2 scrubbing — a harness is an agent and must see `TASKS_AGENT`, `TASKS_MODEL`, and
+its cutoff as the shell would give them — minus `TASKS_SESSION` and
+`TASKS_SESSION_PID`, which name the TUI and would misattribute the agent's claims,
+plus the harness's `env` table. Spawn failure is an error;
 what the harness does afterwards is not the TUI's business.
 
 **Prompt:** `prompt` with `{id}` and `{title}` substituted. The default is
@@ -300,21 +342,29 @@ dropped in favor of the TUI.
 
 ### 8.1 A project's slot
 
-`identity.SlotFor(root)`:
+`identity.SlotFor(root)` reproduces familiar's `resolveIdentity` (`src/bus/pins.js`,
+`identity.js`):
 
-1. Canonicalize `root` with `filepath.EvalSymlinks`.
-2. Read `~/.config/familiar/identities.yaml` if present: `identities[].{path, slot}`.
-   Each `path` is `~`-expanded and canonicalized; the first whose canonical path
-   equals the root's wins. A file that exists but does not parse is an error.
-3. Otherwise `key = remote ?? root`, where `remote` is
-   `git -C root remote get-url origin` normalized exactly as familiar does
-   (scheme, credentials, port, `.git` stripped; scp form folded; lowercased;
-   `null` when it is not `host/owner/name`) and `root` is the canonical path.
-   `slot = fnv1a32(key) mod 12`.
+1. `remote` = `git -C root config --get remote.origin.url`, normalized exactly as
+   familiar's `normalizeRemote` (scheme, credentials, port, `.git` stripped; scp
+   form folded; lowercased; `null` unless it is `host/owner/name`). `repoRoot` =
+   `root` canonicalized with `filepath.EvalSymlinks`. `project` = the basename of
+   `root`.
+2. Read `~/.config/familiar/identities.yaml` when present: `identities[]`, each with
+   `slot` (0–11) and at least one of `remote`, `path`, `project`. Absent is no pins;
+   present and malformed, or a pin with none of the three, is an error.
+3. Match with familiar's precedence — the first `remote` pin equal to `remote`
+   case-insensitively; else the first `path` pin whose canonical form equals
+   `repoRoot`; else the first `project` pin equal to `project`. A pin's path is
+   `~`-expanded and resolved; when it does not exist on this machine, its lexical
+   form is used, which matches nothing and is not an error.
+4. No pin: `slot = fnv1a32(remote ?? repoRoot) mod 12`.
 
 The twelve `(hue, sat)` pairs are copied from familiar's `slot-hues.js` and marked
 frozen with the same warning. The test suite carries familiar's `normalizeRemote`
-cases and a set of `fnv1a32` vectors so a drift in either shows up here.
+cases, `fnv1a32` vectors, and pin cases for each precedence rule, a symlinked path,
+and a pin naming a directory that does not exist, so a drift in any of them shows up
+here.
 
 ### 8.2 Tone
 
@@ -335,6 +385,7 @@ Independent of the project accent, and the same in every project:
 | claim | accent marker |
 | periodic | teal marker |
 | error | red, in the status line and the quick-add preview |
+| warning | yellow, in the status line and the log |
 
 Each is a light/dark pair resolved once from the tone (`lipgloss.LightDark`), chosen
 from the terminal's 256-color range so it sits inside any scheme. They are the only
@@ -369,18 +420,39 @@ this table is the first thing to delete.
 
 The current view reloads after any write it issued, on `r`, and on a timer every
 `refresh_seconds` (agents change claims and parks under the TUI). A reload preserves
-the highlighted id when it is still present and the scroll position otherwise. A
-reload in flight when another is requested is dropped, not queued. The Projects
-right pane is debounced as in §5.1.
+the highlighted id when it is still present and the scroll position otherwise.
 
-## 11. Errors
+Reloads are coalesced, never dropped: while one is in flight, a request sets a
+single pending flag, and the flag issues one more reload when the first returns. A
+post-write reload therefore always runs after the write, even when a timer read was
+mid-flight when the write completed. Every load carries a generation number and the
+scope it was issued for (the view, and the project or id); a result whose generation
+is older than the latest issued for that scope, or whose scope is no longer the one
+shown, is discarded. The Projects right pane follows the same rule with the
+highlighted prefix as its scope, debounced as in §5.1.
 
-Every failure has one home: the status line at the bottom, in the error color,
-until the next keypress. It shows `Kind: Detail` for a `tasksctl.Error`, the
-spawn error for a launch, the parse error for quick add. A fatal condition at
-startup (no `tasks`, version too low, malformed config, unparseable pins) prints the
-message to stderr and exits 1 before the alternate screen opens. Nothing is logged
-to a file; nothing is retried.
+## 11. Errors and warnings
+
+Every failure and every warning has one home: a message log kept for the session,
+whose most recent entry shows in the status line at the bottom — errors in the
+error color, warnings in the warning color. An error is `Kind: Detail` for a
+`tasksctl.Error`, the spawn error for a launch, the parse error for quick add. A
+warning is each string of a successful response's `warnings[]`, prefixed with the
+command that produced it (`park tui-d6e352: …`): the CLI exits 0 while reporting that
+a status was saved but the claim store could not be cleaned, that worktree copies of
+a record diverge, or that a park record has no task file here, and all of those are
+things a person must see.
+
+The status line holds its entry until the next keypress; a reload — including the
+one that follows every write — never clears it, and a reload's own warnings are
+appended to the log without displacing an error shown from the write. `W` opens
+the log as a scrollable list, newest last, so a message that scrolled past is still
+readable.
+
+A fatal condition at startup (no `tasks` or a `projects` response without the
+expected fields, malformed config, unparseable pins) prints the message to stderr and
+exits 1 before the alternate screen opens. Nothing is logged to a file; nothing is
+retried.
 
 ## 12. Testing
 
@@ -390,15 +462,21 @@ to a file; nothing is retried.
   (empty string, `a`, a known remote key) with expected values computed from
   familiar's implementation; pin matching through a symlinked path; the slot table
   length asserted against 12.
-- `tasksctl`: the argv each typed call builds; JSON fixtures captured from the real
-  binary under `testdata/` decoded into the types; the error envelope; the
+- `tasksctl`: the argv each typed call builds, including `-C <checkout>`; JSON
+  fixtures captured from the real binary under `testdata/` decoded into the types —
+  a list row, a resolved parked row, an unresolved parked row with nulls, a `show`
+  with a park and a claim, a success with `warnings[]`; the error envelope; the
   environment scrubbing of §2, asserted on the `exec.Cmd` before it runs.
-- `launch`: argv assembly for each default harness, `{prompt}` absent, checkout
-  selection with and without a park, the missing-worktree error.
+- `checkoutFor`: park present and existing, park present and missing (falls to
+  claim, then root, with the notice), claim only, neither.
+- `launch`: argv assembly for each default harness, `{prompt}` absent, the
+  environment of §7 (TUI session variables removed, agent variables kept).
 - `ui`: `teatest/v2` runs over a `tasksctl.Runner` interface faked in memory —
   open a project, switch tabs, filter, open a task, park with a next step and
   waiting-on user, the argv the fake received; quick add end to end from keystrokes
-  to argv.
+  to argv; a write whose reload returns a warning leaves the log holding both; a
+  stale-generation result is discarded and a pending reload runs after an in-flight
+  one.
 - One integration test, skipped when `tasks` is not on `PATH`, that inits a scratch
   project with `XDG_CONFIG_HOME` pointed at a temp dir, adds two tasks through the
   real binary, and drives the TUI's project view against it.
