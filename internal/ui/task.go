@@ -184,7 +184,12 @@ func (v *taskView) content() string {
 	}
 	b.WriteString("\n")
 	if strings.TrimSpace(t.Body) != "" {
-		b.WriteString(v.markdown(t.Body))
+		body, err := v.markdown(t.Body)
+		if err != nil {
+			fmt.Fprintf(&b, "%s %v\n\n%s", s.Error.Render("body render failed:"), err, t.Body)
+		} else {
+			b.WriteString(body)
+		}
 		b.WriteString("\n")
 	}
 	if len(t.Notes) > 0 {
@@ -222,20 +227,16 @@ func (v *taskView) content() string {
 	return b.String()
 }
 
-func (v *taskView) markdown(src string) string {
+func (v *taskView) markdown(src string) (string, error) {
 	width := v.width
 	if width <= 0 {
 		width = 80
 	}
 	r, err := glamour.NewTermRenderer(glamour.WithStandardStyle(v.env.Styles.GlamourStyle()), glamour.WithWordWrap(width-2))
 	if err != nil {
-		return src
+		return "", err
 	}
-	out, err := r.Render(src)
-	if err != nil {
-		return src
-	}
-	return out
+	return r.Render(src)
 }
 
 func prefixOf(id string) string {
