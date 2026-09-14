@@ -66,3 +66,54 @@ func (c *Client) Root(ctx context.Context, id string) (res RootResult, err error
 	}
 	return res, decodeInto(raw, &res, "!prefix", "!root", "!warnings")
 }
+
+// Add runs the argv quickadd built (spec §6.1). --project is inside args; no -C.
+func (c *Client) Add(ctx context.Context, args []string) (res AddResult, err error) {
+	raw, err := c.R.Run(ctx, "", args...)
+	if err != nil {
+		return res, err
+	}
+	return res, decodeInto(raw, &res, "!id", "!action", "!warnings")
+}
+
+func (c *Client) Start(ctx context.Context, dir, id string, force bool) (WriteResult, error) {
+	args := []string{"start"}
+	if force {
+		args = append(args, "--force")
+	}
+	return c.write(ctx, dir, append(args, id)...)
+}
+
+func (c *Client) Park(ctx context.Context, dir, id string, p ParkSpec) (WriteResult, error) {
+	args := []string{"park", id, p.NextStep}
+	if p.WaitingOnUser {
+		args = append(args, "--waiting-on", "user")
+	}
+	if p.Reason != "" {
+		args = append(args, "--reason", p.Reason)
+	}
+	return c.write(ctx, dir, args...)
+}
+
+func (c *Client) Done(ctx context.Context, dir, id, message string) (WriteResult, error) {
+	return c.write(ctx, dir, withMessage([]string{"done", id}, message)...)
+}
+
+func (c *Client) Drop(ctx context.Context, dir, id, message string) (WriteResult, error) {
+	return c.write(ctx, dir, withMessage([]string{"drop", id}, message)...)
+}
+
+func withMessage(args []string, message string) []string {
+	if message != "" {
+		return append(args, message)
+	}
+	return args
+}
+
+func (c *Client) write(ctx context.Context, dir string, args ...string) (res WriteResult, err error) {
+	raw, err := c.R.Run(ctx, dir, args...)
+	if err != nil {
+		return res, err
+	}
+	return res, decodeInto(raw, &res, "!id", "!warnings")
+}
