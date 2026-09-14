@@ -103,10 +103,13 @@ or a response without the fields below is a fatal message naming what was expect
 Drift after that surfaces the same way: a named field missing from any response is a
 typed decode error shown in the status line, never a zero value.
 
-Every invocation is `tasks [-C <dir>] <command> [flags]` with the environment of §2,
-stdout parsed as JSON, and a non-zero exit parsed as `{"error": {"kind", "detail"}}`
-into `tasksctl.Error{Kind, Detail}`. A non-zero exit whose stdout is not that shape
-is `Error{Kind: "unparseable", Detail: <stderr>}`.
+Every invocation is `tasks [-C <dir>] <command> [flags]` with the environment of §2.
+On exit 0, stdout is parsed as JSON. On a non-zero exit stdout is empty and the CLI
+writes `{"error": {"kind", "detail"}}` to **stderr**; that is decoded into
+`tasksctl.Error{Kind, Detail}`. A non-zero exit whose stderr is not that shape (a
+clap usage error, a panic) is `Error{Kind: "unparseable", Detail: <stderr text>}`.
+`Kind` is what the UI branches on — `claimed` is the one §5.4 acts on — so the
+decoder is tested against captured stderr, not stdout.
 
 Reads, and the fields consumed:
 
@@ -126,8 +129,11 @@ Every response carries `warnings[]`; §11 says what happens to them.
 A **list row** (`TaskSummary`) has `id, title, status, priority, size, complexity,
 process, owner, updated, tags, parent, child_count, open_descendant_count, claim,
 park, periodic`; `status`, `title`, `updated`, and the counts are always present.
-Row `claim` gives `owner, session, worktree`; row `park` gives `next_step,
-waiting_on, reason, worktree, at`.
+Row `claim` gives `owner, session, worktree, live`; row `park` gives `next_step,
+waiting_on, reason, worktree, at`. A claim is returned whether or not its session is
+alive — the store is pruned lazily — and `live` is the only thing that says which.
+A claim with `live: false` is a stale claim: the row shows it dimmed as such, it
+never counts as ownership, and no rule below selects its worktree.
 
 A **parked row** (`ParkedRow`) is a different shape and is decoded by a different
 type: it has no `periodic`, adds `phase`, and its `status, priority, size,
@@ -143,16 +149,20 @@ and offers no transition on it, since no command can find the record from here.
 `checkoutFor(row)` is one function used by every task command and by launch:
 
 1. `park.worktree` when the row is parked and that directory exists;
-2. else `claim.worktree` when the row carries a claim and that directory exists;
+2. else `claim.worktree` when the row carries a claim with `live: true` and that
+   directory exists;
 3. else the registered root.
 
 When a recorded worktree is missing (a merged and pruned branch), the choice falls
 to the next rule and the status line says which path was gone, so a person sees why
 a transition landed on main. Rows are the source of the record; a view that opens a
 task passes its row's checkout along rather than re-deriving it from `show`.
-`tasks-tui <id>`, which has no row, runs `show` at the registered root first to learn
-the park and claim, derives the checkout from that response, and shows from there
-when it differs.
+`tasks-tui <id>`, which has no row, cannot start from `show` at the registered
+root: a task whose record exists only on its branch is `task_not_found` there, while
+the park that names its branch is readable from anywhere. It therefore runs
+`list --project <prefix> --parked` first and, when the id is among the parked rows,
+takes the checkout from that row; otherwise it runs `show` at the registered root,
+takes a live claim's worktree if there is one, and shows from the result.
 
 Writes:
 
@@ -204,8 +214,8 @@ done --sort updated`, most recent first). `1`–`5` and `tab`/`shift+tab` switch
 `/` filters by id, title, or tag substring.
 
 A row: `id  P<n>  size  complexity  process  status  updated  title  [tags]`, with
-a claim marker (`◆ owner`) and a park marker (`⏸ user` or `⏸ agent`) after the
-title when present, `⟳ every` for a recurrence, and `▸ n` for a goal with open
+a claim marker (`◆ owner` when `live`, `◇ owner` dimmed when stale) and a park
+marker (`⏸ user` or `⏸ agent`) after the title when present, `⟳ every` for a recurrence, and `▸ n` for a goal with open
 descendants. `enter` opens the task; the transition keys of §5.4 act on the
 highlighted row without opening it; `a` quick-adds into this project; `l` launches
 the highlighted task.
@@ -217,7 +227,8 @@ size, complexity, process, owner, created/started/updated/completed, tags, sourc
 every and next due, spec and plan with their resolved paths and `step`), the body
 through Glamour with a style matching the tone (§8), notes newest last, and a
 relations block: parent, children, and dependencies each with id, status, and
-title. A live claim shows owner, session, worktree; a park shows next step,
+title. A claim shows owner, session, worktree, and whether it is live or stale; a park
+shows next step,
 waiting-on, reason, and the checkout it was parked in; an escalation shows its level.
 
 Keys: the transitions of §5.4, `l` launch, `y` copies the id to the clipboard when
@@ -230,8 +241,10 @@ Each key opens an overlay at the bottom of the screen; `esc` cancels it; `enter`
 submits. Every submit runs one command, shows its `Error.Detail` on failure, and
 reloads the view on success.
 
-- `s` **start** — no prompt. On `claimed`, the overlay shows the claim's owner and
-  session and offers `F` to run `start --force`.
+- `s` **start** — no prompt. On `Kind == "claimed"`, the overlay shows the claim's
+  owner and session and offers `F` to run `start --force`. A stale claim does not
+  produce this error; the CLI takes it over and reports the takeover in
+  `warnings[]`, which §11 shows.
 - `p` **park** — a required one-line next step; `ctrl+u` toggles waiting-on
   between agent and user; `ctrl+r` cycles the reason through none, review, decision,
   approval, environment, dependency, session. `capability` and `quiet` are not
@@ -465,10 +478,13 @@ retried.
 - `tasksctl`: the argv each typed call builds, including `-C <checkout>`; JSON
   fixtures captured from the real binary under `testdata/` decoded into the types —
   a list row, a resolved parked row, an unresolved parked row with nulls, a `show`
-  with a park and a claim, a success with `warnings[]`; the error envelope; the
-  environment scrubbing of §2, asserted on the `exec.Cmd` before it runs.
+  with a park and a claim, a row with a stale claim (`live: false`), a success with
+  `warnings[]`; the error envelope decoded from captured stderr with empty stdout,
+  and a non-JSON stderr; the environment scrubbing of §2, asserted on the `exec.Cmd`
+  before it runs.
 - `checkoutFor`: park present and existing, park present and missing (falls to
-  claim, then root, with the notice), claim only, neither.
+  claim, then root, with the notice), live claim only, stale claim only (root),
+  neither; the by-id entry path finding a parked task the root `show` cannot.
 - `launch`: argv assembly for each default harness, `{prompt}` absent, the
   environment of §7 (TUI session variables removed, agent variables kept).
 - `ui`: `teatest/v2` runs over a `tasksctl.Runner` interface faked in memory —
