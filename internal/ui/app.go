@@ -238,10 +238,5 @@ func (a *App) renderLog(height int) string {
 	return strings.Join(lines, "\n")
 }
 
-func (a *App) openQuickAdd() tea.Cmd            { return nil }
-func (a *App) openLaunch() tea.Cmd              { return nil }
-func (a *App) startTarget(bool) tea.Cmd         { return nil }
-func (a *App) openPark() tea.Cmd                { return nil }
-func (a *App) openDone() tea.Cmd                { return nil }
-func (a *App) openDrop() tea.Cmd                { return nil }
-func (a *App) openForce(target, string) tea.Cmd { return nil }
+func (a *App) openQuickAdd() tea.Cmd { return nil }
+func (a *App) openLaunch() tea.Cmd   { return nil }
