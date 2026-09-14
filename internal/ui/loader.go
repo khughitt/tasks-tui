@@ -8,10 +8,11 @@ import (
 
 // loadMsg carries a fetch result back to the view whose loader issued it.
 type loadMsg struct {
-	loader uint64
-	gen    uint64
-	data   any
-	err    error
+	loader     uint64
+	gen        uint64
+	data       any
+	err        error
+	background bool
 }
 
 var loaderIDs atomic.Uint64
