@@ -1,6 +1,6 @@
 # tasks-tui v1: the daily surface — design
 
-**Status:** draft 2026-09-13, awaiting review. Goal: tui-d6e352. Plan: none yet.
+**Status:** reviewed 2026-09-13 (three review rounds against the CLI); planning. Goal: tui-d6e352. Plan: `docs/plans/2026-09-13-tasks-tui-v1.md`.
 
 ## 1. Problem
 

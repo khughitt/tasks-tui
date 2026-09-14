@@ -6,9 +6,9 @@ priority: 1
 size: xl
 complexity: high
 process: planned
-owner: main
+owner: design/v1
 created: 2026-09-14T00:45:49Z
-updated: 2026-09-14T01:15:51Z
+updated: 2026-09-14T01:21:01Z
 started: 2026-09-14T00:45:49Z
 depends: []
 tags: [v1]
