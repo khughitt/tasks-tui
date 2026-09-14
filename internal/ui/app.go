@@ -238,5 +238,4 @@ func (a *App) renderLog(height int) string {
 	return strings.Join(lines, "\n")
 }
 
-func (a *App) openQuickAdd() tea.Cmd { return nil }
-func (a *App) openLaunch() tea.Cmd   { return nil }
+func (a *App) openLaunch() tea.Cmd { return nil }
