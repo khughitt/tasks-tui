@@ -100,6 +100,9 @@ func Build(cfg Config, harness, dir, id, title string, environ []string) (Plan, 
 // Spawn starts the plan in its own session with stdio detached, and reaps it in the
 // background. What the harness does afterwards is not the TUI's business.
 func Spawn(p Plan) error {
+	if len(p.Argv) == 0 {
+		return fmt.Errorf("launch: command argv is empty")
+	}
 	cmd := exec.Command(p.Argv[0], p.Argv[1:]...)
 	cmd.Dir = p.Dir
 	cmd.Env = p.Env

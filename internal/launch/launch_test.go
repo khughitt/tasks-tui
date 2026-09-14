@@ -109,3 +109,10 @@ func TestSpawnErrorsOnMissingBinary(t *testing.T) {
 		t.Fatal("missing binary must error")
 	}
 }
+
+func TestSpawnErrorsOnEmptyPlan(t *testing.T) {
+	err := Spawn(Plan{})
+	if err == nil || !strings.Contains(err.Error(), "argv") {
+		t.Fatalf("error %v", err)
+	}
+}
