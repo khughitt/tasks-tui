@@ -28,6 +28,26 @@ Passed: `cmd/tasks-tui`, `internal/identity`, and `internal/tasksctl`.
 
 Passed: ops check, gofmt, vet, staticcheck, and `tasks check`.
 
+## Review correction
+
+The initial implementation treated every `git config --get remote.origin.url` failure as an absent origin. `GitOriginURL` now returns an empty remote only for Git's expected exit status 1; missing Git, invalid roots, timeouts, and other failures are returned with the affected root in the error.
+
+### RED
+
+`go test ./internal/identity/ -run TestGitOriginURLDistinguishesMissingOriginFromFailures -v`
+
+Failed as expected: a missing `git` executable was treated as no origin.
+
+### GREEN
+
+`go test ./internal/identity/ -run TestGitOriginURLDistinguishesMissingOriginFromFailures -v`
+
+Passed using a real initialized repository without an origin, an empty `PATH`, and a nonexistent repository root.
+
+`just check`
+
+Passed: ops check, gofmt, vet, staticcheck, and `tasks check`.
+
 ## Files
 
 - `internal/identity/pins.go`

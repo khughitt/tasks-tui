@@ -2,6 +2,8 @@ package identity
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -17,10 +19,14 @@ func GitOriginURL(root string) (string, error) {
 	defer cancel()
 	out, err := exec.CommandContext(ctx, "git", "-C", root, "config", "--get", "remote.origin.url").Output()
 	if ctx.Err() != nil {
-		return "", ctx.Err()
+		return "", fmt.Errorf("git origin URL for %q: %w", root, ctx.Err())
 	}
 	if err != nil {
-		return "", nil
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
+			return "", nil
+		}
+		return "", fmt.Errorf("git origin URL for %q: %w", root, err)
 	}
 	return strings.TrimSpace(string(out)), nil
 }
