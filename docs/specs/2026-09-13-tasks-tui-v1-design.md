@@ -193,7 +193,7 @@ app opens that Project view with Projects beneath it; started elsewhere, or with
 A table of every registered project, one row each: accent bar, prefix, name (the
 root's basename), `doing todo idea blocked` counts, last activity as a relative
 time, and a dimmed row with `✗` when unreachable. Default order is last activity,
-newest first; `s` toggles prefix order. `/` filters rows by prefix or name.
+newest first; `S` toggles prefix order (`s` is start everywhere). `/` filters rows by prefix or name.
 
 To the right, a pane for the highlighted project from `prime --project <p>`:
 `doing` rows with their claim owner, `parked` rows (the parked shape of §4) with
@@ -231,9 +231,9 @@ title. A claim shows owner, session, worktree, and whether it is live or stale; 
 shows next step,
 waiting-on, reason, and the checkout it was parked in; an escalation shows its level.
 
-Keys: the transitions of §5.4, `l` launch, `y` copies the id to the clipboard when
-`wl-copy` is on `PATH` (otherwise the key reports that it is not), `j/k` and page
-keys scroll.
+Keys: the transitions of §5.4, `l` launch, `y` copies the id to the clipboard through
+the terminal (OSC 52, which kitty supports; no external tool), `j/k` and page keys
+scroll.
 
 ### 5.4 Transitions
 
@@ -258,9 +258,10 @@ reloads the view on success.
 ## 6. Quick add
 
 `a` opens a single-line input at the bottom of any view. The line is parsed on
-every keystroke; tokens are colored in place, and a preview line under the input
-shows the command that would run, or the first error in the error color. `enter`
-files it when there is no error and is refused otherwise; `esc` cancels.
+every keystroke; the line is echoed beneath the input with each token in its class
+color, and under that a preview line shows the command that would run, or the first
+error in the error color. `enter` files it when there is no error and is refused
+otherwise; `esc` cancels.
 
 ### 6.1 Grammar
 
@@ -487,8 +488,9 @@ retried.
   neither; the by-id entry path finding a parked task the root `show` cannot.
 - `launch`: argv assembly for each default harness, `{prompt}` absent, the
   environment of §7 (TUI session variables removed, agent variables kept).
-- `ui`: `teatest/v2` runs over a `tasksctl.Runner` interface faked in memory —
-  open a project, switch tabs, filter, open a task, park with a next step and
+- `ui`: a synchronous driver (`internal/uitest`) that executes every command the
+  model returns and reads the rendered screen, over a `tasksctl.Runner` faked in
+  memory — open a project, switch tabs, filter, open a task, park with a next step and
   waiting-on user, the argv the fake received; quick add end to end from keystrokes
   to argv; a write whose reload returns a warning leaves the log holding both; a
   stale-generation result is discarded and a pending reload runs after an in-flight
