@@ -12,6 +12,7 @@ import (
 
 func projectFake() *fakeRunner {
 	f := newFake()
+	f.on("/r/tui", "show tui-ddd444", showJSON(tasksctl.Task{ID: "tui-ddd444", Title: "Title of tui-ddd444", Status: "todo", Priority: 3, Created: "2026-09-13T09:00:00Z", Updated: "2026-09-13T10:00:00Z", Depends: []string{}, Tags: []string{}, Body: "unique task body", Notes: []tasksctl.Note{}}, nil))
 	f.on("", "prime --project tui", primeJSON("tui"))
 	f.on("", "ready --project tui", rowsJSON(row("tui-aaa111", "todo", 2), row("tui-ddd444", "todo", 3)))
 	f.on("", "list --project tui --status doing", rowsJSON(row("tui-bbb222", "doing", 1)))
@@ -57,7 +58,7 @@ func TestProjectViewTabsFilterAndCurrent(t *testing.T) {
 		t.Fatalf("filter: rows=%d current=%+v", len(pv.rows), cur)
 	}
 	d.Key("enter")
-	d.Expect("tui-ddd444")
+	d.Expect("unique task body")
 	if !f.called("ready --project tui") || !f.called("prime --project tui") {
 		t.Fatal("ready and prime must have loaded")
 	}
@@ -152,7 +153,7 @@ func TestProjectViewHiddenResultIsDroppedThenPopReloads(t *testing.T) {
 		t.Fatal("initial parent load must start")
 	}
 	gen := pv.loader.gen
-	app.push(&stubTask{t: target{ID: "child"}})
+	app.push(&stubView{name: "child"})
 	app.Update(loadMsg{loader: pv.loader.ID(), gen: gen, data: projectData{tab: tabReady, rows: []rowView{{ID: "leak"}}}, err: errors.New("hidden failure")})
 	if pv.rows[0].ID != "kept" || len(app.Messages()) != 0 {
 		t.Fatalf("hidden parent result leaked: rows=%+v messages=%+v", pv.rows, app.Messages())
