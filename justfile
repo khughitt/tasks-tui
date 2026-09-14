@@ -5,7 +5,7 @@
 
 tt := "python3 tools/tt"
 
-fast_cmd := "go test ./internal/..."
+fast_cmd := "go test $(go list ./internal/... | grep -v '/integration$')"
 test_cmd := "go test ./..."
 check_cmd := "python3 tools/ops-check && test -z \"$(gofmt -l .)\" && go vet ./... && go tool staticcheck ./... && tasks check"
 

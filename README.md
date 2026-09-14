@@ -11,5 +11,32 @@ out to the `tasks` binary and reads its JSON; it never touches `tasks/*.md` itse
 
 Keys: `?` legend · `a` quick add · `l` launch an agent · `s` start · `p` park · `d` done · `x` drop · `W` messages · `q` quit.
 
-Config: `~/.config/tasks-tui/config.toml` (all optional; see `docs/specs/2026-09-13-tasks-tui-v1-design.md` §9).
+Quick add: `#tag !2 ~m ^mid @30d >prefix · ? first = idea · -- body`.
+
+Config: `~/.config/tasks-tui/config.toml` (all optional):
+
+```toml
+tasks = "tasks"
+refresh_seconds = 30
+
+[launch]
+terminal = ["kitty", "--directory", "{dir}", "--"]
+prompt = "Run `tasks start {id}` and continue that task: {title}"
+
+[launch.harness.claude]
+command = ["claude", "{prompt}"]
+
+[launch.harness.codex]
+command = ["codex", "{prompt}"]
+
+[launch.harness.opencode]
+command = ["opencode", "--prompt", "{prompt}"]
+
+[launch.harness.crush]
+command = ["crush"]
+
+[identity]
+slot = { tui = 2 }
+```
+
 Design: `docs/specs/`. Plans: `docs/plans/`.

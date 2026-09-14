@@ -1,6 +1,6 @@
 # tasks-tui v1: the daily surface — design
 
-**Status:** implementation in progress 2026-09-14; reviewed 2026-09-13 (three review rounds against the CLI). Goal: tui-d6e352. Plan: `docs/plans/2026-09-13-tasks-tui-v1.md`.
+**Status:** implemented 2026-09-14 on branch design/v1 (plan docs/plans/2026-09-13-tasks-tui-v1.md). Goal: tui-d6e352.
 
 ## 1. Problem
 

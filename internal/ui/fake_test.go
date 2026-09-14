@@ -1,4 +1,3 @@
-//lint:file-ignore U1000 Shared test helpers are consumed by the view tasks that follow.
 package ui
 
 import (

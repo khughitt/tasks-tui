@@ -1,4 +1,3 @@
-//lint:file-ignore U1000 This shared view contract is consumed by the view tasks that follow.
 package ui
 
 import (
