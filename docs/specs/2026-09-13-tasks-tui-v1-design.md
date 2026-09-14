@@ -208,10 +208,15 @@ in one line whether anything is waiting on them.
 
 A header with the accent bar, prefix, name, root, and counts. Under it a tabbed
 list: **Ready** (default; `ready --project`), **Doing** (`list --status doing`
-followed by `list --parked`, the second decoded as parked rows and marked), **Open** (`list`, the default
+merged with `list --parked` by id — parking leaves status alone, so a parked doing
+task is one row carrying its park, and a parked todo is appended as a parked row), **Open** (`list`, the default
 statuses by priority), **Ideas** (`list --status idea`), **Done** (`list --status
 done --sort updated`, most recent first). `1`–`5` and `tab`/`shift+tab` switch tabs;
 `/` filters by id, title, or tag substring.
+
+While a filter is being typed, the view owns every key: no global shortcut fires
+(`s` is text, not start) until `enter` or `esc` leaves the filter. The same holds for
+an open overlay, which also receives pasted text.
 
 A row: `id  P<n>  size  complexity  process  status  updated  title  [tags]`, with
 a claim marker (`◆ owner` when `live`, `◇ owner` dimmed when stale) and a park
@@ -459,7 +464,11 @@ things a person must see.
 
 The status line holds its entry until the next keypress; a reload — including the
 one that follows every write — never clears it, and a reload's own warnings are
-appended to the log without displacing an error shown from the write. `W` opens
+appended to the log without displacing an error shown from the write. A load's
+error or warnings are reported only when its result is the current one for its scope
+(§10); a stale or superseded failure is discarded with its data. Warnings from the
+startup `projects` call and from the by-id entry lookups (§4.1) enter the same log
+before the first screen, since stderr is hidden once the alternate screen opens. `W` opens
 the log as a scrollable list, newest last, so a message that scrolled past is still
 readable.
 
