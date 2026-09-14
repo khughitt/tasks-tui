@@ -141,14 +141,25 @@ func TestProjectsSelectionWindowUTF8BackspaceAndReloadPosition(t *testing.T) {
 func TestProjectsBackgroundResultsAreDrainedAndDropped(t *testing.T) {
 	env := testEnv(newFake())
 	pv := newProjectsView(env)
-	gen := pv.main.gen
-	_, cmd := pv.update(loadMsg{loader: pv.main.ID(), gen: gen, data: projectsData{}, background: true})
-	if cmd != nil || len(pv.data.projects.Projects) != 0 {
-		t.Fatal("background main result accepted")
+	pending := func(gen uint64) tea.Cmd { return func() tea.Msg { return gen } }
+
+	pv.main.Request(pending)
+	mainGen := pv.main.gen
+	pv.main.Request(pending)
+	_, cmd := pv.update(loadMsg{loader: pv.main.ID(), gen: mainGen, data: projectsData{
+		projects: tasksctl.ProjectsResult{Projects: []tasksctl.Project{{Prefix: "leak"}}},
+	}, err: errors.New("main leak"), background: true})
+	if cmd == nil || cmd() != uint64(mainGen+1) || len(pv.data.projects.Projects) != 0 {
+		t.Fatal("background main result did not drain pending load or leaked data/notices")
 	}
-	gen = pv.pane.gen
-	_, cmd = pv.update(loadMsg{loader: pv.pane.ID(), gen: gen, data: paneData{prefix: "tui"}, background: true})
-	if cmd != nil || pv.prime != nil {
-		t.Fatal("background pane result accepted")
+
+	pv.pane.Request(pending)
+	paneGen := pv.pane.gen
+	pv.pane.Request(pending)
+	_, cmd = pv.update(loadMsg{loader: pv.pane.ID(), gen: paneGen, data: paneData{
+		prefix: "tui", res: tasksctl.PrimeResult{Prefix: "leak", Warnings: []string{"leak"}},
+	}, err: paneError{prefix: "tui", err: errors.New("pane leak")}, background: true})
+	if cmd == nil || cmd() != uint64(paneGen+1) || pv.prime != nil || pv.primeFor != "" {
+		t.Fatal("background pane result did not drain pending load or leaked data/notices")
 	}
 }
