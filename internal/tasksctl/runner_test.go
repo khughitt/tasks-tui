@@ -62,6 +62,17 @@ func TestDecodeFailureNonJSON(t *testing.T) {
 	}
 }
 
+func TestDecodeFailureRequiresNamedFields(t *testing.T) {
+	for _, input := range []string{
+		`{"error":{"kind":"claimed"}}`,
+		`{"error":{"kind":"claimed","detail":null}}`,
+	} {
+		if err := decodeFailure([]byte(input)); err.Kind != "unparseable" {
+			t.Fatalf("decodeFailure(%s) = %+v", input, err)
+		}
+	}
+}
+
 func TestCommandShape(t *testing.T) {
 	r := ExecRunner{Bin: "/usr/bin/tasks", Env: []string{"A=1"}}
 	cmd := r.command(context.Background(), "/repo", "show", "x-1")

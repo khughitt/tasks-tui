@@ -84,12 +84,12 @@ func (r ExecRunner) Run(ctx context.Context, dir string, args ...string) ([]byte
 func decodeFailure(stderr []byte) *Error {
 	var env struct {
 		Error struct {
-			Kind   string `json:"kind"`
-			Detail string `json:"detail"`
+			Kind   *string `json:"kind"`
+			Detail *string `json:"detail"`
 		} `json:"error"`
 	}
-	if err := json.Unmarshal(bytes.TrimSpace(stderr), &env); err == nil && env.Error.Kind != "" {
-		return &Error{Kind: env.Error.Kind, Detail: env.Error.Detail}
+	if err := json.Unmarshal(bytes.TrimSpace(stderr), &env); err == nil && env.Error.Kind != nil && *env.Error.Kind != "" && env.Error.Detail != nil {
+		return &Error{Kind: *env.Error.Kind, Detail: *env.Error.Detail}
 	}
 	return &Error{Kind: "unparseable", Detail: strings.TrimSpace(string(stderr))}
 }
