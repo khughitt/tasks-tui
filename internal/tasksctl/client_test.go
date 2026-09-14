@@ -2,6 +2,7 @@ package tasksctl
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -95,6 +96,15 @@ func TestParkedRowsAllowUnresolved(t *testing.T) {
 	}
 	if !slices.Equal(r2.calls[0], []string{"list", "--project", "tui", "--parked"}) {
 		t.Fatalf("argv %v", r2.calls[0])
+	}
+}
+
+func TestParkedRowRejectsNullPark(t *testing.T) {
+	var row ParkedRow
+	err := row.UnmarshalJSON([]byte(`{"id":"x-1","title":"t","status":null,"priority":null,"size":null,"complexity":null,"process":null,"owner":null,"updated":null,"tags":[],"parent":null,"child_count":null,"open_descendant_count":null,"claim":null,"park":null,"escalation":null,"phase":null}`))
+	var taskErr *Error
+	if !errors.As(err, &taskErr) || taskErr.Kind != "decode" {
+		t.Fatalf("park:null must be a decode error: %v", err)
 	}
 }
 

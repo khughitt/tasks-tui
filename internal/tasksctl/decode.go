@@ -47,7 +47,7 @@ func decodeInto(raw []byte, into any, keys ...string) error {
 
 var (
 	rowKeys    = []string{"!id", "!title", "!status", "!priority", "size", "complexity", "process", "owner", "!updated", "!tags", "parent", "!child_count", "!open_descendant_count", "claim", "park", "periodic"}
-	parkedKeys = []string{"!id", "!title", "status", "priority", "size", "complexity", "process", "owner", "updated", "!tags", "parent", "child_count", "open_descendant_count", "claim", "park", "escalation", "phase"}
+	parkedKeys = []string{"!id", "!title", "status", "priority", "size", "complexity", "process", "owner", "updated", "!tags", "parent", "child_count", "open_descendant_count", "claim", "!park", "escalation", "phase"}
 	taskKeys   = []string{"!id", "!title", "!status", "!priority", "size", "complexity", "process", "!parallel", "every", "owner", "!created", "!updated", "started", "completed", "last_done", "!depends", "parent", "!tags", "source", "model", "agent", "spec", "plan", "step", "!body", "!notes"}
 	claimKeys  = []string{"!owner", "!session", "!host", "pid", "!worktree", "!started", "!seen", "!live"}
 	parkKeys   = []string{"!at", "!next_step", "!waiting_on", "reason", "needs", "minutes", "!session", "!owner", "!host", "!worktree"}
