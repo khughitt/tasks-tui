@@ -108,3 +108,7 @@ func (e *Escalation) UnmarshalJSON(raw []byte) error {
 	type plain Escalation
 	return decodeInto(raw, (*plain)(e), escKeys...)
 }
+func (t *Tag) UnmarshalJSON(raw []byte) error {
+	type plain Tag
+	return decodeInto(raw, (*plain)(t), "!tag")
+}

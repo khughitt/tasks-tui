@@ -12,6 +12,8 @@ import (
 
 func projectFake() *fakeRunner {
 	f := newFake()
+	f.on("", "tags --project tui", `{"tags":[],"warnings":[]}`)
+	f.on("", "tags --project ops", `{"tags":[],"warnings":[]}`)
 	f.on("/r/tui", "show tui-ddd444", showJSON(tasksctl.Task{ID: "tui-ddd444", Title: "Title of tui-ddd444", Status: "todo", Priority: 3, Created: "2026-09-13T09:00:00Z", Updated: "2026-09-13T10:00:00Z", Depends: []string{}, Tags: []string{}, Body: "unique task body", Notes: []tasksctl.Note{}}, nil))
 	f.on("", "prime --project tui", primeJSON("tui"))
 	f.on("", "ready --project tui", rowsJSON(row("tui-aaa111", "todo", 2), row("tui-ddd444", "todo", 3)))

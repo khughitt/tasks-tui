@@ -15,6 +15,11 @@ Keys: `?` legend · `a` quick add · `l` launch an agent · `s` start · `p` par
 
 Quick add: `#tag !2 ~m ^mid @30d >prefix · ? first = idea · -- body`.
 
+When typing a tag at the end of the input, Tab accepts a suggestion and Up/Down
+choose among matches from the current project's open tasks. An explicit `>prefix`
+changes the project. New tags can always be typed directly; text after `--` is
+never completed.
+
 Config: `~/.config/tasks-tui/config.toml` (all optional):
 
 ```toml

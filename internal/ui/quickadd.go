@@ -8,6 +8,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"tasks-tui/internal/quickadd"
+	"tasks-tui/internal/tasksctl"
 )
 
 // styledLine renders the input with each token in its class colour (spec §6.2).
@@ -114,6 +115,76 @@ func (a *App) openQuickAdd() tea.Cmd {
 			return addMsg{res: res, err: err}
 		}
 	}
-	a.overlay = p
+	p.input.ShowSuggestions = true
+	a.overlay = &quickAddOverlay{prompt: p, env: a.env, defaultProject: defaultProject, loader: NewLoader()}
 	return nil
+}
+
+type tagData struct {
+	prefix string
+	res    tasksctl.TagsResult
+}
+
+type quickAddOverlay struct {
+	prompt                 *promptOverlay
+	env                    *Env
+	defaultProject, prefix string
+	loader                 *Loader
+	tags                   []string
+}
+
+func (o *quickAddOverlay) update(msg tea.Msg) (overlay, tea.Cmd) {
+	if msg, ok := msg.(loadMsg); ok {
+		if msg.loader != o.loader.ID() {
+			return o, nil
+		}
+		accept, next := o.loader.Done(msg.gen)
+		d := msg.data.(tagData)
+		if !accept || d.prefix != o.prefix {
+			return o, next
+		}
+		command := "tags --project " + d.prefix
+		if msg.err != nil {
+			return o, tea.Batch(next, notices(LevelError, command+": "+msg.err.Error()))
+		}
+		o.tags = nil
+		for _, tag := range d.res.Tags {
+			o.tags = append(o.tags, tag.Tag)
+		}
+		return o, tea.Batch(next, o.suggest(), notices(LevelWarning, prefixed(command, d.res.Warnings)...))
+	}
+	next, cmd := o.prompt.update(msg)
+	if next == nil {
+		return nil, cmd
+	}
+	return o, tea.Batch(cmd, o.suggest())
+}
+
+func (o *quickAddOverlay) suggest() tea.Cmd {
+	prefix, suggestions := quickadd.TagSuggestions(o.prompt.input.Value(), o.prompt.input.Position(), o.env.Prefixes, o.defaultProject, o.tags)
+	if prefix == o.prefix {
+		o.prompt.input.SetSuggestions(suggestions)
+		return nil
+	}
+	o.prefix, o.tags = prefix, nil
+	o.prompt.input.SetSuggestions(nil)
+	if prefix == "" {
+		return nil
+	}
+	return o.loader.Request(func(gen uint64) tea.Cmd {
+		return o.loader.Cmd(gen, func() (any, error) {
+			ctx, cancel := o.env.ctx()
+			defer cancel()
+			res, err := o.env.Client.Tags(ctx, prefix)
+			return tagData{prefix: prefix, res: res}, err
+		})
+	})
+}
+
+func (o *quickAddOverlay) render(width int) string {
+	content := o.prompt.render(width)
+	if len(o.prompt.input.MatchedSuggestions()) > 0 {
+		content += "\n" + o.env.Styles.Muted.Render("tab complete tag · ↑/↓ choose")
+	}
+	return content
 }

@@ -63,6 +63,11 @@ func (a *App) Update(raw tea.Msg) (tea.Model, tea.Cmd) {
 			a.stack[i] = nv
 			cmds = append(cmds, cmd)
 		}
+		if a.overlay != nil {
+			var cmd tea.Cmd
+			a.overlay, cmd = a.overlay.update(msg)
+			cmds = append(cmds, cmd)
+		}
 		return a, tea.Batch(cmds...)
 	case noticesMsg:
 		for _, notice := range msg {

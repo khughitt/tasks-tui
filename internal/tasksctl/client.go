@@ -4,6 +4,14 @@ import "context"
 
 type Client struct{ R Runner }
 
+func (c *Client) Tags(ctx context.Context, prefix string) (res TagsResult, err error) {
+	raw, err := c.R.Run(ctx, "", "tags", "--project", prefix)
+	if err != nil {
+		return res, err
+	}
+	return res, decodeInto(raw, &res, "!tags", "!warnings")
+}
+
 func (c *Client) Projects(ctx context.Context) (res ProjectsResult, err error) {
 	raw, err := c.R.Run(ctx, "", "projects")
 	if err != nil {

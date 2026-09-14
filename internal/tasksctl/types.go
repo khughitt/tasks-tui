@@ -200,6 +200,13 @@ type RootResult struct {
 	Root     string   `json:"root"`
 	Warnings []string `json:"warnings"`
 }
+type Tag struct {
+	Tag string `json:"tag"`
+}
+type TagsResult struct {
+	Tags     []Tag    `json:"tags"`
+	Warnings []string `json:"warnings"`
+}
 type AddResult struct {
 	ID       string   `json:"id"`
 	Action   string   `json:"action"`
