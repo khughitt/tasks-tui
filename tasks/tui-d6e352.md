@@ -1,15 +1,16 @@
 ---
 id: tui-d6e352
 title: "tasks-tui v1: the daily surface"
-status: doing
+status: done
 priority: 1
 size: xl
 complexity: high
 process: planned
 owner: design/v1
 created: 2026-09-14T00:45:49Z
-updated: 2026-09-14T10:59:01Z
+updated: 2026-09-14T12:52:58Z
 started: 2026-09-14T00:45:49Z
+completed: 2026-09-14T12:52:58Z
 depends: []
 tags: [v1]
 agent: claude-code/claude-opus-5
@@ -29,3 +30,5 @@ A standalone Bubble Tea TUI over the tasks tracker: multi-project and single-pro
 - 2026-09-14T09:23:11Z (design/v1): Plan review round 2: unreachable projects (null counts/total), DepInfo nullability, pane scope by prefix, fixture tags; all revised in
 - 2026-09-14T10:29:32Z (design/v1): User approved reviewed plan for implementation using subagent-driven-development; executing the 19 direct steps in existing .worktrees/v1.
 - 2026-09-14T10:59:01Z (design/v1): Implementation follows the reviewed plan; execution review adds strict error-detail decoding, notices for missing live-claim worktrees, familiar saturation clamping, and small UI corrections for visible selection, UTF-8 filters, header counts, warning sources, and preview colors. Rulings tracked in the SDD ledger.
+- 2026-09-14T12:52:58Z (design/v1): Implemented all 19 reviewed plan steps plus the final null-park decoder fix. Independent task reviews and final scoped review are clean; just gate and real-terminal smoke passed, including isolated transitions, quick add, launch, and real registry entry points. Branch design/v1 remains available for review.
+- 2026-09-14T12:52:58Z (design/v1): tasks-tui v1: Projects/Project/Task views, quick add, launch, start/park/done/drop over the tasks JSON contract
