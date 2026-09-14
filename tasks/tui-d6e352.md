@@ -8,7 +8,7 @@ complexity: high
 process: planned
 owner: main
 created: 2026-09-14T00:45:49Z
-updated: 2026-09-14T00:52:12Z
+updated: 2026-09-14T01:11:38Z
 started: 2026-09-14T00:45:49Z
 depends: []
 tags: [v1]
@@ -21,3 +21,4 @@ A standalone Bubble Tea TUI over the tasks tracker: multi-project and single-pro
 ## Notes
 
 - 2026-09-14T00:52:12Z (design/v1): parked (waiting on user, review): User reviews docs/specs/2026-09-13-tasks-tui-v1-design.md on branch design/v1 (.worktrees/v1); then writing-plans
+- 2026-09-14T01:11:38Z (design/v1): Spec review round 1: six findings verified against tasks src and familiar pins.js; all six revised in
