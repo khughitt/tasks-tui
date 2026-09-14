@@ -4,10 +4,12 @@ A keyboard-driven terminal front end for the `tasks` tracker, on Bubble Tea. It 
 out to the `tasks` binary and reads its JSON; it never touches `tasks/*.md` itself.
 
     just setup      # deps and git hooks
-    just install    # go install ./cmd/tasks-tui
-    tasks-tui       # Projects view, or the project you are standing in
-    tasks-tui tui   # one project by prefix
-    tasks-tui tui-d6e352
+    just install    # installs tasks-tui and the short command tui
+    tui             # Projects view, or the project you are standing in
+    tui tui         # one project by prefix
+    tui tui-d6e352
+
+Both commands are installed in Go's binary directory, which must be on `PATH`.
 
 Keys: `?` legend · `a` quick add · `l` launch an agent · `s` start · `p` park · `d` done · `x` drop · `W` messages · `q` quit.
 

@@ -34,4 +34,9 @@ hook-pre-push:
     {{tt}} hook-pre-push -- sh -c '{{check_cmd}} && {{test_cmd}}'
 
 install:
+    #!/bin/sh
+    set -eu
     go install ./cmd/tasks-tui
+    tui_bin_dir="$(go env GOBIN)"
+    if [ -z "$tui_bin_dir" ]; then tui_bin_dir="$(go env GOPATH)/bin"; fi
+    ln -sf tasks-tui "$tui_bin_dir/tui"
