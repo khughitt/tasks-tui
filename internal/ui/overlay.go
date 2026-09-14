@@ -1,4 +1,3 @@
-//lint:file-ignore U1000 Shared overlays are consumed by the UI tasks that follow.
 package ui
 
 import (
