@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"charm.land/lipgloss/v2"
 	"tasks-tui/internal/config"
 	"tasks-tui/internal/identity"
 	"tasks-tui/internal/launch"
@@ -21,6 +22,18 @@ type fakeRunner struct {
 	replies map[string]string
 	errors  map[string]*tasksctl.Error
 	calls   []string
+}
+
+var darkTone = identity.Tone{Dark: true, SatScale: 1}
+
+//lint:ignore U1000 shared by subsequent UI tests
+func col(t *testing.T, line, tok string) int {
+	t.Helper()
+	i := strings.Index(line, tok)
+	if i < 0 {
+		t.Fatalf("no %q in %q", tok, line)
+	}
+	return lipgloss.Width(line[:i])
 }
 
 func newFake() *fakeRunner {

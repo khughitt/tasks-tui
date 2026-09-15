@@ -39,7 +39,7 @@ func TestProjectViewTabsFilterAndCurrent(t *testing.T) {
 		t.Fatalf("after j current %+v", cur)
 	}
 	d.Key("tab")
-	d.Expect("tui-bbb222", "tui-ccc333", "⏸ user")
+	d.Expect("tui-bbb222", "tui-ccc333", "⏸", "user")
 	d.Key("j")
 	if cur := pv.current(); cur == nil || cur.ID != "tui-ccc333" || cur.Park == nil {
 		t.Fatalf("parked row target %+v", cur)
@@ -59,6 +59,9 @@ func TestProjectViewTabsFilterAndCurrent(t *testing.T) {
 	if cur := pv.current(); cur == nil || cur.ID != "tui-ddd444" || len(pv.rows) != 1 {
 		t.Fatalf("filter: rows=%d current=%+v", len(pv.rows), cur)
 	}
+	d.Key("i")
+	d.Expect("unique task body")
+	d.Key("esc")
 	d.Key("enter")
 	d.Expect("unique task body")
 	if !f.called("ready --project tui") || !f.called("prime --project tui") {
@@ -74,7 +77,7 @@ func TestProjectViewUnresolvedHasNoTarget(t *testing.T) {
 	pv := newProjectView(env, "tui")
 	d := drive(t, New(env, Options{Stack: []view{pv}}))
 	d.Key("2")
-	d.Expect("unresolved", "⏸ agent")
+	d.Expect("unresolved", "⏸", "agent")
 	if pv.current() != nil {
 		t.Fatal("an unresolved parked row offers no transitions")
 	}
@@ -168,4 +171,47 @@ func TestProjectViewHiddenResultIsDroppedThenPopReloads(t *testing.T) {
 	if _, ok := msg.(loadMsg); !ok {
 		t.Fatalf("reload returned %T, want loadMsg", msg)
 	}
+}
+
+func TestProjectViewPillTabCountHeaderRowAndEmptyStates(t *testing.T) {
+	f := projectFake()
+	f.on("", "list --project tui --status idea", rowsJSON())
+	env := testEnv(f)
+	pv := newProjectView(env, "tui")
+	app := New(env, Options{Stack: []view{pv}})
+	d := drive(t, app)
+	d.Expect(" 1 Ready 2 ", "status", "title", "  2 Doing")
+	if pill := env.Styles.Pill(2).Render(" 1 Ready 2 "); !strings.Contains(app.render(), pill) {
+		t.Fatalf("active tab is a pill: %q", app.render())
+	}
+	d.ExpectNot("2 rows")
+	d.Key("/")
+	d.Type("ddd")
+	d.Expect("/ddd · 1 of 2", " 1 Ready 1 ")
+	d.Key("esc")
+	d.Key("/")
+	for range 3 {
+		d.Key("backspace")
+	}
+	d.Key("esc")
+	d.Expect(" 1 Ready 2 ")
+	d.Key("4")
+	d.Expect("no ideas — a then ? files one", " 4 Ideas 0 ")
+	d.Key("/")
+	d.Type("zzz")
+	d.Expect("no rows match /zzz")
+	d.Key("esc")
+	d.Key("/")
+	for range 3 {
+		d.Key("backspace")
+	}
+	d.Key("esc")
+	d.Key("2")
+	d.Expect(" 2 Doing 2 ")
+	cmd := pv.setTab(tabReady)
+	if !strings.Contains(app.render(), " 1 Ready 2 ") || !strings.Contains(app.render(), " 2 Doing ") {
+		t.Fatalf("pending tab keeps its last count:\n%s", app.render())
+	}
+	d.Run(cmd)
+	d.Expect(" 1 Ready 2 ")
 }

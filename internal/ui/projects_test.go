@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"tasks-tui/internal/tasksctl"
+	"tasks-tui/internal/uitest"
 )
 
 func projectsJSON() string {
@@ -37,7 +40,7 @@ func TestProjectsViewLoadsPaneAndStripAndOpens(t *testing.T) {
 	pv := newProjectsView(env)
 	app := New(env, Options{Stack: []view{pv}})
 	d := drive(t, app)
-	d.Expect("tui", "ops ✗ unreachable", "1 doing · 1 parked across 2 projects", "tui-aaa111", "tui-bbb222")
+	d.Expect("tui", "ops", "✗ unreachable", "1 doing · 1 parked across 2 projects", "tui-aaa111", "tui-bbb222")
 	if !logged(app, LevelWarning, "projects: registry: ops unreachable") || !logged(app, LevelWarning, "prime --project tui: tui has a stale claim file") {
 		t.Fatalf("warnings missing: %+v", app.Messages())
 	}
@@ -122,8 +125,8 @@ func TestProjectsSelectionWindowUTF8BackspaceAndReloadPosition(t *testing.T) {
 	for range 6 {
 		d.Key("j")
 	}
-	d.Expect("p6 ✗ unreachable")
-	d.ExpectNot("p0 ✗ unreachable")
+	d.Expect("p6")
+	d.ExpectNot("p0")
 	d.Key("/")
 	d.Type("é")
 	d.Key("backspace")
@@ -135,6 +138,107 @@ func TestProjectsSelectionWindowUTF8BackspaceAndReloadPosition(t *testing.T) {
 	pv.sortAndFilter()
 	if pv.sel != 2 {
 		t.Fatalf("selection = %d, want clamp to 2", pv.sel)
+	}
+}
+
+func wideProjectsJSON() string {
+	return `{"projects":[` +
+		`{"prefix":"ai","root":"/r/ai","reachable":true,"counts":{"idea":4,"todo":5,"doing":7,"blocked":0,"shelved":0,"done":0,"dropped":0},"total":16,"last_activity":"2026-09-13T10:00:00Z"},` +
+		`{"prefix":"naturalsystemsv2xx","root":"/r/natural-systems-v2","reachable":true,"counts":{"idea":3,"todo":38,"doing":0,"blocked":2,"shelved":0,"done":0,"dropped":0},"total":43,"last_activity":"2026-09-12T10:00:00Z"}` +
+		`],"warnings":[]}`
+}
+
+// The wide fixture's table is 78 cells (name "natural-systems-v2" is 18), so the pane
+// needs a 160-cell terminal: 160-78-1 = 81 >= the task table's 57 for "ai-" ids.
+func driveWide(t *testing.T, app *App) *uitest.Driver {
+	t.Helper()
+	return uitest.New(t, app, 160, 40)
+}
+
+func lineWith(t *testing.T, screen, needle string) string {
+	t.Helper()
+	for _, line := range strings.Split(screen, "\n") {
+		if strings.Contains(line, needle) {
+			return line
+		}
+	}
+	t.Fatalf("no line with %q:\n%s", needle, screen)
+	return ""
+}
+
+func TestProjectsCountsRightAlignUnderHeadersWhateverThePrefixLength(t *testing.T) {
+	f := newFake()
+	f.on("", "projects", wideProjectsJSON())
+	f.on("", "list --all-projects --status doing", rowsJSON())
+	f.on("", "list --all-projects --parked", parkedJSON())
+	f.on("", "prime --project ai", primeJSON("ai"))
+	f.on("", "prime --project naturalsystemsv2xx", primeJSON("naturalsystemsv2xx"))
+	env := testEnv(f)
+	d := driveWide(t, New(env, Options{Stack: []view{newProjectsView(env)}}))
+	screen := d.Screen()
+	head := lineWith(t, screen, "blocked")
+	ai := lineWith(t, screen, "▌ ai ")
+	ns := lineWith(t, screen, "naturalsystemsv2xx")
+	// Cell offsets, not byte offsets: the rows start with a multi-byte accent bar and the header does not.
+	doingEnd := col(t, head, "doing") + len("doing")
+	if col(t, ai, "7")+1 != doingEnd || col(t, ns, "0")+1 != doingEnd {
+		t.Fatalf("doing column right edge %d:\n%s\n%s\n%s", doingEnd, head, ai, ns)
+	}
+	todoEnd := col(t, head, "todo") + len("todo")
+	if col(t, ai, "5")+1 != todoEnd || col(t, ns, "38")+2 != todoEnd {
+		t.Fatalf("todo column:\n%s\n%s\n%s", head, ai, ns)
+	}
+	if !strings.Contains(screen, "│") {
+		t.Fatal("a separator stands between the table and the pane")
+	}
+}
+
+func TestProjectsZeroCountsAreMutedAndBlockedIsRed(t *testing.T) {
+	f := newFake()
+	f.on("", "projects", wideProjectsJSON())
+	f.on("", "list --all-projects --status doing", rowsJSON())
+	f.on("", "list --all-projects --parked", parkedJSON())
+	f.on("", "prime --project ai", primeJSON("ai"))
+	env := testEnv(f)
+	pv := newProjectsView(env)
+	d := drive(t, New(env, Options{Stack: []view{pv}}))
+	_ = d
+	s := env.Styles
+	cells := pv.projectCells(pv.rows[1], time.Now())
+	if got := cells[2].spans[0]; got.text != "0" || got.style.Render("0") != s.Muted.Render("0") {
+		t.Fatalf("zero doing muted: %+v", got)
+	}
+	if got := cells[5].spans[0]; got.text != "2" || got.style.Render("2") != s.Error.UnsetBold().Render("2") {
+		t.Fatalf("non-zero blocked red: %+v", got)
+	}
+}
+
+func TestProjectsPaneHidesUnderTaskMinWidthAndTableClipsNarrower(t *testing.T) {
+	f := newFake()
+	f.on("", "projects", wideProjectsJSON())
+	f.on("", "list --all-projects --status doing", rowsJSON())
+	f.on("", "list --all-projects --parked", parkedJSON())
+	f.on("", "prime --project ai", primeJSON("ai"))
+	env := testEnv(f)
+	pv := newProjectsView(env)
+	app := New(env, Options{Stack: []view{pv}})
+	d := driveWide(t, app)
+	d.Expect("ai-aaa111", "│")
+	d.Feed(tea.WindowSizeMsg{Width: 100, Height: 20})
+	d.ExpectNot("ai-aaa111")
+	d.ExpectNot("│")
+	d.Expect("naturalsystemsv2xx", "38")
+	d.Feed(tea.WindowSizeMsg{Width: 48, Height: 20})
+	d.Expect("naturalsystemsv2xx")
+	d.ExpectNot("natural-systems-v2")
+	pv.data.projects.Projects = append(pv.data.projects.Projects, tasksctl.Project{Prefix: "gone", Root: "/r/gone"})
+	pv.sortAndFilter()
+	d.Expect("gone", "✗ unreachable")
+	d.Feed(tea.WindowSizeMsg{Width: 30, Height: 20})
+	for _, line := range strings.Split(d.Screen(), "\n") {
+		if lipgloss.Width(line) > 30 {
+			t.Fatalf("line wider than the terminal: %q", line)
+		}
 	}
 }
 

@@ -32,6 +32,7 @@ func newTaskView(env *Env, t target) *taskView {
 func (v *taskView) title() string   { return v.tgt.ID }
 func (v *taskView) project() string { return v.tgt.Prefix }
 func (v *taskView) capturing() bool { return false }
+func (v *taskView) loading() bool   { return v.loader.InFlight() }
 func (v *taskView) current() *target {
 	t := v.tgt
 	if v.data != nil {

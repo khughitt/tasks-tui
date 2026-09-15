@@ -11,7 +11,7 @@ out to the `tasks` binary and reads its JSON; it never touches `tasks/*.md` itse
 
 Both commands are installed in Go's binary directory, which must be on `PATH`.
 
-Keys: `?` legend · `a` quick add · `l` launch an agent · `s` start · `p` park · `d` done · `x` drop · `W` messages · `q` quit.
+Keys: `?` legend · `enter`/`i` open · `a` quick add · `l` launch an agent · `s` start · `p` park · `d` done · `x` drop · `W` messages · `q` quit (or close a panel).
 
 Quick add: `#tag !2 ~m ^mid @30d >prefix · ? first = idea · -- body`.
 

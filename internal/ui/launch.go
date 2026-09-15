@@ -18,7 +18,7 @@ func (a *App) openLaunch() tea.Cmd {
 		a.log.Add(LevelError, "launch: no harness configured")
 		return nil
 	}
-	a.overlay = &pickerOverlay{styles: a.env.Styles, title: "launch on " + tgt.ID, items: names,
+	a.overlay = &pickerOverlay{styles: a.env.Styles, slot: a.env.slot(tgt.Prefix), title: "launch on " + tgt.ID, items: names,
 		onPick: func(name string) tea.Cmd {
 			co := a.env.checkout(tgt)
 			if co.Notice != "" {

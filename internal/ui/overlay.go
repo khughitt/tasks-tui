@@ -83,7 +83,7 @@ func (o *confirmOverlay) update(msg tea.Msg) (overlay, tea.Cmd) {
 		return o, nil
 	}
 	switch k.String() {
-	case "esc":
+	case "esc", "q":
 		return nil, nil
 	case o.accept:
 		return nil, o.onAccept()
@@ -101,6 +101,7 @@ type pickerOverlay struct {
 	styles *Styles
 	title  string
 	items  []string
+	slot   int
 	sel    int
 	onPick func(name string) tea.Cmd
 }
@@ -112,7 +113,7 @@ func (o *pickerOverlay) update(msg tea.Msg) (overlay, tea.Cmd) {
 	}
 	k := press.String()
 	switch {
-	case k == "esc":
+	case k == "esc" || k == "q":
 		return nil, nil
 	case k == "enter":
 		return nil, o.onPick(o.items[o.sel])
@@ -138,7 +139,7 @@ func (o *pickerOverlay) render(width int) string {
 	for i, it := range o.items {
 		label := strconv.Itoa(i+1) + " " + it
 		if i == o.sel {
-			parts = append(parts, s.Selected.Render(" "+label+" "))
+			parts = append(parts, s.Gutter(o.slot).Render(" "+label+" "))
 		} else {
 			parts = append(parts, " "+label+" ")
 		}

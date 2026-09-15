@@ -49,6 +49,7 @@ type view interface {
 	current() *target
 	project() string
 	capturing() bool
+	loading() bool
 }
 
 type overlay interface {

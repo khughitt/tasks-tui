@@ -99,7 +99,7 @@ func TestProjectViewAgainstRealBinary(t *testing.T) {
 		t.Fatalf("park must be logged: %+v", app.Messages())
 	}
 	d.Key("2")
-	d.Expect("⏸ user", "first task")
+	d.Expect("⏸", "user", "first task")
 	if strings.Count(d.Screen(), "first task") != 1 {
 		t.Fatal("a parked doing task renders once")
 	}

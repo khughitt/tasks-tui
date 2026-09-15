@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"charm.land/bubbles/v2/key"
@@ -21,7 +22,7 @@ const (
 	tabDone
 )
 
-var tabNames = []string{"Ready", "Doing", "Open", "Ideas", "Done"}
+var tabNames = [...]string{"Ready", "Doing", "Open", "Ideas", "Done"}
 
 type projectData struct {
 	tab      tab
@@ -41,6 +42,10 @@ type projectView struct {
 	filter    string
 	filtering bool
 	offset    int
+	loadedTab tab
+	hasData   bool
+	shown     [len(tabNames)]int
+	hasCount  [len(tabNames)]bool
 }
 
 func newProjectView(env *Env, prefix string) *projectView {
@@ -49,6 +54,7 @@ func newProjectView(env *Env, prefix string) *projectView {
 func (v *projectView) title() string   { return v.prefix }
 func (v *projectView) project() string { return v.prefix }
 func (v *projectView) capturing() bool { return v.filtering }
+func (v *projectView) loading() bool   { return v.loader.InFlight() }
 func (v *projectView) current() *target {
 	if v.sel < 0 || v.sel >= len(v.rows) || v.rows[v.sel].Unresolved {
 		return nil
@@ -142,6 +148,9 @@ func (v *projectView) applyFilter() {
 			v.rows = append(v.rows, r)
 		}
 	}
+	if v.hasData {
+		v.shown[v.loadedTab], v.hasCount[v.loadedTab] = len(v.rows), true
+	}
 	if len(v.rows) == 0 {
 		v.sel = 0
 		return
@@ -173,6 +182,7 @@ func (v *projectView) update(msg tea.Msg) (view, tea.Cmd) {
 		d := msg.data.(projectData)
 		if d.tab == v.tab {
 			v.all, v.counts = d.rows, d.counts
+			v.loadedTab, v.hasData = d.tab, true
 			v.applyFilter()
 		}
 		return v, tea.Batch(next, notices(LevelWarning, d.warnings...))
@@ -223,21 +233,47 @@ func (v *projectView) update(msg tea.Msg) (view, tea.Cmd) {
 	return v, nil
 }
 
+var emptyText = map[tab]string{
+	tabReady: "nothing ready — a adds a task",
+	tabDoing: "nothing doing",
+	tabOpen:  "no open tasks",
+	tabIdeas: "no ideas — a then ? files one",
+	tabDone:  "nothing done yet",
+}
+
+func (v *projectView) chip(n int, label string, hot lipgloss.Style) string {
+	num := v.env.Styles.Muted.Render(fmt.Sprint(n))
+	if n > 0 {
+		num = hot.Render(fmt.Sprint(n))
+	}
+	return num + " " + v.env.Styles.Muted.Render(label)
+}
+
 func (v *projectView) render(width, height int) string {
-	s, root := v.env.Styles, v.env.Roots[v.prefix]
+	s, root, slot := v.env.Styles, v.env.Roots[v.prefix], v.env.slot(v.prefix)
 	c := v.counts
-	head := s.Accent(v.env.slot(v.prefix)).Render("▌ ") + s.Header.Render(v.prefix) + "  " + s.Muted.Render(name(root)+"  "+root) + "  " + s.Muted.Render(fmt.Sprintf("%d doing  %d todo  %d idea  %d blocked", c.Doing, c.Todo, c.Idea, c.Blocked))
+	head := s.Accent(slot).Render("▌ ") + s.Header.Render(v.prefix) + "  " + s.Muted.Render(name(root)+"  "+root) + "   " + strings.Join([]string{v.chip(c.Doing, "doing", s.Accent(slot)), v.chip(c.Todo, "todo", s.Base), v.chip(c.Idea, "idea", s.Base), v.chip(c.Blocked, "blocked", s.Error.UnsetBold())}, "  ")
 	tabs := make([]string, len(tabNames))
 	for i, n := range tabNames {
 		label := fmt.Sprintf("%d %s", i+1, n)
-		if tab(i) == v.tab {
-			tabs[i] = s.TabOn.Render(label)
-		} else {
-			tabs[i] = s.TabOff.Render(label)
+		if tab(i) != v.tab {
+			tabs[i] = s.Muted.Render(" " + label + " ")
+			continue
 		}
+		if v.hasCount[i] {
+			label += " " + fmt.Sprint(v.shown[i])
+		}
+		tabs[i] = s.Pill(slot).Render(" " + label + " ")
 	}
-	lines := []string{head, strings.Join(tabs, "  ")}
-	avail := max(1, height-len(lines)-1)
+	rt := s.layoutRows(v.rows, width, time.Now())
+	clipped := lipgloss.NewStyle().MaxWidth(width)
+	lines := []string{clipped.Render(head), clipped.Render(strings.Join(tabs, " ")), rt.header()}
+	filtering := v.filtering || v.filter != ""
+	avail := height - len(lines)
+	if filtering {
+		avail--
+	}
+	avail = max(1, avail)
 	if v.sel < v.offset {
 		v.offset = v.sel
 	}
@@ -245,15 +281,17 @@ func (v *projectView) render(width, height int) string {
 		v.offset = v.sel - avail + 1
 	}
 	for i := v.offset; i < len(v.rows) && i < v.offset+avail; i++ {
-		lines = append(lines, s.renderRow(v.rows[i], width, i == v.sel))
+		lines = append(lines, rt.line(i, i == v.sel))
 	}
-	if len(v.rows) == 0 {
-		lines = append(lines, s.Muted.Render("nothing here"))
+	if len(v.rows) == 0 && v.hasData && v.loadedTab == v.tab {
+		if v.filter != "" {
+			lines = append(lines, "  "+s.Muted.Render("no rows match /"+v.filter))
+		} else {
+			lines = append(lines, "  "+s.Muted.Render(emptyText[v.tab]))
+		}
 	}
-	foot := s.Muted.Render(fmt.Sprintf("%d rows", len(v.rows)))
-	if v.filtering || v.filter != "" {
-		foot = s.Muted.Render("/"+v.filter+"  ") + foot
+	if filtering {
+		lines = append(lines, s.Muted.Render(fmt.Sprintf("/%s · %d of %d", v.filter, len(v.rows), len(v.all))))
 	}
-	lines = append(lines, foot)
 	return lipgloss.NewStyle().MaxHeight(height).Render(strings.Join(lines, "\n"))
 }

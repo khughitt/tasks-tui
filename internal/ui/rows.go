@@ -66,53 +66,115 @@ func pad(s string, w int) string {
 	}
 	return s
 }
-func (s *Styles) renderRow(r rowView, width int, selected bool) string {
-	accent := s.Accent(r.Slot)
-	prio, prioStyle := "  ", s.Muted
-	if r.Priority != nil {
-		prio = "P" + strconv.Itoa(*r.Priority)
-		prioStyle = s.PriorityStyle(*r.Priority)
+
+// taskTable is spec v1.1 §4: the columns of every task list.
+var taskTable = table{gap: 2, flexMin: 24, cols: []column{
+	{key: "gutter", min: 2},
+	{key: "id", label: "id", min: 2},
+	{key: "prio", label: "P", min: 2},
+	{key: "size", label: "sz", min: 2, drop: 2},
+	{key: "cx", label: "cx", min: 4, drop: 3},
+	{key: "proc", label: "proc", min: 7, drop: 4},
+	{key: "status", label: "status", min: 6},
+	{key: "age", label: "age", align: alignRight, min: 3, drop: 1},
+	{key: "marks", min: 4},
+	{key: "title", label: "title", min: 5, flex: true},
+}}
+
+func (s *Styles) ageStyle(age string) lipgloss.Style {
+	if strings.HasSuffix(age, "d") || strings.HasSuffix(age, "w") || age == "?" {
+		return s.Muted
 	}
-	status := r.Status
+	return s.Recent
+}
+
+func (s *Styles) taskCells(r rowView, now time.Time) []cell {
+	accent := s.Accent(r.Slot)
+	prio, prioStyle := "", s.Muted
+	if r.Priority != nil {
+		prio, prioStyle = "P"+strconv.Itoa(*r.Priority), s.PriorityStyle(*r.Priority)
+	}
+	status, statusStyle := r.Status, s.StatusStyle(r.Status)
 	if r.Unresolved {
 		status = "unresolved"
 	}
-	statusStyle := s.StatusStyle(r.Status)
 	if r.Status == "doing" {
 		statusStyle = statusStyle.Foreground(accent.GetForeground())
 	}
-	cols := []string{accent.Render(pad(r.ID, 12)), prioStyle.Render(prio), s.Muted.Render(pad(r.Size, 2)), s.Muted.Render(pad(r.Complexity, 4)), s.Muted.Render(pad(r.Process, 7)), statusStyle.Render(pad(status, 10)), s.Muted.Render(pad(ago(r.Updated, time.Now()), 4))}
-	line := strings.Join(cols, " ") + " " + statusStyle.Render(r.Title)
-	var marks []string
+	age := ago(r.Updated, now)
+	marks := []span{{" ", s.Base}, {" ", s.Base}, {" ", s.Base}, {" ", s.Base}}
+	var tail []span
 	if len(r.Tags) > 0 {
-		marks = append(marks, s.Tag.Render("["+strings.Join(r.Tags, ", ")+"]"))
+		tail = append(tail, span{"[" + strings.Join(r.Tags, ", ") + "]", s.Tag})
 	}
 	if c := r.Claim; c != nil {
-		if c.Live {
-			marks = append(marks, s.Claim.Foreground(accent.GetForeground()).Render("◆ "+c.Owner))
-		} else {
-			marks = append(marks, s.Stale.Render("◇ "+c.Owner))
+		style := s.Claim.Foreground(accent.GetForeground())
+		glyph := "◆"
+		if !c.Live {
+			style, glyph = s.Stale, "◇"
 		}
+		marks[0] = span{glyph, style}
+		tail = append(tail, span{c.Owner, style})
 	}
 	if p := r.Park; p != nil {
+		style, who := s.ParkAgent, "agent"
 		if p.WaitingOn == "user" {
-			marks = append(marks, s.ParkUser.Render("⏸ user"))
-		} else {
-			marks = append(marks, s.ParkAgent.Render("⏸ agent"))
+			style, who = s.ParkUser, "user"
 		}
+		marks[1] = span{"⏸", style}
+		tail = append(tail, span{who, style})
 	}
 	if r.Periodic != nil {
-		marks = append(marks, s.Periodic.Render("⟳ "+r.Periodic.Every))
+		marks[2] = span{"⟳", s.Periodic}
+		tail = append(tail, span{r.Periodic.Every, s.Periodic})
 	}
 	if r.Open > 0 {
-		marks = append(marks, s.Muted.Render(fmt.Sprintf("▸ %d", r.Open)))
+		marks[3] = span{"▸", s.Muted}
+		tail = append(tail, span{fmt.Sprintf("%d open", r.Open), s.Muted})
 	}
-	if len(marks) > 0 {
-		line += "  " + strings.Join(marks, " ")
+	return []cell{
+		text(s.Base, "  "),
+		text(accent, r.ID),
+		text(prioStyle, prio),
+		text(s.Muted, r.Size),
+		text(s.Muted, r.Complexity),
+		text(s.Muted, r.Process),
+		text(statusStyle, status),
+		text(s.ageStyle(age), age),
+		{spans: marks},
+		{spans: []span{{r.Title, statusStyle}}, tail: tail},
 	}
-	st := lipgloss.NewStyle().MaxWidth(width)
-	if selected {
-		st = st.Reverse(true)
-	}
-	return st.Render(pad(line, width))
 }
+
+type rowTable struct {
+	s      *Styles
+	rows   []rowView
+	cells  [][]cell
+	widths []int
+	width  int
+}
+
+func (s *Styles) layoutRows(rows []rowView, width int, now time.Time) rowTable {
+	rt := rowTable{s: s, rows: rows, width: width, cells: make([][]cell, len(rows))}
+	for i, r := range rows {
+		rt.cells[i] = s.taskCells(r, now)
+	}
+	rt.widths = taskTable.widths(rt.cells, width)
+	return rt
+}
+
+func (rt rowTable) header() string {
+	return fit(taskTable.header(rt.widths, rt.s), rt.width, lipgloss.NewStyle())
+}
+
+func (rt rowTable) line(i int, selected bool) string {
+	cells, base := rt.cells[i], lipgloss.NewStyle()
+	if selected {
+		slot := rt.rows[i].Slot
+		cells = append([]cell{text(rt.s.Gutter(slot), "▌ ")}, cells[1:]...)
+		base = rt.s.Surface(slot)
+	}
+	return fit(taskTable.row(rt.widths, cells, base), rt.width, base)
+}
+
+func (rt rowTable) titleOffset() int { return max(0, taskTable.offset(rt.widths, "title")) }
