@@ -41,7 +41,7 @@ Rebuild after changes: `just install`.
 - internal/quickadd/ — the one-line grammar.
 - internal/launch/ — harness commands and the terminal spawn.
 - internal/config/ — `~/.config/tasks-tui/config.toml`.
-- internal/ui/ — the Bubble Tea model: app, views, overlays, styles.
+- internal/ui/ — the Bubble Tea model: app, views, overlays, styles, the column model (columns.go), the legend.
 
 ## Rules
 
