@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: feat/ui-polish
 created: 2026-09-14T23:20:08Z
-updated: 2026-09-15T00:11:04Z
+updated: 2026-09-15T00:16:56Z
 started: 2026-09-14T23:20:18Z
 depends: []
 tags: [ui]
@@ -24,3 +24,5 @@ Polish pass over every view after v1 landed. Alignment: the Projects table pads 
 - 2026-09-14T23:20:26Z (feat/ui-polish): parked (waiting on user, review): User reviews the v1.1 polish spec; on approval write the implementation plan (writing-plans) with one step child per section
 - 2026-09-14T23:25:06Z (feat/ui-polish): Design review: define overflow after all optional columns drop and reconcile pane/table minimum widths; make stacked help reachable within terminal height; connect flexCell and mixed-style marks to the row API; separate header labels from structural column keys.
 - 2026-09-14T23:27:23Z (feat/ui-polish): Review round 1: four findings (narrow floors, legend height, cell API, header labels) resolved in the spec; awaiting re-review
+- 2026-09-15T00:11:22Z (feat/ui-polish): parked (waiting on user, review): User reviews docs/plans/2026-09-14-tasks-tui-v1.1-polish.md; on approval execute Task 1 (tui-cf870c) onward via subagent-driven development in this worktree
+- 2026-09-15T00:16:56Z (feat/ui-polish): Implementation-plan review: extracted column tests pass but row alignment test falsely fails on UTF-8 byte offsets (Projects test has same issue); unreachable indicator is lost when name drops; loaded flag loses prior tab counts; legend fit checks height without width; pill/empty-state test contradicts persistent filters.
