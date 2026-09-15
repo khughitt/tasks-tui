@@ -138,7 +138,7 @@ func (o *pickerOverlay) render(width int) string {
 	for i, it := range o.items {
 		label := strconv.Itoa(i+1) + " " + it
 		if i == o.sel {
-			parts = append(parts, s.Selected.Render(" "+label+" "))
+			parts = append(parts, s.Bold.Reverse(true).Render(" "+label+" "))
 		} else {
 			parts = append(parts, " "+label+" ")
 		}

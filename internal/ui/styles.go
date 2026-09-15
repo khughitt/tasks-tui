@@ -13,7 +13,8 @@ type Styles struct {
 	Base      lipgloss.Style
 	Muted     lipgloss.Style
 	Bold      lipgloss.Style
-	Selected  lipgloss.Style
+	Recent    lipgloss.Style
+	Frame     lipgloss.Style
 	Header    lipgloss.Style
 	TabOn     lipgloss.Style
 	TabOff    lipgloss.Style
@@ -30,6 +31,9 @@ type Styles struct {
 	status    map[string]lipgloss.Style
 	accent    [identity.SlotCount]lipgloss.Style
 	dim       [identity.SlotCount]lipgloss.Style
+	surface   [identity.SlotCount]lipgloss.Style
+	gutter    [identity.SlotCount]lipgloss.Style
+	pill      [identity.SlotCount]lipgloss.Style
 }
 
 func NewStyles(t identity.Tone) *Styles {
@@ -44,7 +48,9 @@ func NewStyles(t identity.Tone) *Styles {
 	s.Base = lipgloss.NewStyle()
 	s.Muted = lipgloss.NewStyle().Foreground(dim)
 	s.Bold = lipgloss.NewStyle().Bold(true)
-	s.Selected = lipgloss.NewStyle().Reverse(true)
+	s.Recent = lipgloss.NewStyle()
+	s.Frame = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(dim).Padding(1, 2)
+	pillText := ld(lipgloss.Color("#fafafa"), lipgloss.Color("#101010"))
 	s.Header = lipgloss.NewStyle().Bold(true)
 	s.TabOn = lipgloss.NewStyle().Bold(true).Underline(true)
 	s.TabOff = s.Muted
@@ -72,16 +78,24 @@ func NewStyles(t identity.Tone) *Styles {
 		"dropped": lipgloss.NewStyle().Foreground(dim).Strikethrough(true),
 	}
 	for slot := 0; slot < identity.SlotCount; slot++ {
-		s.accent[slot] = lipgloss.NewStyle().Foreground(identity.Accent(slot, t))
+		accent, surface := identity.Accent(slot, t), identity.Surface(slot, t)
+		s.accent[slot] = lipgloss.NewStyle().Foreground(accent)
 		s.dim[slot] = lipgloss.NewStyle().Foreground(identity.Dim(slot, t))
+		s.surface[slot] = lipgloss.NewStyle().Background(surface)
+		s.gutter[slot] = lipgloss.NewStyle().Foreground(accent).Background(surface)
+		s.pill[slot] = lipgloss.NewStyle().Background(accent).Foreground(pillText).Bold(true)
 	}
 	s.Claim = s.Bold
 	s.Tag = s.Muted
 	return s
 }
 
-func (s *Styles) Accent(slot int) lipgloss.Style { return s.accent[slot] }
-func (s *Styles) Dim(slot int) lipgloss.Style    { return s.dim[slot] }
+func (s *Styles) Accent(slot int) lipgloss.Style  { return s.accent[slot] }
+func (s *Styles) Dim(slot int) lipgloss.Style     { return s.dim[slot] }
+func (s *Styles) Surface(slot int) lipgloss.Style { return s.surface[slot] }
+func (s *Styles) Gutter(slot int) lipgloss.Style  { return s.gutter[slot] }
+func (s *Styles) Pill(slot int) lipgloss.Style    { return s.pill[slot] }
+func (s *Styles) Rule(slot int) lipgloss.Style    { return s.accent[slot] }
 
 func (s *Styles) PriorityStyle(p int) lipgloss.Style {
 	if p < 0 || p > 4 {

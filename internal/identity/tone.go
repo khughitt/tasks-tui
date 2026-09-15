@@ -71,6 +71,16 @@ func Dim(slot int, t Tone) color.Color {
 	return lipgloss.Color(HSLToHex(float64(hs.Hue), math.Max(0, math.Min(float64(hs.Sat)*t.SatScale, 100)), anchorsFor(t).shadow))
 }
 
+// Surface is the TUI's selection tint: the slot's hue at half saturation and low lightness.
+func Surface(slot int, t Tone) color.Color {
+	hs := Slots[slot]
+	l := 20.0
+	if !t.Dark {
+		l = 92
+	}
+	return lipgloss.Color(HSLToHex(float64(hs.Hue), math.Max(0, math.Min(float64(hs.Sat)*0.5*t.SatScale, 100)), l))
+}
+
 // HSLToHex is familiar's hslToHex: h in degrees, s and l in percent.
 func HSLToHex(h, s, l float64) string {
 	S, L := s/100, l/100

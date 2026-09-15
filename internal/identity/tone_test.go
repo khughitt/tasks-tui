@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -56,5 +57,16 @@ func TestAccentUsesRampAnchors(t *testing.T) {
 	}
 	if Accent(0, Tone{Dark: true, SatScale: 2}) != lipgloss.Color(HSLToHex(22, 100, 58)) {
 		t.Fatal("satScale must clamp saturation to 100")
+	}
+}
+
+func TestSurfaceIsLowLightnessHalfSaturation(t *testing.T) {
+	dark := Surface(0, Tone{Dark: true, SatScale: 1})
+	light := Surface(0, Tone{Dark: false, SatScale: 1})
+	if fmt.Sprint(dark) != fmt.Sprint(lipgloss.Color(HSLToHex(22, 31, 20))) {
+		t.Fatalf("dark surface %v", dark)
+	}
+	if fmt.Sprint(light) != fmt.Sprint(lipgloss.Color(HSLToHex(22, 31, 92))) {
+		t.Fatalf("light surface %v", light)
 	}
 }
