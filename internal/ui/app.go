@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"tasks-tui/internal/tasksctl"
 )
@@ -26,11 +28,18 @@ type App struct {
 	log                   Log
 	legend, showLog       bool
 	logOff, width, height int
+	spinner               spinner.Model
+	spinning              bool
 }
 
-func New(env *Env, opts Options) *App { return &App{env: env, opts: opts, stack: opts.Stack} }
-func (a *App) top() view              { return a.stack[len(a.stack)-1] }
-func (a *App) Init() tea.Cmd          { return tea.Batch(a.top().reload(), a.tick()) }
+func New(env *Env, opts Options) *App {
+	return &App{env: env, opts: opts, stack: opts.Stack, spinner: spinner.New(spinner.WithSpinner(spinner.MiniDot))}
+}
+func (a *App) top() view { return a.stack[len(a.stack)-1] }
+func (a *App) Init() tea.Cmd {
+	a.spinning = true
+	return tea.Batch(a.top().reload(), a.tick(), a.spinner.Tick)
+}
 func (a *App) tick() tea.Cmd {
 	if a.opts.Refresh <= 0 {
 		return nil
@@ -47,6 +56,24 @@ func (a *App) pop() tea.Cmd {
 }
 
 func (a *App) Update(raw tea.Msg) (tea.Model, tea.Cmd) {
+	if msg, ok := raw.(spinner.TickMsg); ok {
+		if !a.top().loading() {
+			a.spinning = false
+			return a, nil
+		}
+		var cmd tea.Cmd
+		a.spinner, cmd = a.spinner.Update(msg)
+		return a, cmd
+	}
+	m, cmd := a.update(raw)
+	if !a.spinning && a.top().loading() {
+		a.spinning = true
+		cmd = tea.Batch(cmd, a.spinner.Tick)
+	}
+	return m, cmd
+}
+
+func (a *App) update(raw tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := raw.(type) {
 	case tea.WindowSizeMsg:
 		a.width, a.height = msg.Width, msg.Height
@@ -203,20 +230,36 @@ func (a *App) render() string {
 	return body + "\n" + bottom
 }
 func (a *App) statusLine() string {
+	s := a.env.Styles
+	hint := s.Muted.Render("? keys")
+	var left string
 	if m := a.log.Current(); m != nil {
-		style := a.env.Styles.Info
-		if m.Level == LevelWarning {
-			style = a.env.Styles.Warning
-		} else if m.Level == LevelError {
-			style = a.env.Styles.Error
+		left = noticeText(s, *m)
+	} else {
+		crumbs := make([]string, len(a.stack))
+		for i, v := range a.stack {
+			crumbs[i] = v.title()
 		}
-		return style.MaxWidth(a.width).Render(m.Text)
+		left = s.Muted.Render(strings.Join(crumbs, " › "))
+		if a.spinning {
+			left = s.Accent(a.env.slot(a.top().project())).Render(a.spinner.View()) + " " + left
+		}
 	}
-	crumbs := make([]string, len(a.stack))
-	for i, v := range a.stack {
-		crumbs[i] = v.title()
+	gap := a.width - lipgloss.Width(left) - lipgloss.Width(hint)
+	if gap < 1 {
+		return ansi.Truncate(left, a.width, "")
 	}
-	return a.env.Styles.Muted.MaxWidth(a.width).Render(strings.Join(crumbs, " › ") + "   ? keys")
+	return left + strings.Repeat(" ", gap) + hint
+}
+func noticeText(s *Styles, m Message) string {
+	switch m.Level {
+	case LevelError:
+		return s.Error.Render("✗ " + m.Text)
+	case LevelWarning:
+		return s.Warning.Render("⚠ " + m.Text)
+	default:
+		return s.Info.Render("· " + m.Text)
+	}
 }
 func (a *App) renderLog(height int) string {
 	lines := []string{a.env.Styles.Header.Render("messages") + a.env.Styles.Muted.Render("  (newest last; j/k scroll; esc close)")}
@@ -224,13 +267,7 @@ func (a *App) renderLog(height int) string {
 		a.logOff = len(a.log.Entries)
 	}
 	for _, m := range a.log.Entries[a.logOff:] {
-		style := a.env.Styles.Info
-		if m.Level == LevelWarning {
-			style = a.env.Styles.Warning
-		} else if m.Level == LevelError {
-			style = a.env.Styles.Error
-		}
-		lines = append(lines, style.MaxWidth(a.width).Render(m.Text))
+		lines = append(lines, lipgloss.NewStyle().MaxWidth(a.width).Render(noticeText(a.env.Styles, m)))
 		if len(lines) >= height {
 			break
 		}

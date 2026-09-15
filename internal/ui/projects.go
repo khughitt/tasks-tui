@@ -59,6 +59,7 @@ func (v *projectsView) project() string {
 }
 func (v *projectsView) current() *target { return nil }
 func (v *projectsView) capturing() bool  { return v.filtering }
+func (v *projectsView) loading() bool    { return v.main.InFlight() || v.pane.InFlight() }
 func (v *projectsView) reload() tea.Cmd {
 	return v.main.Request(func(gen uint64) tea.Cmd {
 		return v.main.Cmd(gen, func() (any, error) {

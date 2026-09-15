@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 
 	"tasks-tui/internal/identity"
 )
@@ -13,6 +14,7 @@ import (
 type stubView struct {
 	name          string
 	loaded        int
+	loadingNow    bool
 	capturingKeys bool
 	seen          []string
 }
@@ -29,6 +31,7 @@ func (s *stubView) render(_, _ int) string { return "view " + s.name }
 func (s *stubView) current() *target       { return nil }
 func (s *stubView) project() string        { return "tui" }
 func (s *stubView) capturing() bool        { return s.capturingKeys }
+func (s *stubView) loading() bool          { return s.loadingNow }
 
 func testApp(stack ...view) *App {
 	return New(&Env{Styles: NewStyles(identity.Tone{Dark: true})}, Options{Stack: stack})
@@ -37,7 +40,7 @@ func TestAppShellKeysStackAndStatus(t *testing.T) {
 	root, child := &stubView{name: "root"}, &stubView{name: "child"}
 	app := testApp(root)
 	d := drive(t, app)
-	d.Expect("view root", "root   ? keys")
+	d.Expect("view root", "root", "? keys")
 	d.Feed(pushMsg{v: child})
 	d.Expect("view child", "root › child")
 	if child.loaded != 1 {
@@ -53,9 +56,13 @@ func TestAppShellKeysStackAndStatus(t *testing.T) {
 	d.ExpectNot("launch agent")
 	app.Notice(LevelError, "boom")
 	d.Feed(tickMsg{})
-	d.Expect("boom")
+	d.Expect("✗ boom")
 	d.Key("j")
 	d.ExpectNot("boom")
+	app.Notice(LevelWarning, "careful")
+	d.Feed(tickMsg{})
+	d.Expect("⚠ careful")
+	d.Key("j")
 	d.Key("W")
 	d.Expect("messages", "boom")
 	d.Key("esc")
@@ -108,6 +115,33 @@ func (v *loaderView) render(_, _ int) string { return v.name + ":" + v.stored }
 func (v *loaderView) current() *target       { return nil }
 func (v *loaderView) project() string        { return "" }
 func (v *loaderView) capturing() bool        { return false }
+func (v *loaderView) loading() bool          { return v.loader.InFlight() }
+
+func TestStatusLineRightAlignsHintAndSpinsWhileLoading(t *testing.T) {
+	v := &stubView{name: "root"}
+	app := testApp(v)
+	d := drive(t, app)
+	status := strings.Split(strings.TrimRight(d.Screen(), "\n"), "\n")
+	last := status[len(status)-1]
+	if !strings.HasSuffix(last, "? keys") || lipgloss.Width(last) != 120 {
+		t.Fatalf("hint right-aligned to the width: %q", last)
+	}
+	v.loadingNow = true
+	if _, cmd := app.Update(tea.KeyPressMsg{Code: 'r', Text: "r"}); cmd == nil || !app.spinning {
+		t.Fatal("a loading view starts the spinner")
+	}
+	app.Update(app.spinner.Tick())
+	if !strings.Contains(d.Screen(), app.spinner.View()) {
+		t.Fatalf("spinner glyph on the status line:\n%s", d.Screen())
+	}
+	v.loadingNow = false
+	if _, cmd := app.Update(app.spinner.Tick()); cmd != nil || app.spinning {
+		t.Fatal("spinner stops when nothing loads")
+	}
+	if strings.Contains(d.Screen(), app.spinner.View()) {
+		t.Fatalf("no spinner when idle:\n%s", d.Screen())
+	}
+}
 
 func TestHiddenLoadSuppressesDataAndNoticesThenReloads(t *testing.T) {
 	hidden := &loaderView{name: "hidden", loader: NewLoader()}

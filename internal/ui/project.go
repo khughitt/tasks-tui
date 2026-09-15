@@ -54,6 +54,7 @@ func newProjectView(env *Env, prefix string) *projectView {
 func (v *projectView) title() string   { return v.prefix }
 func (v *projectView) project() string { return v.prefix }
 func (v *projectView) capturing() bool { return v.filtering }
+func (v *projectView) loading() bool   { return v.loader.InFlight() }
 func (v *projectView) current() *target {
 	if v.sel < 0 || v.sel >= len(v.rows) || v.rows[v.sel].Unresolved {
 		return nil

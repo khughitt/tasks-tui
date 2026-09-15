@@ -29,7 +29,8 @@ type Loader struct {
 
 func NewLoader() *Loader { return &Loader{id: loaderIDs.Add(1)} }
 
-func (l *Loader) ID() uint64 { return l.id }
+func (l *Loader) ID() uint64     { return l.id }
+func (l *Loader) InFlight() bool { return l.inflight }
 
 // Request runs run(gen) now, or records it to run once the in-flight load returns.
 func (l *Loader) Request(run func(gen uint64) tea.Cmd) tea.Cmd {
