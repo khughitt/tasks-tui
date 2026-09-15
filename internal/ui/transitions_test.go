@@ -139,6 +139,13 @@ func TestDoneAndDropWithConfirm(t *testing.T) {
 	d.Expect("drop tui-aaa111 — why")
 	d.Key("enter")
 	d.Expect("really drop tui-aaa111", "[y] drop")
+	d.Key("q")
+	if app.overlay != nil || d.Quit || f.called("@/r/tui drop tui-aaa111") {
+		t.Fatal("q cancels the confirm without writing or quitting")
+	}
+	d.Key("x")
+	d.Key("enter")
+	d.Expect("[y] drop")
 	d.Key("y")
 	if !logged(app, LevelInfo, "drop tui-aaa111") {
 		t.Fatalf("drop notice missing: %+v", app.Messages())

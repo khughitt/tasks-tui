@@ -214,7 +214,11 @@ func (a *App) render() string {
 	status := a.statusLine()
 	bottom := status
 	if a.overlay != nil {
-		bottom = a.overlay.render(a.width) + "\n" + status
+		rule := a.env.Styles.Muted
+		if p := a.top().project(); p != "" {
+			rule = a.env.Styles.Rule(a.env.slot(p))
+		}
+		bottom = rule.Render(strings.Repeat("─", a.width)) + "\n" + a.overlay.render(a.width) + "\n" + status
 	}
 	bodyHeight := a.height - lipgloss.Height(bottom)
 	var body string
