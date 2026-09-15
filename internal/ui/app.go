@@ -8,6 +8,7 @@ import (
 
 	"charm.land/bubbles/v2/key"
 	"charm.land/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
@@ -29,11 +30,12 @@ type App struct {
 	legend, showLog       bool
 	logOff, width, height int
 	spinner               spinner.Model
+	legendVP              viewport.Model
 	spinning              bool
 }
 
 func New(env *Env, opts Options) *App {
-	return &App{env: env, opts: opts, stack: opts.Stack, spinner: spinner.New(spinner.WithSpinner(spinner.MiniDot))}
+	return &App{env: env, opts: opts, stack: opts.Stack, spinner: spinner.New(spinner.WithSpinner(spinner.MiniDot)), legendVP: viewport.New()}
 }
 func (a *App) top() view { return a.stack[len(a.stack)-1] }
 func (a *App) Init() tea.Cmd {
@@ -149,24 +151,35 @@ func (a *App) Messages() []Message             { return a.log.Entries }
 
 func (a *App) key(msg tea.KeyPressMsg) tea.Cmd {
 	switch {
-	case key.Matches(msg, keys.Quit):
+	case msg.String() == "ctrl+c":
 		return tea.Quit
 	case a.legend || a.showLog:
-		if key.Matches(msg, keys.Back, keys.Help, keys.Log) {
+		if key.Matches(msg, keys.Back, keys.Help, keys.Log, keys.Quit) {
 			a.legend, a.showLog = false, false
 			return nil
 		}
-		if a.showLog {
-			if key.Matches(msg, keys.Up) && a.logOff > 0 {
+		switch {
+		case key.Matches(msg, keys.Up):
+			if a.showLog && a.logOff > 0 {
 				a.logOff--
 			}
-			if key.Matches(msg, keys.Down) {
+			a.legendVP.ScrollUp(1)
+		case key.Matches(msg, keys.Down):
+			if a.showLog {
 				a.logOff++
 			}
+			a.legendVP.ScrollDown(1)
+		case key.Matches(msg, keys.PageUp):
+			a.legendVP.PageUp()
+		case key.Matches(msg, keys.PageDown):
+			a.legendVP.PageDown()
 		}
 		return nil
+	case key.Matches(msg, keys.Quit):
+		return tea.Quit
 	case key.Matches(msg, keys.Help):
 		a.legend = true
+		a.legendVP.GotoTop()
 	case key.Matches(msg, keys.Log):
 		a.showLog = true
 		a.logOff = max(0, len(a.log.Entries)-(a.height-4))
@@ -224,7 +237,7 @@ func (a *App) render() string {
 	var body string
 	switch {
 	case a.legend:
-		body = a.env.Styles.Header.Render("keys") + "\n" + legendText
+		body = a.renderLegend(a.width, bodyHeight)
 	case a.showLog:
 		body = a.renderLog(bodyHeight)
 	default:
@@ -232,6 +245,28 @@ func (a *App) render() string {
 	}
 	body = lipgloss.NewStyle().Height(bodyHeight).MaxHeight(bodyHeight).Render(body)
 	return body + "\n" + bottom
+}
+
+// renderLegend is spec v1.1 §9: a centred framed panel, or a top-placed scrolling one
+// when the content is taller than the body.
+func (a *App) renderLegend(width, height int) string {
+	s := a.env.Styles
+	inner := max(1, width-6)
+	content := s.Header.Render("keys") + "\n\n" + legendContent(s, inner)
+	if lipgloss.Height(content)+4 <= height && lipgloss.Width(content)+6 <= width {
+		return lipgloss.Place(width, height, lipgloss.Center, lipgloss.Center, s.Frame.Render(content))
+	}
+	a.legendVP.SetWidth(min(inner, lipgloss.Width(content)))
+	a.legendVP.SetHeight(max(1, height-4))
+	a.legendVP.SetContent(content)
+	body := s.Frame.BorderBottom(false).Render(a.legendVP.View())
+	w := lipgloss.Width(body)
+	bottom := "╰" + strings.Repeat("─", max(0, w-2)) + "╯"
+	if !a.legendVP.AtBottom() {
+		const more = " ↓ more "
+		bottom = "╰" + strings.Repeat("─", max(0, w-2-lipgloss.Width(more))) + more + "╯"
+	}
+	return body + "\n" + s.Muted.Render(bottom)
 }
 func (a *App) statusLine() string {
 	s := a.env.Styles

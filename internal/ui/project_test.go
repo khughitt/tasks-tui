@@ -57,6 +57,9 @@ func TestProjectViewTabsFilterAndCurrent(t *testing.T) {
 	if cur := pv.current(); cur == nil || cur.ID != "tui-ddd444" || len(pv.rows) != 1 {
 		t.Fatalf("filter: rows=%d current=%+v", len(pv.rows), cur)
 	}
+	d.Key("i")
+	d.Expect("unique task body")
+	d.Key("esc")
 	d.Key("enter")
 	d.Expect("unique task body")
 	if !f.called("ready --project tui") || !f.called("prime --project tui") {

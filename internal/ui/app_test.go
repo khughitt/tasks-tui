@@ -52,8 +52,30 @@ func TestAppShellKeysStackAndStatus(t *testing.T) {
 	}
 	d.Key("?")
 	d.Expect("quick add", "launch agent")
-	d.Key("?")
+	d.Key("q")
+	if d.Quit {
+		t.Fatal("q closes the legend without quitting")
+	}
 	d.ExpectNot("launch agent")
+	d.Feed(tea.WindowSizeMsg{Width: 24, Height: 60})
+	d.Key("?")
+	for _, line := range strings.Split(d.Screen(), "\n") {
+		if lipgloss.Width(line) > 24 {
+			t.Fatalf("a narrow tall terminal still clips the legend to its width: %q", line)
+		}
+	}
+	d.Key("esc")
+	d.Feed(tea.WindowSizeMsg{Width: 40, Height: 20})
+	d.Key("?")
+	d.Expect("↓ more")
+	d.ExpectNot("quit / close")
+	for range 40 {
+		d.Key("j")
+	}
+	d.Expect("quit / close")
+	d.ExpectNot("↓ more")
+	d.Key("esc")
+	d.Feed(tea.WindowSizeMsg{Width: 120, Height: 40})
 	app.Notice(LevelError, "boom")
 	d.Feed(tickMsg{})
 	d.Expect("✗ boom")
