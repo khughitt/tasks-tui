@@ -3,6 +3,7 @@ package ui
 import (
 	"fmt"
 	"strings"
+	"time"
 	"unicode/utf8"
 
 	"charm.land/bubbles/v2/key"
@@ -244,8 +245,9 @@ func (v *projectView) render(width, height int) string {
 	if v.sel >= v.offset+avail {
 		v.offset = v.sel - avail + 1
 	}
+	rt := s.layoutRows(v.rows, width, time.Now())
 	for i := v.offset; i < len(v.rows) && i < v.offset+avail; i++ {
-		lines = append(lines, s.renderRow(v.rows[i], width, i == v.sel))
+		lines = append(lines, rt.line(i, i == v.sel))
 	}
 	if len(v.rows) == 0 {
 		lines = append(lines, s.Muted.Render("nothing here"))

@@ -37,7 +37,7 @@ func TestProjectViewTabsFilterAndCurrent(t *testing.T) {
 		t.Fatalf("after j current %+v", cur)
 	}
 	d.Key("tab")
-	d.Expect("tui-bbb222", "tui-ccc333", "⏸ user")
+	d.Expect("tui-bbb222", "tui-ccc333", "⏸", "user")
 	d.Key("j")
 	if cur := pv.current(); cur == nil || cur.ID != "tui-ccc333" || cur.Park == nil {
 		t.Fatalf("parked row target %+v", cur)
@@ -72,7 +72,7 @@ func TestProjectViewUnresolvedHasNoTarget(t *testing.T) {
 	pv := newProjectView(env, "tui")
 	d := drive(t, New(env, Options{Stack: []view{pv}}))
 	d.Key("2")
-	d.Expect("unresolved", "⏸ agent")
+	d.Expect("unresolved", "⏸", "agent")
 	if pv.current() != nil {
 		t.Fatal("an unresolved parked row offers no transitions")
 	}

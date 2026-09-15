@@ -266,33 +266,60 @@ func (v *projectsView) render(width, height int) string {
 	strip := s.Muted.Render(fmt.Sprintf("%d doing · %d parked across %d projects", len(v.data.doing.Tasks), len(v.data.parked.Tasks), len(v.data.projects.Projects)))
 	return lipgloss.NewStyle().Height(max(0, height-1)).MaxHeight(max(0, height-1)).Render(body) + "\n" + strip
 }
+
+const paneReadyCap = 8
+
+func (v *projectsView) paneRows() (rows []rowView, nextSteps map[int]string) {
+	slot := v.env.slot(v.primeFor)
+	nextSteps = map[int]string{}
+	for _, r := range v.prime.Doing {
+		rows = append(rows, fromRow(r, slot))
+	}
+	for _, r := range v.prime.Parked {
+		nextSteps[len(rows)] = r.Park.NextStep
+		rows = append(rows, fromParked(r, slot))
+	}
+	for i, r := range v.prime.Ready {
+		if i == paneReadyCap {
+			break
+		}
+		rows = append(rows, fromRow(r, slot))
+	}
+	return rows, nextSteps
+}
+
 func (v *projectsView) renderPane(width int) string {
 	s := v.env.Styles
 	slot := v.env.slot(v.primeFor)
+	rows, nextSteps := v.paneRows()
+	if len(rows) == 0 {
+		return s.Muted.Render("nothing doing, parked, or ready")
+	}
+	rt := s.layoutRows(rows, width, time.Now())
+	indent := strings.Repeat(" ", rt.titleOffset())
 	var out []string
 	section := func(title string, n int) {
 		if n > 0 {
 			out = append(out, s.Accent(slot).Render(title))
 		}
 	}
-	section("doing", len(v.prime.Doing))
-	for _, r := range v.prime.Doing {
-		out = append(out, s.renderRow(fromRow(r, slot), width, false))
-	}
-	section("parked", len(v.prime.Parked))
-	for _, r := range v.prime.Parked {
-		out = append(out, s.renderRow(fromParked(r, slot), width, false), s.Muted.Render("    → "+r.Park.NextStep))
-	}
-	section("ready", len(v.prime.Ready))
-	for i, r := range v.prime.Ready {
-		if i == 8 {
-			out = append(out, s.Muted.Render(fmt.Sprintf("    … %d more", len(v.prime.Ready)-8)))
-			break
+	i := 0
+	emit := func(n int) {
+		for end := i + n; i < end; i++ {
+			out = append(out, rt.line(i, false))
+			if step, ok := nextSteps[i]; ok {
+				out = append(out, lipgloss.NewStyle().MaxWidth(width).Render(indent+s.Muted.Render("→ "+step)))
+			}
 		}
-		out = append(out, s.renderRow(fromRow(r, slot), width, false))
 	}
-	if len(out) == 0 {
-		out = append(out, s.Muted.Render("nothing doing, parked, or ready"))
+	section("doing", len(v.prime.Doing))
+	emit(len(v.prime.Doing))
+	section("parked", len(v.prime.Parked))
+	emit(len(v.prime.Parked))
+	section("ready", len(v.prime.Ready))
+	emit(min(len(v.prime.Ready), paneReadyCap))
+	if n := len(v.prime.Ready); n > paneReadyCap {
+		out = append(out, s.Muted.Render(fmt.Sprintf("%s%d ready · %d shown", indent, n, paneReadyCap)))
 	}
 	return strings.Join(out, "\n")
 }

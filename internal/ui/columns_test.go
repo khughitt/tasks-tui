@@ -121,7 +121,7 @@ func TestRowAppliesBaseUnderEverySpanAndFitPads(t *testing.T) {
 }
 
 func TestColumnMinimumsCoverLabels(t *testing.T) {
-	for _, tb := range []table{testTable} {
+	for _, tb := range []table{testTable, taskTable} {
 		for _, c := range tb.cols {
 			if c.min < 1 || c.min < lipgloss.Width(c.label) {
 				t.Errorf("%s: min %d under label %q", c.key, c.min, c.label)
