@@ -1,13 +1,16 @@
 ---
 id: tui-a128d7
 title: Tag completion in quick add from tasks tags
-status: todo
+status: done
 priority: 2
 size: m
 complexity: mid
 process: direct
+owner: feat/tag-completion
 created: 2026-09-14T12:42:09Z
-updated: 2026-09-15T21:17:26Z
+updated: 2026-09-15T21:20:41Z
+started: 2026-09-15T21:18:03Z
+completed: 2026-09-15T21:20:41Z
 depends: []
 tags: [v2]
 agent: codex
@@ -18,3 +21,4 @@ Why: complete quick-add tags from the tracker without leaving the prompt. Done: 
 ## Notes
 
 - 2026-09-15T21:17:26Z (main): scope: scoped; promoted to direct implementation from the established 174855b branch, retaining its typed boundary, native suggestions, and stale-result checks
+- 2026-09-15T21:20:41Z (feat/tag-completion): Complete project-scoped trailing-tag suggestions in quick add via tasks tags, with typed decoding and stale-request protection
