@@ -167,3 +167,46 @@ func TestProjectViewHiddenResultIsDroppedThenPopReloads(t *testing.T) {
 		t.Fatalf("reload returned %T, want loadMsg", msg)
 	}
 }
+
+func TestProjectViewPillTabCountHeaderRowAndEmptyStates(t *testing.T) {
+	f := projectFake()
+	f.on("", "list --project tui --status idea", rowsJSON())
+	env := testEnv(f)
+	pv := newProjectView(env, "tui")
+	app := New(env, Options{Stack: []view{pv}})
+	d := drive(t, app)
+	d.Expect(" 1 Ready 2 ", "status", "title", "  2 Doing")
+	if pill := env.Styles.Pill(2).Render(" 1 Ready 2 "); !strings.Contains(app.render(), pill) {
+		t.Fatalf("active tab is a pill: %q", app.render())
+	}
+	d.ExpectNot("2 rows")
+	d.Key("/")
+	d.Type("ddd")
+	d.Expect("/ddd · 1 of 2", " 1 Ready 1 ")
+	d.Key("esc")
+	d.Key("/")
+	for range 3 {
+		d.Key("backspace")
+	}
+	d.Key("esc")
+	d.Expect(" 1 Ready 2 ")
+	d.Key("4")
+	d.Expect("no ideas — a then ? files one", " 4 Ideas 0 ")
+	d.Key("/")
+	d.Type("zzz")
+	d.Expect("no rows match /zzz")
+	d.Key("esc")
+	d.Key("/")
+	for range 3 {
+		d.Key("backspace")
+	}
+	d.Key("esc")
+	d.Key("2")
+	d.Expect(" 2 Doing 2 ")
+	cmd := pv.setTab(tabReady)
+	if !strings.Contains(app.render(), " 1 Ready 2 ") || !strings.Contains(app.render(), " 2 Doing ") {
+		t.Fatalf("pending tab keeps its last count:\n%s", app.render())
+	}
+	d.Run(cmd)
+	d.Expect(" 1 Ready 2 ")
+}

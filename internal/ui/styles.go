@@ -16,8 +16,6 @@ type Styles struct {
 	Recent    lipgloss.Style
 	Frame     lipgloss.Style
 	Header    lipgloss.Style
-	TabOn     lipgloss.Style
-	TabOff    lipgloss.Style
 	Error     lipgloss.Style
 	Warning   lipgloss.Style
 	Info      lipgloss.Style
@@ -52,8 +50,6 @@ func NewStyles(t identity.Tone) *Styles {
 	s.Frame = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(dim).Padding(1, 2)
 	pillText := ld(lipgloss.Color("#fafafa"), lipgloss.Color("#101010"))
 	s.Header = lipgloss.NewStyle().Bold(true)
-	s.TabOn = lipgloss.NewStyle().Bold(true).Underline(true)
-	s.TabOff = s.Muted
 	s.Error = lipgloss.NewStyle().Foreground(red).Bold(true)
 	s.Warning = lipgloss.NewStyle().Foreground(yellow)
 	s.Info = s.Muted
