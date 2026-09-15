@@ -201,7 +201,10 @@ type RootResult struct {
 	Warnings []string `json:"warnings"`
 }
 type Tag struct {
-	Tag string `json:"tag"`
+	Tag      string         `json:"tag"`
+	Meaning  *string        `json:"meaning"`
+	Count    int            `json:"count"`
+	Projects map[string]int `json:"projects"`
 }
 type TagsResult struct {
 	Tags     []Tag    `json:"tags"`

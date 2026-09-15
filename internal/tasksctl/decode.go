@@ -110,5 +110,5 @@ func (e *Escalation) UnmarshalJSON(raw []byte) error {
 }
 func (t *Tag) UnmarshalJSON(raw []byte) error {
 	type plain Tag
-	return decodeInto(raw, (*plain)(t), "!tag")
+	return decodeInto(raw, (*plain)(t), "!tag", "meaning", "!count", "!projects")
 }

@@ -16,7 +16,18 @@ func TestTagsUsesProjectAndDecodesWarnings(t *testing.T) {
 	if r.dirs[0] != "" || !slices.Equal(r.calls[0], []string{"tags", "--project", "tui"}) {
 		t.Fatalf("unexpected invocation: %v in %v", r.calls, r.dirs)
 	}
-	for _, raw := range []string{`{"tags":null,"warnings":[]}`, `{"tags":[{}],"warnings":[]}`, `{"tags":[{"tag":null}],"warnings":[]}`, `{"tags":[null],"warnings":[]}`, `{"tags":[]}`} {
+	for _, raw := range []string{
+		`{"tags":null,"warnings":[]}`,
+		`{"tags":[{}],"warnings":[]}`,
+		`{"tags":[{"tag":null}],"warnings":[]}`,
+		`{"tags":[{"tag":"bug","count":2,"projects":{}}],"warnings":[]}`,
+		`{"tags":[{"tag":"bug","meaning":null,"projects":{}}],"warnings":[]}`,
+		`{"tags":[{"tag":"bug","meaning":null,"count":2}],"warnings":[]}`,
+		`{"tags":[{"tag":"bug","meaning":null,"count":null,"projects":{}}],"warnings":[]}`,
+		`{"tags":[{"tag":"bug","meaning":null,"count":2,"projects":null}],"warnings":[]}`,
+		`{"tags":[null],"warnings":[]}`,
+		`{"tags":[]}`,
+	} {
 		_, err := (&Client{R: literalRunner(raw)}).Tags(context.Background(), "tui")
 		var typed *Error
 		if !errors.As(err, &typed) || typed.Kind != "decode" {
