@@ -271,6 +271,13 @@ func (a *App) renderLegend(width, height int) string {
 func (a *App) statusLine() string {
 	s := a.env.Styles
 	hint := s.Muted.Render("? keys")
+	if a.width <= 0 {
+		return ""
+	}
+	hintWidth := lipgloss.Width(hint)
+	if a.width <= hintWidth {
+		return ansi.Truncate(hint, a.width, "")
+	}
 	var left string
 	if m := a.log.Current(); m != nil {
 		left = noticeText(s, *m)
@@ -284,10 +291,11 @@ func (a *App) statusLine() string {
 			left = s.Accent(a.env.slot(a.top().project())).Render(a.spinner.View()) + " " + left
 		}
 	}
-	gap := a.width - lipgloss.Width(left) - lipgloss.Width(hint)
-	if gap < 1 {
-		return ansi.Truncate(left, a.width, "")
+	maxLeft := a.width - hintWidth - 1
+	if lipgloss.Width(left) > maxLeft {
+		left = ansi.Truncate(left, maxLeft, "")
 	}
+	gap := a.width - lipgloss.Width(left) - hintWidth
 	return left + strings.Repeat(" ", gap) + hint
 }
 func noticeText(s *Styles, m Message) string {

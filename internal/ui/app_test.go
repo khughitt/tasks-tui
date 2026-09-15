@@ -165,6 +165,36 @@ func TestStatusLineRightAlignsHintAndSpinsWhileLoading(t *testing.T) {
 	}
 }
 
+func TestStatusLineKeepsHintWhenLeftTextIsLong(t *testing.T) {
+	app := testApp(&stubView{name: strings.Repeat("crumb/", 20)})
+	d := drive(t, app)
+	d.Feed(tea.WindowSizeMsg{Width: 32, Height: 10})
+	last := strings.Split(strings.TrimRight(d.Screen(), "\n"), "\n")[9]
+	if !strings.HasSuffix(last, "? keys") || lipgloss.Width(last) != 32 {
+		t.Fatalf("long breadcrumb hides hint: %q", last)
+	}
+
+	app.Notice(LevelError, strings.Repeat("notice ", 20))
+	last = strings.Split(strings.TrimRight(d.Screen(), "\n"), "\n")[9]
+	if !strings.HasSuffix(last, "? keys") || lipgloss.Width(last) != 32 {
+		t.Fatalf("long notice hides hint: %q", last)
+	}
+}
+
+func TestStatusLineClipsHintAtTinyWidth(t *testing.T) {
+	app := testApp(&stubView{name: "root"})
+	d := drive(t, app)
+	d.Feed(tea.WindowSizeMsg{Width: 3, Height: 5})
+	last := strings.Split(strings.TrimRight(d.Screen(), "\n"), "\n")[4]
+	if lipgloss.Width(last) != 3 {
+		t.Fatalf("tiny status line width: %q", last)
+	}
+	app.width = 0
+	if got := app.statusLine(); got != "" {
+		t.Fatalf("zero status line width: %q", got)
+	}
+}
+
 func TestHiddenLoadSuppressesDataAndNoticesThenReloads(t *testing.T) {
 	hidden := &loaderView{name: "hidden", loader: NewLoader()}
 	app := testApp(hidden)
