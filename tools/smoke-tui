@@ -1,0 +1,87 @@
+#!/bin/sh
+set -eu
+
+root=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
+tmp=$(mktemp -d)
+socket="$tmp/tmux.sock"
+session="tasks-tui-smoke-$$"
+trap 'tmux -S "$socket" kill-session -t "$session" 2>/dev/null || :; rm -rf "$tmp"' EXIT HUP INT TERM
+
+config="$tmp/config"
+state="$tmp/state"
+home="$tmp/home"
+repo="$tmp/repo"
+bin="$tmp/tasks-tui"
+fixture="$tmp/launch-fixture"
+launched="$tmp/launched"
+tasks_bin=$(command -v tasks)
+
+mkdir -p "$config/tasks-tui" "$state" "$home" "$repo"
+env -i PATH="$PATH" HOME="$home" XDG_CONFIG_HOME="$config" XDG_STATE_HOME="$state" git -C "$repo" init -q
+env -i PATH="$PATH" HOME="$home" XDG_CONFIG_HOME="$config" XDG_STATE_HOME="$state" "$tasks_bin" -C "$repo" init --prefix zz >/dev/null
+env -i PATH="$PATH" HOME="$home" XDG_CONFIG_HOME="$config" XDG_STATE_HOME="$state" "$tasks_bin" -C "$repo" add 'first task' -p 1 >/dev/null
+
+printf '%s\n' '#!/bin/sh' "touch '$launched'" >"$fixture"
+chmod +x "$fixture"
+printf '%s\n' \
+  '[launch]' \
+  'terminal = ["sh", "-c"]' \
+  'prompt = "smoke"' \
+  '' \
+  '[launch.harness.fake]' \
+  "command = [\"$fixture\"]" >"$config/tasks-tui/config.toml"
+
+(cd "$root" && go build -o "$bin" ./cmd/tasks-tui)
+env -i PATH="$PATH" HOME="$home" XDG_CONFIG_HOME="$config" XDG_STATE_HOME="$state" \
+  tmux -S "$socket" new-session -d -s "$session" -x 120 -y 40 "$bin --all"
+
+screen() { tmux -S "$socket" capture-pane -p -t "$session"; }
+wait_for() {
+  n=0
+  until "$@"; do
+    n=$((n + 1))
+    if [ "$n" -eq 50 ]; then
+      screen >&2 || :
+      echo "smoke-tui: timed out waiting for $*" >&2
+      exit 1
+    fi
+    sleep 0.1
+  done
+}
+has_screen() { screen | grep -Fq "$1"; }
+lacks_screen() { ! has_screen "$1"; }
+has_task() {
+  env -i PATH="$PATH" HOME="$home" XDG_CONFIG_HOME="$config" XDG_STATE_HOME="$state" \
+    "$tasks_bin" -C "$repo" list | grep -Fq "$1"
+}
+
+wait_for has_screen zz
+tmux -S "$socket" send-keys -t "$session" enter
+wait_for has_screen 'first task'
+tmux -S "$socket" send-keys -t "$session" a
+tmux -S "$socket" set-buffer -b smoke 'added task #it'
+tmux -S "$socket" paste-buffer -b smoke -t "$session"
+wait_for has_screen 'added task #it'
+tmux -S "$socket" send-keys -t "$session" enter
+wait_for has_task 'added task'
+tmux -S "$socket" send-keys -t "$session" a
+tmux -S "$socket" set-buffer -b smoke 'cancelled task #it'
+tmux -S "$socket" paste-buffer -b smoke -t "$session"
+wait_for has_screen 'cancelled task #it'
+tmux -S "$socket" send-keys -t "$session" -H 1b
+wait_for lacks_screen 'quick add'
+if has_task 'cancelled task'; then
+  echo 'smoke-tui: cancelled prompt wrote a task' >&2
+  exit 1
+fi
+tmux -S "$socket" send-keys -t "$session" l
+wait_for has_screen '4 fake'
+tmux -S "$socket" send-keys -t "$session" 4
+wait_for test -f "$launched"
+tmux -S "$socket" send-keys -t "$session" q
+if find "$home" -mindepth 1 -print -quit | grep -q .; then
+  echo 'smoke-tui: child wrote outside its XDG directories' >&2
+  exit 1
+fi
+
+echo 'smoke-tui: ok'

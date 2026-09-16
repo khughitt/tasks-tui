@@ -21,6 +21,9 @@ test-fast:
 test:
     {{tt}} test -- sh -c '{{test_cmd}}'
 
+smoke:
+    tools/smoke-tui
+
 # Seconds: hygiene, format, vet, staticcheck, tasks check.
 check:
     {{tt}} check -- sh -c '{{check_cmd}}'
