@@ -31,7 +31,7 @@ var keys = keymap{
 	Tab:      key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab/shift+tab", "tabs")),
 	ShiftTab: key.NewBinding(key.WithKeys("shift+tab")),
 	Digits:   key.NewBinding(key.WithKeys("1", "2", "3", "4", "5"), key.WithHelp("1–5", "tab n")),
-	Sort:     key.NewBinding(key.WithKeys("S"), key.WithHelp("S", "sort projects")),
+	Sort:     key.NewBinding(key.WithKeys("S"), key.WithHelp("S", "sort")),
 	Copy:     key.NewBinding(key.WithKeys("y"), key.WithHelp("y", "copy id")),
 }
 

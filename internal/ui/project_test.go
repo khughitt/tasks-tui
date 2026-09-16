@@ -160,6 +160,23 @@ func TestProjectCycleSortKeepsMissingRowsLast(t *testing.T) {
 	}
 }
 
+func TestProjectSortSelectorCapturesAndApplies(t *testing.T) {
+	pv := newProjectView(testEnv(newFake()), "tui")
+	pv.hasData = true
+	pv.rows = []rowView{{ID: "b", Priority: intp(2)}, {ID: "a", Priority: intp(1)}}
+	pv.all = append([]rowView(nil), pv.rows...)
+	pv.widths = taskTable.widths(nil, 120)
+	pv.update(tea.KeyPressMsg{Code: 'S', Text: "S"})
+	if !pv.capturing() {
+		t.Fatal("sort selector must capture Esc")
+	}
+	pv.update(tea.KeyPressMsg{Code: tea.KeyRight})
+	pv.update(tea.KeyPressMsg{Code: tea.KeyEnter})
+	if pv.capturing() || pv.sortKey == "" {
+		t.Fatalf("selector state: capturing=%v key=%q", pv.capturing(), pv.sortKey)
+	}
+}
+
 func intp(n int) *int { return &n }
 
 func TestProjectViewWarningSourcesAndBackgroundDrain(t *testing.T) {

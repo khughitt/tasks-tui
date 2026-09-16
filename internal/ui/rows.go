@@ -147,12 +147,14 @@ func (s *Styles) taskCells(r rowView, now time.Time) []cell {
 }
 
 type rowTable struct {
-	s      *Styles
-	rows   []rowView
-	cells  [][]cell
-	widths []int
-	width  int
-	labels map[string]string
+	s         *Styles
+	rows      []rowView
+	cells     [][]cell
+	widths    []int
+	width     int
+	labels    map[string]string
+	candidate string
+	slot      int
 }
 
 func (s *Styles) layoutRows(rows []rowView, width int, now time.Time) rowTable {
@@ -170,7 +172,7 @@ func (s *Styles) layoutRowsWithLabels(rows []rowView, width int, now time.Time, 
 }
 
 func (rt rowTable) header() string {
-	return fit(taskTable.headerWithLabels(rt.widths, rt.s, rt.labels), rt.width, lipgloss.NewStyle())
+	return fit(taskTable.headerWithCandidate(rt.widths, rt.s, rt.labels, rt.candidate, rt.slot), rt.width, lipgloss.NewStyle())
 }
 
 func (rt rowTable) line(i int, selected bool) string {
