@@ -41,14 +41,14 @@ type projectsView struct {
 	primeFor   string
 	rows       []tasksctl.Project
 	sel        int
-	byPrefix   bool
+	order      sortBinding
 	filter     string
 	filtering  bool
 	seq        int
 }
 
 func newProjectsView(env *Env) *projectsView {
-	return &projectsView{env: env, main: NewLoader(), pane: NewLoader()}
+	return &projectsView{env: env, main: NewLoader(), pane: NewLoader(), order: sortBinding{seq: "S a", column: "activity", desc: true}}
 }
 func (v *projectsView) title() string { return "projects" }
 func (v *projectsView) project() string {
@@ -114,10 +114,11 @@ func (v *projectsView) sortAndFilter() {
 		}
 	}
 	sort.SliceStable(v.rows, func(i, j int) bool {
-		if v.byPrefix {
-			return v.rows[i].Prefix < v.rows[j].Prefix
+		a, b := v.rows[i], v.rows[j]
+		if v.order.desc {
+			a, b = b, a
 		}
-		return deref(v.rows[i].LastActivity) > deref(v.rows[j].LastActivity)
+		return projectLess(v.order.column, a, b)
 	})
 	if len(v.rows) == 0 {
 		v.sel = 0
@@ -136,6 +137,13 @@ func name(root string) string {
 		return root[i+1:]
 	}
 	return root
+}
+
+func projectLess(column string, a, b tasksctl.Project) bool {
+	if column == "prefix" {
+		return a.Prefix < b.Prefix
+	}
+	return deref(a.LastActivity) < deref(b.LastActivity)
 }
 
 // projectsTable is spec v1.1 §5. No flexible column and no gutter: the accent bar is the row's identity.
@@ -247,8 +255,10 @@ func (v *projectsView) update(raw tea.Msg) (view, tea.Cmd) {
 			}
 			return v, v.debouncePane()
 		case key.Matches(msg, keys.Sort):
-			v.byPrefix = !v.byPrefix
-			v.sortAndFilter()
+			if b, ok := findSort(projectsSort, msg.String()); ok {
+				v.order = b
+				v.sortAndFilter()
+			}
 			return v, v.debouncePane()
 		case key.Matches(msg, keys.Filter):
 			v.filtering = true

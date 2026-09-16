@@ -47,9 +47,6 @@ type projectView struct {
 	hasData    bool
 	sortKey    string
 	descending bool
-	widths     []int
-	sorting    bool
-	candidate  int
 	shown      [len(tabNames)]int
 	hasCount   [len(tabNames)]bool
 }
@@ -59,7 +56,7 @@ func newProjectView(env *Env, prefix string) *projectView {
 }
 func (v *projectView) title() string   { return v.prefix }
 func (v *projectView) project() string { return v.prefix }
-func (v *projectView) capturing() bool { return v.filtering || v.sorting }
+func (v *projectView) capturing() bool { return v.filtering }
 func (v *projectView) loading() bool   { return v.loader.InFlight() }
 func (v *projectView) current() *target {
 	if v.sel < 0 || v.sel >= len(v.rows) || v.rows[v.sel].Unresolved {
@@ -214,9 +211,9 @@ func (v *projectView) less(a, b rowView) bool {
 		at, _ := time.Parse(time.RFC3339, a.Updated)
 		bt, _ := time.Parse(time.RFC3339, b.Updated)
 		if at.Before(bt) {
-			order = -1
-		} else if at.After(bt) {
 			order = 1
+		} else if at.After(bt) {
+			order = -1
 		}
 	default:
 		order = strings.Compare(v.value(a), v.value(b))
@@ -274,29 +271,15 @@ func (v *projectView) update(msg tea.Msg) (view, tea.Cmd) {
 		}
 		d := msg.data.(projectData)
 		if d.tab == v.tab {
+			if v.loadedTab != d.tab {
+				v.rows, v.sel = nil, 0
+			}
 			v.all, v.counts = d.rows, d.counts
 			v.loadedTab, v.hasData = d.tab, true
 			v.applyFilter()
 		}
 		return v, tea.Batch(next, notices(LevelWarning, d.warnings...))
 	case tea.KeyPressMsg:
-		if v.sorting {
-			keys := v.sortKeys()
-			switch msg.String() {
-			case "esc", "backspace":
-				v.sorting = false
-			case "left":
-				v.candidate = max(0, v.candidate-1)
-			case "right":
-				v.candidate = min(len(keys)-1, v.candidate+1)
-			case "enter":
-				if len(keys) > 0 {
-					v.cycleSort(keys[v.candidate])
-				}
-				v.sorting = false
-			}
-			return v, nil
-		}
 		if v.filtering {
 			switch msg.String() {
 			case "enter", "esc":
@@ -323,29 +306,26 @@ func (v *projectView) update(msg tea.Msg) (view, tea.Cmd) {
 			v.sel = 0
 		case key.Matches(msg, keys.Bottom):
 			v.sel = max(0, len(v.rows)-1)
-		case key.Matches(msg, keys.Tab):
+		case key.Matches(msg, keys.Tab, keys.Next):
 			return v, v.setTab((v.tab + 1) % tab(len(tabNames)))
-		case key.Matches(msg, keys.ShiftTab):
+		case key.Matches(msg, keys.ShiftTab, keys.Prev):
 			return v, v.setTab((v.tab + tab(len(tabNames)) - 1) % tab(len(tabNames)))
 		case key.Matches(msg, keys.Filter):
 			v.filtering = true
-		case msg.String() == "S" && v.hasData:
-			v.sorting = true
-			v.candidate = 0
-			for i, key := range v.sortKeys() {
-				if key == v.sortKey {
-					v.candidate = i
-				}
-			}
 		case key.Matches(msg, keys.Enter):
 			if t := v.current(); t != nil {
 				return v, func() tea.Msg { return pushMsg{v: newTaskView(v.env, *t)} }
 			}
-		default:
-			s := msg.String()
-			if len(s) == 1 && s[0] >= '1' && s[0] <= '5' {
-				return v, v.setTab(tab(s[0] - '1'))
+		case key.Matches(msg, keys.Sort):
+			if b, ok := findSort(tasksSort, msg.String()); ok {
+				v.sortKey, v.descending = b.column, b.desc
+				if v.sortKey == "priority" {
+					v.sortKey = "prio"
+				}
+				v.applyFilter()
 			}
+		case key.Matches(msg, keys.Digits):
+			return v, v.setTab(tabFor(msg.String()))
 		}
 	}
 	return v, nil
@@ -384,8 +364,6 @@ func (v *projectView) render(width, height int) string {
 		tabs[i] = s.Pill(slot).Render(" " + label + " ")
 	}
 	rt := s.layoutRowsWithLabels(v.rows, width, time.Now(), v.headerLabels())
-	rt.candidate, rt.slot = v.candidateKey(), slot
-	v.widths = rt.widths
 	clipped := lipgloss.NewStyle().MaxWidth(width)
 	lines := []string{clipped.Render(head), clipped.Render(strings.Join(tabs, " ")), rt.header()}
 	filtering := v.filtering || v.filter != ""
@@ -416,20 +394,6 @@ func (v *projectView) render(width, height int) string {
 	return lipgloss.NewStyle().MaxHeight(height).Render(strings.Join(lines, "\n"))
 }
 
-func (v *projectView) candidateKey() string {
-	if !v.sorting {
-		return ""
-	}
-	keys := v.sortKeys()
-	if v.candidate >= 0 && v.candidate < len(keys) {
-		if keys[v.candidate] == "prio" {
-			return "prio"
-		}
-		return keys[v.candidate]
-	}
-	return ""
-}
-
 func (v *projectView) headerLabels() map[string]string {
 	if v.sortKey == "" {
 		return nil
@@ -450,18 +414,6 @@ func (v *projectView) headerLabels() map[string]string {
 	return nil
 }
 
-func (v *projectView) sortKeys() []string {
-	var keys []string
-	for i, c := range taskTable.cols {
-		if c.label == "" || i >= len(v.widths) || v.widths[i] == 0 {
-			continue
-		}
-		switch c.key {
-		case "prio":
-			keys = append(keys, "prio")
-		default:
-			keys = append(keys, c.key)
-		}
-	}
-	return keys
-}
+// tabFor is the select dispatch: digit key "1".."5" to its tab. The conformance test
+// derives the "tab N" argument from it.
+func tabFor(k string) tab { return tab(k[0] - '1') }

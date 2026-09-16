@@ -267,3 +267,30 @@ func TestProjectsBackgroundResultsAreDrainedAndDropped(t *testing.T) {
 		t.Fatal("background pane result did not drain pending load or leaked data/notices")
 	}
 }
+
+func TestProjectsSortChordsUseColumnAndDirection(t *testing.T) {
+	env := testEnv(newFake())
+	pv := newProjectsView(env)
+	app := New(env, Options{Stack: []view{pv}})
+	d := drive(t, app)
+	newer, older := "2026-09-15T00:00:00Z", "2026-09-01T00:00:00Z"
+	pv.data.projects.Projects = []tasksctl.Project{{Prefix: "zed", Root: "/r/zed", Reachable: true, LastActivity: &newer}, {Prefix: "abc", Root: "/r/abc", Reachable: true, LastActivity: &older}}
+	pv.sortAndFilter()
+	first := func(want, label string) {
+		t.Helper()
+		if pv.rows[0].Prefix != want {
+			t.Fatalf("%s: %s first", label, pv.rows[0].Prefix)
+		}
+	}
+	first("zed", "default activity desc")
+	chord(t, d, app, "s", "p")
+	first("abc", "s p")
+	chord(t, d, app, "s", "p")
+	first("abc", "repeated s p remains ascending")
+	chord(t, d, app, "S", "p")
+	first("zed", "S p")
+	chord(t, d, app, "s", "a")
+	first("abc", "s a")
+	chord(t, d, app, "S", "a")
+	first("zed", "S a")
+}

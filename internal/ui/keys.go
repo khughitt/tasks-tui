@@ -23,6 +23,14 @@ type sortBinding struct {
 var projectsSort = []sortBinding{{"s p", "prefix", false}, {"S p", "prefix", true}, {"s a", "activity", false}, {"S a", "activity", true}}
 var tasksSort = []sortBinding{{"s p", "priority", false}, {"S p", "priority", true}, {"s a", "age", false}, {"S a", "age", true}, {"s t", "title", false}, {"S t", "title", true}}
 
+func findSort(table []sortBinding, seq string) (sortBinding, bool) {
+	for _, b := range table {
+		if b.seq == seq {
+			return b, true
+		}
+	}
+	return sortBinding{}, false
+}
 func launchSeqs() []string {
 	out := make([]string, len(launchKeys))
 	for i, b := range launchKeys {

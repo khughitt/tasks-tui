@@ -160,20 +160,17 @@ func TestProjectCycleSortKeepsMissingRowsLast(t *testing.T) {
 	}
 }
 
-func TestProjectSortSelectorCapturesAndApplies(t *testing.T) {
+func TestProjectSortChordsRetainHeadersAndOrderAge(t *testing.T) {
 	pv := newProjectView(testEnv(newFake()), "tui")
-	pv.hasData = true
-	pv.rows = []rowView{{ID: "b", Priority: intp(2)}, {ID: "a", Priority: intp(1)}}
-	pv.all = append([]rowView(nil), pv.rows...)
-	pv.widths = taskTable.widths(nil, 120)
-	pv.update(tea.KeyPressMsg{Code: 'S', Text: "S"})
-	if !pv.capturing() {
-		t.Fatal("sort selector must capture Esc")
+	pv.all = []rowView{{ID: "old", Updated: "2026-09-01T00:00:00Z"}, {ID: "new", Updated: "2026-09-15T00:00:00Z"}}
+	pv.applyFilter()
+	pv.update(tea.KeyPressMsg{Text: "s a"})
+	if pv.rows[0].ID != "new" || pv.headerLabels()["age"] != "age↑" || pv.capturing() {
+		t.Fatalf("ascending age sorts youngest first and shows header: rows=%v labels=%v", pv.rows, pv.headerLabels())
 	}
-	pv.update(tea.KeyPressMsg{Code: tea.KeyRight})
-	pv.update(tea.KeyPressMsg{Code: tea.KeyEnter})
-	if pv.capturing() || pv.sortKey == "" {
-		t.Fatalf("selector state: capturing=%v key=%q", pv.capturing(), pv.sortKey)
+	pv.update(tea.KeyPressMsg{Text: "S a"})
+	if pv.rows[0].ID != "old" || pv.headerLabels()["age"] != "age↓" {
+		t.Fatalf("descending age sorts oldest first and shows header: rows=%v labels=%v", pv.rows, pv.headerLabels())
 	}
 }
 
@@ -271,4 +268,46 @@ func TestProjectViewPillTabCountHeaderRowAndEmptyStates(t *testing.T) {
 	}
 	d.Run(cmd)
 	d.Expect(" 1 Ready 2 ")
+}
+
+func TestProjectViewSortChordsHLTabsAndGGTop(t *testing.T) {
+	f := projectFake()
+	env := testEnv(f)
+	pv := newProjectView(env, "tui")
+	app := New(env, Options{Stack: []view{pv}})
+	d := drive(t, app)
+	chord(t, d, app, "S", "p") // ready: aaa111 P2, ddd444 P3
+	if pv.rows[0].ID != "tui-ddd444" {
+		t.Fatalf("S p sorts priority desc: %s first", pv.rows[0].ID)
+	}
+	chord(t, d, app, "s", "t")
+	if pv.rows[0].ID != "tui-aaa111" {
+		t.Fatalf("s t sorts title asc: %s first", pv.rows[0].ID)
+	}
+	d.Key("l")
+	d.Expect("tui-bbb222", "tui-ccc333")
+	d.Key("right")
+	d.Expect("tui-aaa111", "tui-bbb222")
+	chord(t, d, app, "s", "p")
+	if pv.rows[0].ID != "tui-bbb222" {
+		t.Fatalf("the sort survives a tab switch and applies to fresh rows: %s first", pv.rows[0].ID)
+	}
+	d.Key("h")
+	d.Key("left")
+	d.Expect("tui-ddd444")
+	d.Key("j")
+	chord(t, d, app, "g", "g")
+	if pv.sel != 0 {
+		t.Fatal("g g jumps to the top")
+	}
+	d.Key("end")
+	if pv.sel != 1 {
+		t.Fatal("end jumps to the bottom")
+	}
+	d.Key("home")
+	d.Key("3")
+	d.Expect("tui-aaa111", "tui-bbb222")
+	if pv.sel != 0 || pv.tab != tabOpen {
+		t.Fatalf("3 selects tab 3: tab=%d sel=%d", pv.tab, pv.sel)
+	}
 }
