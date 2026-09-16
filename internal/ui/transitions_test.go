@@ -22,7 +22,7 @@ func TestStartRunsInCheckoutAndReloads(t *testing.T) {
 	f := projectFake()
 	f.on("/r/tui", "start tui-aaa111", `{"id":"tui-aaa111","warnings":["took over stale claim sid:2"]}`)
 	d, app := transitions(t, f)
-	d.Key("s")
+	d.Key("space")
 	if !logged(app, LevelWarning, "start tui-aaa111: took over stale claim sid:2") {
 		t.Fatalf("start warning missing: %+v", app.Messages())
 	}
@@ -51,7 +51,7 @@ func TestStartClaimedOffersForce(t *testing.T) {
 	f.on("/r/tui", "start tui-aaa111", &tasksctl.Error{Kind: "claimed", Detail: "tui-aaa111 is claimed by sid:9 (feat/y)"})
 	f.on("/r/tui", "start --force tui-aaa111", `{"id":"tui-aaa111","warnings":[]}`)
 	d, app := transitions(t, f)
-	d.Key("s")
+	d.Key("space")
 	d.Expect("claimed by sid:9", "[F] start --force")
 	d.Key("F")
 	if !logged(app, LevelInfo, "start tui-aaa111") {
@@ -66,7 +66,7 @@ func TestStartOtherErrorIsShownNotForced(t *testing.T) {
 	f := projectFake()
 	f.on("/r/tui", "start tui-aaa111", &tasksctl.Error{Kind: "rename_pending", Detail: "project frozen"})
 	d, _ := transitions(t, f)
-	d.Key("s")
+	d.Key("space")
 	d.Expect("start tui-aaa111: rename_pending: project frozen")
 	d.ExpectNot("[F]")
 }
@@ -172,7 +172,7 @@ func TestTransitionsNeedATarget(t *testing.T) {
 	f.on("", "prime --project tui", primeJSON("tui"))
 	env := testEnv(f)
 	d := drive(t, New(env, Options{Stack: []view{newProjectsView(env)}}))
-	for _, k := range []string{"s", "p", "d", "x"} {
+	for _, k := range []string{"space", "p", "d", "x"} {
 		d.Key(k)
 		d.Expect("no task highlighted")
 	}

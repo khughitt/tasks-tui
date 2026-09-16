@@ -106,7 +106,7 @@ func TestQuickAddUnreachableProjectRequiresExplicitProject(t *testing.T) {
 	pv := newProjectsView(env)
 	app := New(env, Options{Stack: []view{pv}})
 	d := drive(t, app)
-	d.Key("S")
+	chord(t, d, app, "s", "p")
 	d.Key("k")
 	d.Key("a")
 	d.Type("title")

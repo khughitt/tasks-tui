@@ -35,7 +35,7 @@ func TestLegendReflowsFourAcrossTwoByTwoThenStacked(t *testing.T) {
 	if lipgloss.Height(narrow) <= lipgloss.Height(mid) {
 		t.Fatalf("stacked is tallest:\n%s", narrow)
 	}
-	for _, want := range []string{"j/k", "move", "enter/i", "open", "launch agent", "quit / close", "1–5"} {
+	for _, want := range []string{"j/k", "move", "h/l", "enter/i", "open", "c …", "launch agent", "space", "s …/S …", "F5", "g g/G", "quit / close", "1–5"} {
 		if !strings.Contains(wide, want) {
 			t.Errorf("legend lacks %q", want)
 		}

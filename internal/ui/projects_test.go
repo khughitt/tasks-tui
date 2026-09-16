@@ -44,7 +44,7 @@ func TestProjectsViewLoadsPaneAndStripAndOpens(t *testing.T) {
 	if !logged(app, LevelWarning, "projects: registry: ops unreachable") || !logged(app, LevelWarning, "prime --project tui: tui has a stale claim file") {
 		t.Fatalf("warnings missing: %+v", app.Messages())
 	}
-	d.Key("S")
+	chord(t, d, app, "s", "p")
 	d.Key("k")
 	d.Key("j")
 	d.Expect("tui-aaa111")

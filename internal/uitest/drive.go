@@ -70,6 +70,20 @@ func (d *Driver) Key(k string) {
 		d.Feed(tea.KeyPressMsg{Code: tea.KeyPgDown})
 	case "pgup":
 		d.Feed(tea.KeyPressMsg{Code: tea.KeyPgUp})
+	case "space":
+		d.Feed(tea.KeyPressMsg{Code: tea.KeySpace, Text: " "})
+	case "f5":
+		d.Feed(tea.KeyPressMsg{Code: tea.KeyF5})
+	case "left":
+		d.Feed(tea.KeyPressMsg{Code: tea.KeyLeft})
+	case "right":
+		d.Feed(tea.KeyPressMsg{Code: tea.KeyRight})
+	case "home":
+		d.Feed(tea.KeyPressMsg{Code: tea.KeyHome})
+	case "end":
+		d.Feed(tea.KeyPressMsg{Code: tea.KeyEnd})
+	case "ctrl+c":
+		d.Feed(tea.KeyPressMsg{Code: 'c', Mod: tea.ModCtrl})
 	default:
 		r := []rune(k)
 		if len(r) != 1 {
