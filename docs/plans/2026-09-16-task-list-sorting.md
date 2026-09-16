@@ -55,7 +55,7 @@ Expected: PASS.
 
 ```bash
 tasks done tui-c59419 "Added local task-list sorting and measured headers"
-git add internal/ui/project.go internal/ui/columns.go internal/ui/rows.go internal/ui/project_test.go internal/ui/columns_test.go
+git add internal/ui/project.go internal/ui/columns.go internal/ui/rows.go internal/ui/project_test.go internal/ui/columns_test.go tasks/tui-c59419.md
 git commit -m "feat: sort task lists locally"
 ```
 
@@ -96,4 +96,4 @@ Expected: PASS.
 
 Run: `just gate`
 
-Then update the sorting spec status to `implemented`, run `tasks done tui-cfa2bf "Added the task-list selector and capture"`, and commit the task record and documentation with the code. Once `tasks prime` offers `tui-62bb3f` under closeout, confirm the goal and run `tasks done tui-62bb3f "Added local keyboard sorting for Project task lists"`.
+Then update the sorting spec status to `implemented`, run `tasks done tui-cfa2bf "Added the task-list selector and capture"`, and commit `tasks/tui-cfa2bf.md` with the code and documentation. Once `tasks prime` offers `tui-62bb3f` under closeout, confirm the goal and run `tasks done tui-62bb3f "Added local keyboard sorting for Project task lists"` in its own task-record commit.
