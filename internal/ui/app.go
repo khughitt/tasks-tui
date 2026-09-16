@@ -222,7 +222,7 @@ func (a *App) key(msg tea.KeyPressMsg) tea.Cmd {
 	case key.Matches(msg, keys.Add):
 		return a.openQuickAdd()
 	case key.Matches(msg, keys.Launch):
-		return a.openLaunch()
+		return a.launch(msg.String())
 	case key.Matches(msg, keys.Start):
 		return a.startTarget(false)
 	case key.Matches(msg, keys.Park):

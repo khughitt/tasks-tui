@@ -92,3 +92,22 @@ func TestLaunchNeedsATarget(t *testing.T) {
 	chord(t, d, app, "c", "c")
 	d.Expect("no task highlighted")
 }
+
+func TestLaunchChordSpawnsAFixedHarnessOrSaysNotConfigured(t *testing.T) {
+	f := projectFake()
+	env := testEnv(f)
+	var got launch.Plan
+	env.Spawn = func(p launch.Plan) error { got = p; return nil }
+	app := New(env, Options{Stack: []view{newProjectView(env, "tui")}})
+	d := drive(t, app)
+	chord(t, d, app, "c", "o")
+	d.Expect("launched codex on tui-aaa111 in /r/tui")
+	if app.overlay != nil || got.Argv[len(got.Argv)-2] != "codex" {
+		t.Fatalf("c o spawns codex without the picker: %+v", got)
+	}
+	delete(env.Config.Launch.Harness, "crush")
+	chord(t, d, app, "c", "r")
+	d.Expect("launch: crush is not configured")
+	chord(t, d, app, "c", "c")
+	d.Expect("launch on tui-aaa111", "1 claude", "2 codex", "3 opencode")
+}
