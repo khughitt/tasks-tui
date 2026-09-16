@@ -1,15 +1,16 @@
 ---
 id: tui-62bb3f
 title: Sort task lists by column
-status: doing
+status: done
 priority: 2
 size: m
 complexity: mid
 process: planned
 owner: feat/task-list-sorting
 created: 2026-09-15T02:17:13Z
-updated: 2026-09-16T09:45:38Z
+updated: 2026-09-16T10:16:11Z
 started: 2026-09-16T02:34:12Z
+completed: 2026-09-16T10:16:11Z
 depends: []
 tags: [v2]
 agent: codex
@@ -28,3 +29,4 @@ Let people reorder the current Project tab by its visible task-table columns wit
 - 2026-09-16T02:59:37Z (feat/task-list-sorting): design revised after review: ranked enums, selector capture and off cycle, measured indicators, and reload/tab behavior are explicit
 - 2026-09-16T09:02:31Z (feat/task-list-sorting): design approved: hidden-column behavior clarified; proceed to implementation planning
 - 2026-09-16T09:45:38Z (feat/task-list-sorting): plan refined: each child completion stages its task record; feedback tasks-136399 records the tracker CLI link-clearing gap
+- 2026-09-16T10:16:11Z (feat/task-list-sorting): Added local keyboard sorting for Project task lists
