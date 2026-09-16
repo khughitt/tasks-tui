@@ -11,7 +11,13 @@ out to the `tasks` binary and reads its JSON; it never touches `tasks/*.md` itse
 
 Both commands are installed in Go's binary directory, which must be on `PATH`.
 
-Keys: `?` legend · `enter`/`i` open · `a` quick add · `l` launch an agent · `s` start · `p` park · `d` done · `x` drop · `W` messages · `q` quit (or close a panel).
+Keys: `?` legend · `enter`/`i` open · `a` quick add · `c c` launch picker · `space` start · `p` park · `d` done · `x` drop · `W` messages · `q` quit (or close a panel).
+
+Launch directly: `c l` Claude, `c o` Codex, `c r` Crush, `c O` OpenCode.
+`F5` reloads; `h`/`l` or Left/Right switch tabs; `g g`/Home goes to the top,
+`G`/End to the bottom. Sort ascending with `s p` (priority), `s a` (age), or
+`s t` (title); use `S` as the prefix for descending. In Projects, `p` sorts
+prefix and `a` sorts activity. A pending prefix appears for up to 900 ms.
 
 Quick add: `#tag !2 ~m ^mid @30d >prefix · ? first = idea · -- body`.
 

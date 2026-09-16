@@ -1,6 +1,7 @@
 # Task-list sorting — design
 
-**Status:** implemented 2026-09-16. Goal: `tui-62bb3f`.
+**Status:** sorting implemented 2026-09-16 under `tui-62bb3f`; interaction updated
+to the shared chord vocabulary by `tui-8d070b` on 2026-09-16.
 
 ## Problem
 
@@ -9,56 +10,41 @@ does not let a person inspect another visible task field without leaving the TUI
 
 ## Decision
 
-`S` in a loaded Project view opens a capturing header selector. Left/right move
-through the currently visible data columns (`id`, `P`, `sz`, `cx`, `proc`, `status`,
-`age`, and `title`); gutter and marks are never selectable. It starts at the active
-column when that column is visible, otherwise at the first data column. Enter applies
-the candidate and closes the selector: the first press sorts ascending, the second
-press on that column reverses it, and the third clears the sort. Esc and backspace
-close the selector without changing the sort. Other keys are ignored. Filtering and
-the selector are mutually exclusive, so `S` remains filter text while filtering.
+`s p`, `s a`, and `s t` sort a Project view by priority, age, and title ascending.
+`S p`, `S a`, and `S t` select descending. Repeating a chord keeps that direction.
+The shared key vocabulary supersedes the original `S` header selector. App holds
+one prefix for 900 ms and shows it in the status line. Filters and overlays own
+text input, including these prefix characters.
 
-The active header shows an up or down arrow; the selector gives its candidate header
-the existing selected surface. Decorated labels participate in table measurement, so
-an indicator neither clips nor shifts a column.
+The active header shows an up or down arrow. Decorated labels participate in table
+measurement, so an indicator neither clips nor shifts a column. Sorting belongs to
+the Project view and persists while switching tabs and reloading; the initial view
+preserves tracker order. Sorting is local and does not change `tasks` argv.
 
-The sort belongs to the Project view and therefore persists while switching tabs,
-but no sort is active on the initial load, preserving the tracker's order. Sorting
-is local: it never changes the `tasks` argv or reloads data. Reloads and tab switches
-apply an active sort to their fresh rows; it overrides the Done tab's server ordering.
-A resize can hide a column; its indicator is hidden too, but its ordering still
-applies. Selecting a visible column replaces that sort, and continuing that column's
-three-state cycle eventually clears it.
+Priority is numeric; ascending age puts the youngest updated timestamp first;
+titles compare case-insensitively. The landed sorting helpers retain missing
+values last in either direction and task ID as a deterministic tie-breaker.
+Filtering preserves the selected task when possible. A newly loaded tab starts at
+its first row; a refresh of the same tab preserves selection.
 
-Values sort by their corresponding row values: priority numerically; size by
-`xs < s < m < l < xl`; complexity by `low < mid < high`; status by
-`idea < todo < doing < blocked < shelved < done < dropped`; and age by the underlying
-`updated` timestamp. Id and process sort lexicographically; title is
-case-insensitive lexicographically. Unparseable age and unresolved parked status are
-missing values. Missing values come after present values in either direction, and
-task id is the deterministic tie-breaker. Filtering keeps its current behavior, then
-orders its matching rows by the active sort while retaining the selected task when
-possible.
+Projects uses `s p`/`S p` for prefix and `s a`/`S a` for activity, defaulting to
+activity descending. Its table retains the selected project after sorting.
 
 ## Implementation
 
-`projectView` owns the sort key, direction, and temporary header-selector state; its
-capture predicate includes that state so App routes Esc and backspace to the view.
-The shared table already computes visible widths, so the Project view derives the
-selector's candidates from those widths rather than duplicating the responsive drop
-rules. Its filter path performs the optional stable local sort after building the
-filtered list. The table header accepts the active/suggested column decoration;
-Projects-view sorting remains unchanged.
+`projectView` retains `sortKey`, `descending`, and its existing comparison helpers.
+The chord table sets those fields directly, and `applyFilter` applies the stable
+local sort. `capturing()` now covers filtering only. Header arrows use the existing
+measured-label path. The earlier `cycleSort` helper remains, but no user key cycles
+sorting off; a new view starts in tracker order.
 
 ## Testing
 
-Project-view tests cover selector navigation and capture, the three-state priority
-cycle, timestamp ordering for `age`, ranked enum and lexical fields, missing values,
-selection preservation across a filter, reload and tab persistence, and unchanged
-task commands. They also prove Esc/backspace close the selector without popping the
-view. Column tests cover that dropped and structural columns cannot be selected and
-that decorated headers measure wide enough. The global `S` help changes from
-`sort projects` to `sort`, with the v1.1 legend table updated accordingly.
+Chord tests cover priority/title direction, youngest-first age, header arrows,
+idempotent Projects sorting, persistent sorting across tabs, and navigation.
+Existing sort-helper tests retain selection and missing-value coverage. The
+conformance test compares every scoped binding and chord argument against the
+vendored inventory; the legend tests check the displayed key labels.
 
 ## Out of scope
 

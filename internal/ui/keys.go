@@ -71,6 +71,10 @@ func both(action string, b key.Binding) key.Binding {
 	return scoped("tasks", action, "", scoped("projects", action, "", b))
 }
 
+// localAliases are keys tasks-tui adds to a shared action beyond the vocabulary's own
+// aliases; the inventory marks them alias = true.
+var localAliases = map[string]bool{"i": true}
+
 type keymap struct {
 	Quit, Help, Log, Reload, Back, Add, Launch, Start, Park, Done, Drop, Enter, Filter key.Binding
 	Up, Down, Prev, Next, PageUp, PageDown, Top, Bottom                                key.Binding
