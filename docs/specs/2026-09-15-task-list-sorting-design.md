@@ -26,9 +26,9 @@ The sort belongs to the Project view and therefore persists while switching tabs
 but no sort is active on the initial load, preserving the tracker's order. Sorting
 is local: it never changes the `tasks` argv or reloads data. Reloads and tab switches
 apply an active sort to their fresh rows; it overrides the Done tab's server ordering.
-A resize can hide a column; that column is unavailable to the selector, but its active
-sort remains visible through the other rows and can be cleared by selecting any visible
-column through its three-state cycle.
+A resize can hide a column; its indicator is hidden too, but its ordering still
+applies. Selecting a visible column replaces that sort, and continuing that column's
+three-state cycle eventually clears it.
 
 Values sort by their corresponding row values: priority numerically; size by
 `xs < s < m < l < xl`; complexity by `low < mid < high`; status by

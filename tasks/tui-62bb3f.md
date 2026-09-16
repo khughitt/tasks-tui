@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: feat/task-list-sorting
 created: 2026-09-15T02:17:13Z
-updated: 2026-09-16T02:59:37Z
+updated: 2026-09-16T09:02:31Z
 started: 2026-09-16T02:34:12Z
 depends: []
 tags: [v2]
@@ -23,3 +23,4 @@ Let people reorder the current Project tab by its visible task-table columns wit
 - 2026-09-16T02:32:54Z (feat/task-list-sorting): parked (waiting on user, decision): Choose the task-list sort interaction: recommended keyboard header selector versus a fixed key cycle
 - 2026-09-16T02:34:12Z (feat/task-list-sorting): design decision: approved keyboard header selector; arrows choose a visible data column and Enter toggles direction
 - 2026-09-16T02:59:37Z (feat/task-list-sorting): design revised after review: ranked enums, selector capture and off cycle, measured indicators, and reload/tab behavior are explicit
+- 2026-09-16T09:02:31Z (feat/task-list-sorting): design approved: hidden-column behavior clarified; proceed to implementation planning
