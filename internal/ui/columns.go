@@ -91,7 +91,16 @@ func (t table) minWidth(rows [][]cell) int {
 }
 
 func (t table) widths(rows [][]cell, width int) []int {
+	return t.widthsWithLabels(rows, width, nil)
+}
+
+func (t table) widthsWithLabels(rows [][]cell, width int, labels map[string]string) []int {
 	widths := t.measure(rows)
+	for i, c := range t.cols {
+		if label := labels[c.key]; !c.flex && lipgloss.Width(label) > widths[i] {
+			widths[i] = lipgloss.Width(label)
+		}
+	}
 	for t.sum(widths) > width {
 		best := -1
 		for i, c := range t.cols {
@@ -142,9 +151,25 @@ func (t table) offset(widths []int, key string) int {
 }
 
 func (t table) header(widths []int, s *Styles) string {
+	return t.headerWithLabels(widths, s, nil)
+}
+
+func (t table) headerWithLabels(widths []int, s *Styles, labels map[string]string) string {
+	return t.headerWithCandidate(widths, s, labels, "", 0)
+}
+
+func (t table) headerWithCandidate(widths []int, s *Styles, labels map[string]string, candidate string, slot int) string {
 	cells := make([]cell, len(t.cols))
 	for i, c := range t.cols {
-		cells[i] = text(s.Muted, c.label)
+		label := c.label
+		if labels[c.key] != "" {
+			label = labels[c.key]
+		}
+		style := s.Muted
+		if c.key == candidate {
+			style = s.Surface(slot)
+		}
+		cells[i] = text(style, label)
 	}
 	return t.row(widths, cells, lipgloss.NewStyle())
 }

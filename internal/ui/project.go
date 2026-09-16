@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -32,20 +33,25 @@ type projectData struct {
 }
 
 type projectView struct {
-	env       *Env
-	prefix    string
-	loader    *Loader
-	tab       tab
-	all, rows []rowView
-	counts    tasksctl.Counts
-	sel       int
-	filter    string
-	filtering bool
-	offset    int
-	loadedTab tab
-	hasData   bool
-	shown     [len(tabNames)]int
-	hasCount  [len(tabNames)]bool
+	env        *Env
+	prefix     string
+	loader     *Loader
+	tab        tab
+	all, rows  []rowView
+	counts     tasksctl.Counts
+	sel        int
+	filter     string
+	filtering  bool
+	offset     int
+	loadedTab  tab
+	hasData    bool
+	sortKey    string
+	descending bool
+	widths     []int
+	sorting    bool
+	candidate  int
+	shown      [len(tabNames)]int
+	hasCount   [len(tabNames)]bool
 }
 
 func newProjectView(env *Env, prefix string) *projectView {
@@ -53,7 +59,7 @@ func newProjectView(env *Env, prefix string) *projectView {
 }
 func (v *projectView) title() string   { return v.prefix }
 func (v *projectView) project() string { return v.prefix }
-func (v *projectView) capturing() bool { return v.filtering }
+func (v *projectView) capturing() bool { return v.filtering || v.sorting }
 func (v *projectView) loading() bool   { return v.loader.InFlight() }
 func (v *projectView) current() *target {
 	if v.sel < 0 || v.sel >= len(v.rows) || v.rows[v.sel].Unresolved {
@@ -148,6 +154,9 @@ func (v *projectView) applyFilter() {
 			v.rows = append(v.rows, r)
 		}
 	}
+	if v.sortKey != "" {
+		sort.SliceStable(v.rows, func(i, j int) bool { return v.less(v.rows[i], v.rows[j]) })
+	}
 	if v.hasData {
 		v.shown[v.loadedTab], v.hasCount[v.loadedTab] = len(v.rows), true
 	}
@@ -162,6 +171,90 @@ func (v *projectView) applyFilter() {
 			break
 		}
 	}
+}
+
+func (v *projectView) cycleSort(key string) {
+	switch {
+	case v.sortKey != key:
+		v.sortKey, v.descending = key, false
+	case !v.descending:
+		v.descending = true
+	default:
+		v.sortKey, v.descending = "", false
+	}
+	v.applyFilter()
+}
+
+func (v *projectView) less(a, b rowView) bool {
+	missing := func(r rowView) bool {
+		switch v.sortKey {
+		case "prio":
+			return r.Priority == nil
+		case "age":
+			_, err := time.Parse(time.RFC3339, r.Updated)
+			return err != nil
+		case "status":
+			return r.Unresolved || r.Status == ""
+		default:
+			return v.value(r) == ""
+		}
+	}
+	am, bm := missing(a), missing(b)
+	if am && bm {
+		return strings.Compare(a.ID, b.ID) < 0
+	}
+	if am != bm {
+		return !am
+	}
+	var order int
+	switch v.sortKey {
+	case "prio":
+		order = *a.Priority - *b.Priority
+	case "age":
+		at, _ := time.Parse(time.RFC3339, a.Updated)
+		bt, _ := time.Parse(time.RFC3339, b.Updated)
+		if at.Before(bt) {
+			order = -1
+		} else if at.After(bt) {
+			order = 1
+		}
+	default:
+		order = strings.Compare(v.value(a), v.value(b))
+	}
+	if order == 0 {
+		order = strings.Compare(a.ID, b.ID)
+	}
+	if v.descending {
+		order = -order
+	}
+	return order < 0
+}
+
+func (v *projectView) value(r rowView) string {
+	switch v.sortKey {
+	case "id":
+		return r.ID
+	case "size":
+		return rank(r.Size, map[string]int{"xs": 0, "s": 1, "m": 2, "l": 3, "xl": 4})
+	case "cx":
+		return rank(r.Complexity, map[string]int{"low": 0, "mid": 1, "high": 2})
+	case "status":
+		// Keep this rank aligned with tasks' Status enum.
+		return rank(r.Status, map[string]int{"idea": 0, "todo": 1, "doing": 2, "blocked": 3, "shelved": 4, "done": 5, "dropped": 6})
+	case "proc":
+		return r.Process
+	case "title":
+		return strings.ToLower(r.Title)
+	}
+	return ""
+}
+
+func rank(value string, ranks map[string]int) string {
+	n, ok := ranks[value]
+	if !ok {
+		return ""
+	}
+	return fmt.Sprintf("%d", n)
 }
 
 func (v *projectView) setTab(t tab) tea.Cmd { v.tab, v.sel, v.offset = t, 0, 0; return v.reload() }
@@ -187,6 +280,23 @@ func (v *projectView) update(msg tea.Msg) (view, tea.Cmd) {
 		}
 		return v, tea.Batch(next, notices(LevelWarning, d.warnings...))
 	case tea.KeyPressMsg:
+		if v.sorting {
+			keys := v.sortKeys()
+			switch msg.String() {
+			case "esc", "backspace":
+				v.sorting = false
+			case "left":
+				v.candidate = max(0, v.candidate-1)
+			case "right":
+				v.candidate = min(len(keys)-1, v.candidate+1)
+			case "enter":
+				if len(keys) > 0 {
+					v.cycleSort(keys[v.candidate])
+				}
+				v.sorting = false
+			}
+			return v, nil
+		}
 		if v.filtering {
 			switch msg.String() {
 			case "enter", "esc":
@@ -219,6 +329,14 @@ func (v *projectView) update(msg tea.Msg) (view, tea.Cmd) {
 			return v, v.setTab((v.tab + tab(len(tabNames)) - 1) % tab(len(tabNames)))
 		case key.Matches(msg, keys.Filter):
 			v.filtering = true
+		case msg.String() == "S" && v.hasData:
+			v.sorting = true
+			v.candidate = 0
+			for i, key := range v.sortKeys() {
+				if key == v.sortKey {
+					v.candidate = i
+				}
+			}
 		case key.Matches(msg, keys.Enter):
 			if t := v.current(); t != nil {
 				return v, func() tea.Msg { return pushMsg{v: newTaskView(v.env, *t)} }
@@ -265,7 +383,9 @@ func (v *projectView) render(width, height int) string {
 		}
 		tabs[i] = s.Pill(slot).Render(" " + label + " ")
 	}
-	rt := s.layoutRows(v.rows, width, time.Now())
+	rt := s.layoutRowsWithLabels(v.rows, width, time.Now(), v.headerLabels())
+	rt.candidate, rt.slot = v.candidateKey(), slot
+	v.widths = rt.widths
 	clipped := lipgloss.NewStyle().MaxWidth(width)
 	lines := []string{clipped.Render(head), clipped.Render(strings.Join(tabs, " ")), rt.header()}
 	filtering := v.filtering || v.filter != ""
@@ -294,4 +414,54 @@ func (v *projectView) render(width, height int) string {
 		lines = append(lines, s.Muted.Render(fmt.Sprintf("/%s · %d of %d", v.filter, len(v.rows), len(v.all))))
 	}
 	return lipgloss.NewStyle().MaxHeight(height).Render(strings.Join(lines, "\n"))
+}
+
+func (v *projectView) candidateKey() string {
+	if !v.sorting {
+		return ""
+	}
+	keys := v.sortKeys()
+	if v.candidate >= 0 && v.candidate < len(keys) {
+		if keys[v.candidate] == "prio" {
+			return "prio"
+		}
+		return keys[v.candidate]
+	}
+	return ""
+}
+
+func (v *projectView) headerLabels() map[string]string {
+	if v.sortKey == "" {
+		return nil
+	}
+	key := map[string]string{"prio": "prio", "size": "size", "cx": "cx", "proc": "proc", "age": "age"}[v.sortKey]
+	if key == "" {
+		key = v.sortKey
+	}
+	arrow := "↑"
+	if v.descending {
+		arrow = "↓"
+	}
+	for _, c := range taskTable.cols {
+		if c.key == key {
+			return map[string]string{key: c.label + arrow}
+		}
+	}
+	return nil
+}
+
+func (v *projectView) sortKeys() []string {
+	var keys []string
+	for i, c := range taskTable.cols {
+		if c.label == "" || i >= len(v.widths) || v.widths[i] == 0 {
+			continue
+		}
+		switch c.key {
+		case "prio":
+			keys = append(keys, "prio")
+		default:
+			keys = append(keys, c.key)
+		}
+	}
+	return keys
 }

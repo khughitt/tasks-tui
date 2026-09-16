@@ -129,3 +129,10 @@ func TestColumnMinimumsCoverLabels(t *testing.T) {
 		}
 	}
 }
+
+func TestTaskHeaderDecorationMeasuresItsLabel(t *testing.T) {
+	w := testTable.widthsWithLabels(testRows(), 200, map[string]string{"n": "n↓"})
+	if w[2] != 3 {
+		t.Fatalf("decorated label width = %d, want 3", w[2])
+	}
+}
