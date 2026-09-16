@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: feat/task-list-sorting
 created: 2026-09-15T02:17:13Z
-updated: 2026-09-16T10:16:11Z
+updated: 2026-09-16T10:40:28Z
 started: 2026-09-16T02:34:12Z
 completed: 2026-09-16T10:16:11Z
 depends: []
@@ -30,3 +30,4 @@ Let people reorder the current Project tab by its visible task-table columns wit
 - 2026-09-16T09:02:31Z (feat/task-list-sorting): design approved: hidden-column behavior clarified; proceed to implementation planning
 - 2026-09-16T09:45:38Z (feat/task-list-sorting): plan refined: each child completion stages its task record; feedback tasks-136399 records the tracker CLI link-clearing gap
 - 2026-09-16T10:16:11Z (feat/task-list-sorting): Added local keyboard sorting for Project task lists
+- 2026-09-16T10:40:28Z (main): Approved vocabulary rollout replaces the planned single-key S header selector with s <column> / S <column> sort chords (ops-ee5ffe Task 3).

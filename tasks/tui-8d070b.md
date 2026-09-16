@@ -1,13 +1,15 @@
 ---
 id: tui-8d070b
 title: "Rebind to the shared key vocabulary: chords, c launch, space start, s/S sort, F5, h/l, g g"
-status: todo
+status: doing
 priority: 2
 size: l
 complexity: mid
 process: direct
+owner: main
 created: 2026-09-16T09:36:27Z
-updated: 2026-09-16T09:36:27Z
+updated: 2026-09-16T10:40:28Z
+started: 2026-09-16T10:40:28Z
 depends: []
 tags: [keyboard, cross-project]
 agent: claude-code/claude-fable-5-1
