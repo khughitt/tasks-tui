@@ -1,6 +1,6 @@
 # Task-list sorting — design
 
-**Status:** draft. Goal: `tui-62bb3f`.
+**Status:** approved 2026-09-16. Goal: `tui-62bb3f`.
 
 ## Problem
 

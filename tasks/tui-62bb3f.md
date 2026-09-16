@@ -8,11 +8,14 @@ complexity: mid
 process: planned
 owner: feat/task-list-sorting
 created: 2026-09-15T02:17:13Z
-updated: 2026-09-16T09:02:31Z
+updated: 2026-09-16T09:03:40Z
 started: 2026-09-16T02:34:12Z
 depends: []
 tags: [v2]
 agent: codex
+spec: docs/specs/2026-09-15-task-list-sorting-design.md
+plan: docs/plans/2026-09-16-task-list-sorting.md
+step: "Task 1: Local sort model and measured headers"
 ---
 
 Let people reorder the current Project tab by its visible task-table columns without issuing a new tasks command. Preserve filtering, tabs, selection, and the existing server-defined default order on initial load. Decide and document the keyboard interaction, sort direction, sortable fields, indicators, and tests before implementation.
