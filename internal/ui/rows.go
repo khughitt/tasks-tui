@@ -152,19 +152,25 @@ type rowTable struct {
 	cells  [][]cell
 	widths []int
 	width  int
+	labels map[string]string
 }
 
 func (s *Styles) layoutRows(rows []rowView, width int, now time.Time) rowTable {
+	return s.layoutRowsWithLabels(rows, width, now, nil)
+}
+
+func (s *Styles) layoutRowsWithLabels(rows []rowView, width int, now time.Time, labels map[string]string) rowTable {
 	rt := rowTable{s: s, rows: rows, width: width, cells: make([][]cell, len(rows))}
 	for i, r := range rows {
 		rt.cells[i] = s.taskCells(r, now)
 	}
-	rt.widths = taskTable.widths(rt.cells, width)
+	rt.widths = taskTable.widthsWithLabels(rt.cells, width, labels)
+	rt.labels = labels
 	return rt
 }
 
 func (rt rowTable) header() string {
-	return fit(taskTable.header(rt.widths, rt.s), rt.width, lipgloss.NewStyle())
+	return fit(taskTable.headerWithLabels(rt.widths, rt.s, rt.labels), rt.width, lipgloss.NewStyle())
 }
 
 func (rt rowTable) line(i int, selected bool) string {

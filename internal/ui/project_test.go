@@ -2,6 +2,7 @@ package ui
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -121,6 +122,45 @@ func TestProjectViewFilterUTF8AndSelectionPosition(t *testing.T) {
 		t.Fatalf("selection = %d, want clamped previous position", pv.sel)
 	}
 }
+
+func TestProjectCycleSort(t *testing.T) {
+	pv := newProjectView(testEnv(newFake()), "tui")
+	pv.all = []rowView{
+		{ID: "c", Priority: intp(3), Size: "l", Complexity: "high", Title: "Zulu", Updated: "2026-09-13T12:00:00Z"},
+		{ID: "a", Priority: intp(1), Size: "xs", Complexity: "low", Title: "alpha", Updated: "bad"},
+		{ID: "b", Priority: intp(2), Size: "m", Complexity: "mid", Title: "Bravo", Updated: "2026-09-13T10:00:00Z"},
+	}
+	pv.rows = append([]rowView(nil), pv.all...)
+	pv.sel = 1
+	pv.cycleSort("prio")
+	if got := []string{pv.rows[0].ID, pv.rows[1].ID, pv.rows[2].ID}; !slices.Equal(got, []string{"a", "b", "c"}) || pv.current().ID != "a" {
+		t.Fatalf("ascending priority = %v, selected=%v", got, pv.current())
+	}
+	pv.cycleSort("prio")
+	if got := []string{pv.rows[0].ID, pv.rows[1].ID, pv.rows[2].ID}; !slices.Equal(got, []string{"c", "b", "a"}) {
+		t.Fatalf("descending priority = %v", got)
+	}
+	pv.cycleSort("prio")
+	if got := []string{pv.rows[0].ID, pv.rows[1].ID, pv.rows[2].ID}; !slices.Equal(got, []string{"c", "a", "b"}) {
+		t.Fatalf("cleared sort = %v", got)
+	}
+}
+
+func TestProjectCycleSortKeepsMissingRowsLast(t *testing.T) {
+	pv := newProjectView(testEnv(newFake()), "tui")
+	pv.all = []rowView{{ID: "z"}, {ID: "a"}, {ID: "b", Priority: intp(1)}, {ID: "c", Status: "todo", Unresolved: true}, {ID: "d", Status: "idea"}}
+	pv.cycleSort("prio")
+	if got := []string{pv.rows[0].ID, pv.rows[1].ID, pv.rows[2].ID, pv.rows[3].ID, pv.rows[4].ID}; !slices.Equal(got, []string{"b", "a", "c", "d", "z"}) {
+		t.Fatalf("priority missing rows = %v", got)
+	}
+	pv.all = []rowView{{ID: "c", Status: "todo", Unresolved: true}, {ID: "d", Status: "idea"}}
+	pv.cycleSort("status")
+	if got := pv.rows[len(pv.rows)-1].ID; got != "c" {
+		t.Fatalf("unresolved status sorts last, got %q", got)
+	}
+}
+
+func intp(n int) *int { return &n }
 
 func TestProjectViewWarningSourcesAndBackgroundDrain(t *testing.T) {
 	f := projectFake()
