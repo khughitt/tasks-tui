@@ -1,13 +1,15 @@
 ---
 id: tui-e0aa09
 title: Remove cursor-timer waits from UI tests
-status: todo
+status: doing
 priority: 2
 size: s
 complexity: low
 process: direct
+owner: main
 created: 2026-09-14T13:07:32Z
-updated: 2026-09-16T00:04:01Z
+updated: 2026-09-16T00:04:16Z
+started: 2026-09-16T00:04:16Z
 depends: []
 tags: [v2]
 agent: codex
