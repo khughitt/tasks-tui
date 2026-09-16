@@ -1,6 +1,6 @@
 # tasks-tui v1: the daily surface — design
 
-**Status:** implemented 2026-09-14 (plan docs/plans/2026-09-13-tasks-tui-v1.md). Goal: tui-d6e352. v1.1 (docs/specs/2026-09-14-tasks-tui-v1.1-polish-design.md) supersedes the row, table, legend, and selection paragraphs of §5 and §8.3.
+**Status:** key bindings updated for `tui-8d070b` on 2026-09-16; v1 implemented 2026-09-14 (plan docs/plans/2026-09-13-tasks-tui-v1.md). Goal: tui-d6e352. v1.1 (docs/specs/2026-09-14-tasks-tui-v1.1-polish-design.md) supersedes the row, table, legend, and selection paragraphs of §5 and §8.3.
 
 ## 1. Problem
 
@@ -182,7 +182,7 @@ spec and plan resolve against the branch that holds them.
 ## 5. Views and keys
 
 Three views on a stack: Projects → Project → Task. `esc` and `backspace` pop;
-`q` quits from anywhere outside an overlay; `?` toggles a key legend; `r` reloads
+`q` quits from anywhere outside an overlay; `?` toggles a key legend; `F5` reloads
 the current view. Started inside a registered root (`tasks projects` says so), the
 app opens that Project view with Projects beneath it; started elsewhere, or with
 `--all`, it opens Projects. `tasks-tui <prefix>` opens that project; `tasks-tui
@@ -193,7 +193,8 @@ app opens that Project view with Projects beneath it; started elsewhere, or with
 A table of every registered project, one row each: accent bar, prefix, name (the
 root's basename), `doing todo idea blocked` counts, last activity as a relative
 time, and a dimmed row with `✗` when unreachable. Default order is last activity,
-newest first; `S` toggles prefix order (`s` is start everywhere). `/` filters rows by prefix or name.
+newest first. `s p`/`S p` sort prefix ascending/descending; `s a`/`S a` sort
+activity ascending/descending. `/` filters rows by prefix or name.
 
 To the right, a pane for the highlighted project from `prime --project <p>`:
 `doing` rows with their claim owner, `parked` rows (the parked shape of §4) with
@@ -211,19 +212,22 @@ list: **Ready** (default; `ready --project`), **Doing** (`list --status doing`
 merged with `list --parked` by id — parking leaves status alone, so a parked doing
 task is one row carrying its park, and a parked todo is appended as a parked row), **Open** (`list`, the default
 statuses by priority), **Ideas** (`list --status idea`), **Done** (`list --status
-done --sort updated`, most recent first). `1`–`5` and `tab`/`shift+tab` switch tabs;
+done --sort updated`, most recent first). `1`–`5`, `tab`/`shift+tab`, and `h/l` or Left/Right switch tabs;
 `/` filters by id, title, or tag substring.
 
 While a filter is being typed, the view owns every key: no global shortcut fires
-(`s` is text, not start) until `enter` or `esc` leaves the filter. The same holds for
+(`s` is text, not a chord prefix) until `enter` or `esc` leaves the filter. The same holds for
 an open overlay, which also receives pasted text.
 
 A row: `id  P<n>  size  complexity  process  status  updated  title  [tags]`, with
 a claim marker (`◆ owner` when `live`, `◇ owner` dimmed when stale) and a park
 marker (`⏸ user` or `⏸ agent`) after the title when present, `⟳ every` for a recurrence, and `▸ n` for a goal with open
 descendants. `enter` opens the task; the transition keys of §5.4 act on the
-highlighted row without opening it; `a` quick-adds into this project; `l` launches
-the highlighted task.
+highlighted row without opening it; `a` quick-adds into this project; `c` launch chords target
+the highlighted task. `g g`/Home goes to the first row and `G`/End to the last.
+`s p`, `s a`, and `s t` sort priority, age, and title ascending; uppercase `S`
+selects descending. The active header shows the direction, and sorting survives
+reloads and tab switches.
 
 ### 5.3 Task
 
@@ -236,7 +240,7 @@ title. A claim shows owner, session, worktree, and whether it is live or stale; 
 shows next step,
 waiting-on, reason, and the checkout it was parked in; an escalation shows its level.
 
-Keys: the transitions of §5.4, `l` launch, `y` copies the id to the clipboard through
+Keys: the transitions of §5.4, `c` launch chords, `y` copies the id to the clipboard through
 the terminal (OSC 52, which kitty supports; no external tool), `j/k` and page keys
 scroll.
 
@@ -246,7 +250,7 @@ Each key opens an overlay at the bottom of the screen; `esc` cancels it; `enter`
 submits. Every submit runs one command, shows its `Error.Detail` on failure, and
 reloads the view on success.
 
-- `s` **start** — no prompt. On `Kind == "claimed"`, the overlay shows the claim's
+- `space` **start** — no prompt. On `Kind == "claimed"`, the overlay shows the claim's
   owner and session and offers `F` to run `start --force`. A stale claim does not
   produce this error; the CLI takes it over and reports the takeover in
   `warnings[]`, which §11 shows.
@@ -306,7 +310,9 @@ rendered flags.
 
 ## 7. Quick launch
 
-`l` on a task opens a picker of configured harnesses. Choosing one spawns a terminal
+`c c` on a task opens a picker of configured harnesses. `c l`, `c o`, `c r`,
+and `c O` launch Claude, Codex, Crush, and OpenCode directly; an unconfigured
+harness reports an error. Choosing or directly addressing one spawns a terminal
 window running that harness in the task's checkout with an initial prompt, detaches
 it, and reports "launched <harness> on <id> in <dir>" in the status line. The task's
 status is untouched (§2).
@@ -437,7 +443,7 @@ this table is the first thing to delete.
 
 ## 10. Refresh
 
-The current view reloads after any write it issued, on `r`, and on a timer every
+The current view reloads after any write it issued, on `F5`, and on a timer every
 `refresh_seconds` (agents change claims and parks under the TUI). A reload preserves
 the highlighted id when it is still present and the scroll position otherwise.
 

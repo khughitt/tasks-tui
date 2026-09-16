@@ -85,7 +85,7 @@ func TestProjectViewAgainstRealBinary(t *testing.T) {
 		return false
 	}
 	d.Expect("first task", "second task", "P1", "[it]")
-	d.Key("s") // start the highlighted (P1) task through the real binary
+	d.Key("space") // start the highlighted (P1) task through the real binary
 	if !logged("start zz-") {
 		t.Fatalf("start must be logged: %+v", app.Messages())
 	}

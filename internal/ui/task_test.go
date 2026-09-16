@@ -53,7 +53,7 @@ func TestTaskViewShowsFromCheckoutAndRendersBody(t *testing.T) {
 	}
 	d.Key("j")
 	d.Key("pgdown")
-	d.Key("g")
+	chord(t, d, app, "g", "g")
 	d.Expect("Do the thing")
 }
 

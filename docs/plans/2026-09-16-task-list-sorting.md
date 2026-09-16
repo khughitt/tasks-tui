@@ -1,5 +1,14 @@
 # Task-list sorting Implementation Plan
 
+**Status:** historical implementation plan; its keyboard examples are superseded
+by `tui-8d070b` (2026-09-16). Current bindings are documented in the README and
+`tools/keys.toml`: `space` starts; `c c` opens the launch picker; `c l/o/r/O`
+launch fixed harnesses; `F5` reloads; `h/l` switches tabs; `g g` goes to the top.
+Sorting uses `s p/a/t` or `S p/a/t` for ascending/descending priority, age, or title
+(Projects: `p` prefix, `a` activity). The original selector and key examples below
+record the earlier implementation, not instructions to restore its interaction.
+
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add local, keyboard-selected sorting to Project-view task tabs.
