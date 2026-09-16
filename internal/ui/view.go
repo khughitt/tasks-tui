@@ -92,6 +92,7 @@ type addMsg struct {
 }
 type launchMsg struct {
 	harness, id, dir string
+	prompt           string
 	noPrompt         bool
 	err              error
 }

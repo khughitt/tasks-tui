@@ -2,6 +2,7 @@ package ui
 
 import (
 	"errors"
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -56,7 +57,7 @@ func TestLaunchWithoutPromptSaysSoAndSpawnErrorsShow(t *testing.T) {
 	d.Key("j")
 	d.Key("j")
 	d.Key("enter") // claude, codex, crush, opencode
-	d.Expect("launched crush on tui-aaa111 in /r/tui (no initial prompt)")
+	d.Expect("launched crush on tui-aaa111 in /r/tui (no initial prompt; prompt copied)")
 	env.Spawn = func(launch.Plan) error { return errors.New("kitty: not found") }
 	d.Key("l")
 	d.Key("esc")
@@ -64,6 +65,18 @@ func TestLaunchWithoutPromptSaysSoAndSpawnErrorsShow(t *testing.T) {
 	d.Key("l")
 	d.Key("1")
 	d.Expect("launch: kitty: not found")
+}
+
+func TestNoPromptLaunchCopiesTheRenderedPrompt(t *testing.T) {
+	env := testEnv(projectFake())
+	app := New(env, Options{Stack: []view{newProjectView(env, "tui")}})
+	drive(t, app)
+	app.openLaunch()
+	msg := app.overlay.(*pickerOverlay).onPick("crush")().(launchMsg)
+	_, cmd := app.Update(msg)
+	if got := fmt.Sprint(cmd()); got != "Run `tasks start tui-aaa111` and continue that task: Title of tui-aaa111" {
+		t.Fatalf("clipboard = %q", got)
+	}
 }
 
 func TestLaunchNeedsATarget(t *testing.T) {

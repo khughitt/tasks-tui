@@ -120,7 +120,9 @@ func (a *App) update(raw tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		text := fmt.Sprintf("launched %s on %s in %s", msg.harness, msg.id, msg.dir)
 		if msg.noPrompt {
-			text += " (no initial prompt)"
+			text += " (no initial prompt; prompt copied)"
+			a.log.Add(LevelInfo, text)
+			return a, tea.SetClipboard(msg.prompt)
 		}
 		a.log.Add(LevelInfo, text)
 		return a, nil

@@ -33,7 +33,7 @@ func (a *App) openLaunch() tea.Cmd {
 				if err := spawn(plan); err != nil {
 					return launchMsg{harness: name, id: tgt.ID, err: err}
 				}
-				return launchMsg{harness: name, id: tgt.ID, dir: co.Dir, noPrompt: plan.NoPrompt}
+				return launchMsg{harness: name, id: tgt.ID, dir: co.Dir, prompt: plan.Prompt, noPrompt: plan.NoPrompt}
 			}
 		}}
 	return nil
