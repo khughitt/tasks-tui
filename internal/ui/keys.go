@@ -2,6 +2,12 @@ package ui
 
 import "charm.land/bubbles/v2/key"
 
+// chordPrefixes are the first keys of two-key sequences. App.key holds one pending
+// prefix and delivers the completed chord to the normal dispatch as a key press whose
+// String() is the sequence, e.g. "c c", so bindings list chords as ordinary keys.
+// Only c until the rebinding step frees s, S, and g from their single-key meanings.
+var chordPrefixes = []string{"c"}
+
 type keymap struct {
 	Quit, Help, Log, Reload, Back, Add, Launch, Start, Park, Done, Drop, Enter, Filter key.Binding
 	Up, Down, PageUp, PageDown, Top, Bottom                                            key.Binding

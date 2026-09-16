@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
 	"tasks-tui/internal/identity"
+	"tasks-tui/internal/uitest"
 )
 
 type stubView struct {
@@ -238,4 +240,39 @@ func TestMessagesReturnsLog(t *testing.T) {
 	if got := app.Messages(); len(got) != 1 || !strings.Contains(got[0].Text, "careful") {
 		t.Fatalf("messages: %v", got)
 	}
+}
+
+// chord presses the prefix through Update so its expiry tick is not run by the driver, then the second key.
+func chord(t *testing.T, d *uitest.Driver, app *App, first, second string) {
+	t.Helper()
+	app.Update(tea.KeyPressMsg{Code: []rune(first)[0], Text: first})
+	d.Key(second)
+}
+
+func TestChordPrefixWaitsThenDeliversOrExpires(t *testing.T) {
+	v := &stubView{name: "root"}
+	app := testApp(v)
+	d := drive(t, app)
+	if _, cmd := app.Update(tea.KeyPressMsg{Code: 'c', Text: "c"}); app.chord.prefix != "c" || cmd == nil {
+		t.Fatalf("c pends a chord and schedules its expiry: %+v", app.chord)
+	}
+	d.Expect("c …")
+	d.Key("c")
+	if app.chord.prefix != "" || len(v.seen) != 1 || v.seen[0] != "c c" {
+		t.Fatalf("the second key completes the chord as one key press: %v %+v", v.seen, app.chord)
+	}
+	chord(t, d, app, "c", "x")
+	if app.chord.prefix != "" || len(v.seen) != 2 || v.seen[1] != "c x" {
+		t.Fatalf("a non-matching second key clears the prefix; the view ignores %q: %v", "c x", v.seen)
+	}
+	app.Update(tea.KeyPressMsg{Code: 'c', Text: "c"})
+	d.Feed(chordExpireMsg{deadline: time.Time{}})
+	if app.chord.prefix != "c" {
+		t.Fatal("a stale expiry must not clear a newer prefix")
+	}
+	d.Feed(chordExpireMsg{deadline: app.chord.deadline})
+	if app.chord.prefix != "" {
+		t.Fatal("the matching expiry clears the prefix")
+	}
+	d.Expect("? keys")
 }

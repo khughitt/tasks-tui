@@ -3,6 +3,7 @@ package ui
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -21,6 +22,14 @@ type Options struct {
 	Stack   []view
 }
 
+const chordTimeout = 900 * time.Millisecond
+
+type chordState struct {
+	prefix   string
+	deadline time.Time
+}
+type chordExpireMsg struct{ deadline time.Time }
+
 type App struct {
 	env                   *Env
 	opts                  Options
@@ -32,6 +41,7 @@ type App struct {
 	spinner               spinner.Model
 	legendVP              viewport.Model
 	spinning              bool
+	chord                 chordState
 }
 
 func New(env *Env, opts Options) *App {
@@ -126,6 +136,11 @@ func (a *App) update(raw tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		a.log.Add(LevelInfo, text)
 		return a, nil
+	case chordExpireMsg:
+		if a.chord.prefix != "" && a.chord.deadline.Equal(msg.deadline) {
+			a.chord = chordState{}
+		}
+		return a, nil
 	case tea.PasteMsg:
 		if a.overlay != nil {
 			var cmd tea.Cmd
@@ -182,6 +197,16 @@ func (a *App) key(msg tea.KeyPressMsg) tea.Cmd {
 			a.legendVP.PageDown()
 		}
 		return nil
+	}
+	if a.chord.prefix != "" {
+		msg = tea.KeyPressMsg{Text: a.chord.prefix + " " + msg.String()}
+		a.chord = chordState{}
+	} else if slices.Contains(chordPrefixes, msg.String()) {
+		a.chord = chordState{prefix: msg.String(), deadline: time.Now().Add(chordTimeout)}
+		deadline := a.chord.deadline
+		return tea.Tick(chordTimeout, func(time.Time) tea.Msg { return chordExpireMsg{deadline} })
+	}
+	switch {
 	case key.Matches(msg, keys.Quit):
 		return tea.Quit
 	case key.Matches(msg, keys.Help):
@@ -278,6 +303,9 @@ func (a *App) renderLegend(width, height int) string {
 func (a *App) statusLine() string {
 	s := a.env.Styles
 	hint := s.Muted.Render("? keys")
+	if a.chord.prefix != "" {
+		hint = s.Bold.Render(a.chord.prefix + " …")
+	}
 	if a.width <= 0 {
 		return ""
 	}
