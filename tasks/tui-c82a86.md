@@ -1,13 +1,16 @@
 ---
 id: tui-c82a86
 title: Retain a repeatable terminal smoke test for the complete app
-status: todo
+status: done
 priority: 2
 size: m
 complexity: mid
 process: direct
+owner: test/terminal-smoke
 created: 2026-09-14T13:07:32Z
-updated: 2026-09-16T01:35:10Z
+updated: 2026-09-16T01:42:49Z
+started: 2026-09-16T01:35:28Z
+completed: 2026-09-16T01:42:49Z
 depends: []
 tags: [v2]
 agent: codex
@@ -18,3 +21,5 @@ Why: preserve a real PTY acceptance check beyond the synchronous model integrati
 ## Notes
 
 - 2026-09-16T01:35:10Z (main): scope: scoped; direct standalone tmux smoke reusing the integration test isolation pattern, with a temporary launch fixture and no fast-suite integration
+- 2026-09-16T01:41:07Z (test/terminal-smoke): Standalone tmux smoke now builds a temporary binary in an env -i scratch project, verifies a pasted quick-add write, raw-escape cancellation, and the detached fake harness without HOME fallback writes
+- 2026-09-16T01:42:49Z (test/terminal-smoke): Add a repeatable tmux smoke command covering real PTY startup/navigation, pasted quick-add write/cancel, detached fixture launch, and isolated XDG state
