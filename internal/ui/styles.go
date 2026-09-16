@@ -9,29 +9,30 @@ import (
 // Styles holds the semantic colours of spec §8.3 — the only hard-coded colours — and
 // the per-slot accent styles derived from identity.
 type Styles struct {
-	Tone      identity.Tone
-	Base      lipgloss.Style
-	Muted     lipgloss.Style
-	Bold      lipgloss.Style
-	Recent    lipgloss.Style
-	Frame     lipgloss.Style
-	Header    lipgloss.Style
-	Error     lipgloss.Style
-	Warning   lipgloss.Style
-	Info      lipgloss.Style
-	ParkUser  lipgloss.Style
-	ParkAgent lipgloss.Style
-	Claim     lipgloss.Style
-	Stale     lipgloss.Style
-	Periodic  lipgloss.Style
-	Tag       lipgloss.Style
-	priority  [5]lipgloss.Style
-	status    map[string]lipgloss.Style
-	accent    [identity.SlotCount]lipgloss.Style
-	dim       [identity.SlotCount]lipgloss.Style
-	surface   [identity.SlotCount]lipgloss.Style
-	gutter    [identity.SlotCount]lipgloss.Style
-	pill      [identity.SlotCount]lipgloss.Style
+	Tone        identity.Tone
+	Base        lipgloss.Style
+	Muted       lipgloss.Style
+	Bold        lipgloss.Style
+	Recent      lipgloss.Style
+	Frame       lipgloss.Style
+	Header      lipgloss.Style
+	Error       lipgloss.Style
+	Warning     lipgloss.Style
+	Info        lipgloss.Style
+	ParkUser    lipgloss.Style
+	ParkAgent   lipgloss.Style
+	Claim       lipgloss.Style
+	Stale       lipgloss.Style
+	Periodic    lipgloss.Style
+	Tag         lipgloss.Style
+	cursorBlink bool
+	priority    [5]lipgloss.Style
+	status      map[string]lipgloss.Style
+	accent      [identity.SlotCount]lipgloss.Style
+	dim         [identity.SlotCount]lipgloss.Style
+	surface     [identity.SlotCount]lipgloss.Style
+	gutter      [identity.SlotCount]lipgloss.Style
+	pill        [identity.SlotCount]lipgloss.Style
 }
 
 func NewStyles(t identity.Tone) *Styles {
@@ -42,7 +43,7 @@ func NewStyles(t identity.Tone) *Styles {
 	teal := ld(lipgloss.Color("30"), lipgloss.Color("80"))
 	dim := ld(lipgloss.Color("245"), lipgloss.Color("243"))
 
-	s := &Styles{Tone: t}
+	s := &Styles{Tone: t, cursorBlink: true}
 	s.Base = lipgloss.NewStyle()
 	s.Muted = lipgloss.NewStyle().Foreground(dim)
 	s.Bold = lipgloss.NewStyle().Bold(true)

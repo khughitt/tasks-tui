@@ -24,7 +24,9 @@ func newPrompt(s *Styles, title, placeholder string) *promptOverlay {
 	in := textinput.New()
 	in.Placeholder = placeholder
 	in.Prompt = "> "
-	in.SetStyles(textinput.DefaultStyles(s.Tone.Dark))
+	styles := textinput.DefaultStyles(s.Tone.Dark)
+	styles.Cursor.Blink = s.cursorBlink
+	in.SetStyles(styles)
 	in.Focus()
 	return &promptOverlay{styles: s, title: title, input: in}
 }
