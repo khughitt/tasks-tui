@@ -50,6 +50,7 @@ type Plan struct {
 	Argv     []string
 	Dir      string
 	Env      []string
+	Prompt   string
 	NoPrompt bool // the harness command has no {prompt}; the status line says so
 }
 
@@ -94,7 +95,7 @@ func Build(cfg Config, harness, dir, id, title string, environ []string) (Plan, 
 	for _, key := range keys {
 		env = append(env, key+"="+h.Env[key])
 	}
-	return Plan{Argv: argv, Dir: dir, Env: env, NoPrompt: noPrompt}, nil
+	return Plan{Argv: argv, Dir: dir, Env: env, Prompt: prompt, NoPrompt: noPrompt}, nil
 }
 
 // Spawn starts the plan in its own session with stdio detached, and reaps it in the

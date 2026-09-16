@@ -2,6 +2,7 @@ package ui
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -103,6 +104,17 @@ func TestCapturingViewOwnsEveryKey(t *testing.T) {
 	}
 	if d.Quit || len(app.stack) != 1 || app.legend || len(v.seen) != 5 {
 		t.Fatalf("captured state: quit=%v stack=%d legend=%v seen=%v", d.Quit, len(app.stack), app.legend, v.seen)
+	}
+}
+
+func TestNoPromptLaunchCopiesRenderedPrompt(t *testing.T) {
+	app := testApp(&stubView{name: "root"})
+	_, cmd := app.Update(launchMsg{harness: "crush", id: "tui-1", dir: "/wt", prompt: "Run `tasks start tui-1`", noPrompt: true})
+	if cmd == nil || fmt.Sprint(cmd()) != "Run `tasks start tui-1`" {
+		t.Fatalf("clipboard command = %v", cmd)
+	}
+	if app.log.Current() == nil || !strings.Contains(app.log.Current().Text, "prompt copied") {
+		t.Fatalf("notice = %v", app.log.Current())
 	}
 }
 
