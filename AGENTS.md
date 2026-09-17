@@ -38,10 +38,9 @@ Rebuild after changes: `just install`.
 - `cmd/tasks-tui/` — flags, config, startup probe, program.
 - internal/tasksctl/ — the only subprocess boundary: `Runner`, typed calls, JSON types, `Error`, `CheckoutFor`.
 - internal/identity/ — familiar's slot algorithm (remote key, pins, fnv1a32, hue table, tone).
-- internal/quickadd/ — the one-line grammar.
 - internal/launch/ — harness commands and the terminal spawn.
 - internal/config/ — `~/.config/tasks-tui/config.toml`.
-- internal/ui/ — the Bubble Tea model: app, views, overlays, styles, the column model (columns.go), the legend.
+- internal/ui/ — the Bubble Tea model: app, views, the shared task form, overlays, styles, the column model (columns.go), the legend.
 
 ## Rules
 

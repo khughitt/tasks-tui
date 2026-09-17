@@ -86,7 +86,6 @@ func run() error {
 	}
 	for _, p := range projects.Projects {
 		env.Roots[p.Prefix] = p.Root
-		env.Prefixes = append(env.Prefixes, p.Prefix)
 	}
 
 	cwd, _ := os.Getwd()

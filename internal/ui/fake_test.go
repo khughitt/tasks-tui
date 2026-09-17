@@ -12,7 +12,6 @@ import (
 	"tasks-tui/internal/config"
 	"tasks-tui/internal/identity"
 	"tasks-tui/internal/launch"
-	"tasks-tui/internal/quickadd"
 	"tasks-tui/internal/tasksctl"
 	"tasks-tui/internal/uitest"
 )
@@ -119,6 +118,6 @@ func parkedJSON(rows ...tasksctl.ParkedRow) string {
 func testEnv(f *fakeRunner) *Env {
 	styles := NewStyles(identity.Tone{Dark: true, SatScale: 1})
 	styles.cursorBlink = false
-	return &Env{Client: &tasksctl.Client{R: f}, Styles: styles, Config: config.Default(), Slots: map[string]int{"tui": 2, "ops": 1}, Roots: map[string]string{"tui": "/r/tui", "ops": "/r/ops"}, Prefixes: quickadd.Prefixes{"tui", "ops"}, Exists: func(path string) bool { return strings.HasPrefix(path, "/r/") || strings.HasPrefix(path, "/wt/") }, Environ: []string{"HOME=/h"}, Spawn: func(launch.Plan) error { return nil }, Timeout: 2 * time.Second}
+	return &Env{Client: &tasksctl.Client{R: f}, Styles: styles, Config: config.Default(), Slots: map[string]int{"tui": 2, "ops": 1}, Roots: map[string]string{"tui": "/r/tui", "ops": "/r/ops"}, Exists: func(path string) bool { return strings.HasPrefix(path, "/r/") || strings.HasPrefix(path, "/wt/") }, Environ: []string{"HOME=/h"}, Spawn: func(launch.Plan) error { return nil }, Timeout: 2 * time.Second}
 }
 func drive(t *testing.T, app *App) *uitest.Driver { t.Helper(); return uitest.New(t, app, 120, 40) }

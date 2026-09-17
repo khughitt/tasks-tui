@@ -76,9 +76,9 @@ func both(action string, b key.Binding) key.Binding {
 var localAliases = map[string]bool{"i": true}
 
 type keymap struct {
-	Quit, Help, Log, Reload, Back, Add, Launch, Start, Park, Done, Drop, Enter, Filter key.Binding
-	Up, Down, Prev, Next, PageUp, PageDown, Top, Bottom                                key.Binding
-	Tab, ShiftTab, Digits, Sort, Copy                                                  key.Binding
+	Quit, Help, Log, Reload, Back, Add, Edit, Launch, Start, Park, Done, Drop, Enter, Filter key.Binding
+	Up, Down, Prev, Next, PageUp, PageDown, Top, Bottom                                      key.Binding
+	Tab, ShiftTab, Digits, Sort, Copy                                                        key.Binding
 }
 
 var keys = keymap{
@@ -87,7 +87,8 @@ var keys = keymap{
 	Log:      scoped("global", "log", "", key.NewBinding(key.WithKeys("W"), key.WithHelp("W", "messages"))),
 	Reload:   scoped("global", "reload", "", key.NewBinding(key.WithKeys("f5"), key.WithHelp("F5", "reload"))),
 	Back:     scoped("global", "dismiss", "", key.NewBinding(key.WithKeys("esc", "backspace"), key.WithHelp("esc", "back"))),
-	Add:      scoped("global", "add", "", key.NewBinding(key.WithKeys("a"), key.WithHelp("a", "quick add"))),
+	Add:      scoped("global", "add", "", key.NewBinding(key.WithKeys("a"), key.WithHelp("a", "add"))),
+	Edit:     scoped("global", "edit", "", key.NewBinding(key.WithKeys("e"), key.WithHelp("e", "edit"))),
 	Launch:   key.NewBinding(key.WithKeys(launchSeqs()...), key.WithHelp("c …", "launch agent")), // rows: launchKeys
 	Start:    scoped("global", "primary", "start the focused task", key.NewBinding(key.WithKeys("space"), key.WithHelp("space", "start"))),
 	Park:     scoped("global", "park", "", key.NewBinding(key.WithKeys("p"), key.WithHelp("p", "park"))),
@@ -115,6 +116,6 @@ var keys = keymap{
 var legendGroups = []legendGroup{
 	{"move", []key.Binding{keys.Down, keys.Next, keys.Top, keys.PageDown, keys.Tab, keys.Digits}},
 	{"open", []key.Binding{keys.Enter, keys.Back, keys.Filter, keys.Sort, keys.Reload}},
-	{"task", []key.Binding{keys.Add, keys.Launch, keys.Start, keys.Park, keys.Done, keys.Drop, keys.Copy}},
+	{"task", []key.Binding{keys.Add, keys.Edit, keys.Launch, keys.Start, keys.Park, keys.Done, keys.Drop, keys.Copy}},
 	{"app", []key.Binding{keys.Help, keys.Log, keys.Quit}},
 }

@@ -97,7 +97,7 @@ func TestEveryKeymapFieldIsScoped(t *testing.T) {
 		t.Fatalf("keymap fields not built through scoped(): %v", missing)
 	}
 	rogue := keys
-	rogue.Add = key.NewBinding(key.WithKeys("+"), key.WithHelp("+", "quick add"))
+	rogue.Add = key.NewBinding(key.WithKeys("+"), key.WithHelp("+", "add"))
 	if got := unscopedFields(rogue); !slices.Equal(got, []string{"Add"}) {
 		t.Fatalf("a binding that bypasses scoped() must be reported, got %v", got)
 	}

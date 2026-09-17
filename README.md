@@ -11,7 +11,7 @@ out to the `tasks` binary and reads its JSON; it never touches `tasks/*.md` itse
 
 Both commands are installed in Go's binary directory, which must be on `PATH`.
 
-Keys: `?` legend · `enter`/`i` open · `a` quick add · `c c` launch picker · `space` start · `p` park · `d` done · `x` drop · `W` messages · `q` quit (or close a panel).
+Keys: `?` legend · `enter`/`i` open · `a` add · `e` edit · `c c` launch picker · `space` start · `p` park · `d` done · `x` drop · `W` messages · `q` quit (or close a panel).
 
 Launch directly: `c l` Claude, `c o` Codex, `c r` Crush, `c O` OpenCode.
 `F5` reloads; `h`/`l` or Left/Right switch tabs; `g g`/Home goes to the top,
@@ -19,12 +19,9 @@ Launch directly: `c l` Claude, `c o` Codex, `c r` Crush, `c O` OpenCode.
 `s t` (title); use `S` as the prefix for descending. In Projects, `p` sorts
 prefix and `a` sorts activity. A pending prefix appears for up to 900 ms.
 
-Quick add: `#tag !2 ~m ^mid @30d >prefix · ? first = idea · -- body`.
-
-When typing a tag at the end of the input, Tab accepts a suggestion and Up/Down
-choose among matches from the current project's open tasks. An explicit `>prefix`
-changes the project. New tags can always be typed directly; text after `--` is
-never completed.
+Add and edit open a centered form for title, body, and tags. Use Tab or Shift+Tab
+to move, Ctrl+S to save, and Escape to cancel. In tags, Enter accepts a suggestion
+and Up/Down choose among matches from the current project.
 
 Config: `~/.config/tasks-tui/config.toml` (all optional):
 

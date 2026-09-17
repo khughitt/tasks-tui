@@ -115,14 +115,23 @@ func (a *App) update(raw tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 	case writeMsg:
 		return a, a.afterWrite(msg)
-	case addMsg:
-		if msg.err != nil {
-			a.log.Add(LevelError, "add: "+msg.err.Error())
+	case formSubmitMsg:
+		if a.top() != msg.form {
 			return a, nil
 		}
-		a.log.AddWarnings("add", msg.res.Warnings)
-		a.log.Add(LevelInfo, msg.res.Action+" "+msg.res.ID)
+		if msg.err != nil {
+			return a, a.toTop(msg)
+		}
+		a.log.AddWarnings(msg.action, msg.warnings)
+		a.log.Add(LevelInfo, msg.action)
+		a.stack = a.stack[:len(a.stack)-1]
 		return a, a.top().reload()
+	case formCloseMsg:
+		if len(a.stack) > 1 {
+			a.stack = a.stack[:len(a.stack)-1]
+			return a, a.top().reload()
+		}
+		return a, nil
 	case launchMsg:
 		if msg.err != nil {
 			a.log.Add(LevelError, "launch: "+msg.err.Error())
@@ -220,7 +229,9 @@ func (a *App) key(msg tea.KeyPressMsg) tea.Cmd {
 	case key.Matches(msg, keys.Back):
 		return a.pop()
 	case key.Matches(msg, keys.Add):
-		return a.openQuickAdd()
+		return a.openAdd()
+	case key.Matches(msg, keys.Edit):
+		return a.openEdit()
 	case key.Matches(msg, keys.Launch):
 		return a.launch(msg.String())
 	case key.Matches(msg, keys.Start):

@@ -59,22 +59,26 @@ wait_for has_screen zz
 tmux -S "$socket" send-keys -t "$session" enter
 wait_for has_screen 'first task'
 tmux -S "$socket" send-keys -t "$session" a
-tmux -S "$socket" set-buffer -b smoke 'added task #it'
+tmux -S "$socket" set-buffer -b smoke 'added task'
 tmux -S "$socket" paste-buffer -b smoke -t "$session"
-wait_for has_screen 'added task #it'
-tmux -S "$socket" send-keys -t "$session" enter
+tmux -S "$socket" send-keys -t "$session" tab tab
+tmux -S "$socket" set-buffer -b smoke 'it'
+tmux -S "$socket" paste-buffer -b smoke -t "$session"
+wait_for has_screen 'added task'
+tmux -S "$socket" send-keys -t "$session" C-s
 wait_for has_task 'added task'
 tmux -S "$socket" send-keys -t "$session" a
-tmux -S "$socket" set-buffer -b smoke 'cancelled task #it'
+tmux -S "$socket" set-buffer -b smoke 'cancelled task'
 tmux -S "$socket" paste-buffer -b smoke -t "$session"
-wait_for has_screen 'cancelled task #it'
+wait_for has_screen 'cancelled task'
 tmux -S "$socket" send-keys -t "$session" -H 1b
-wait_for lacks_screen 'quick add'
+wait_for lacks_screen 'ctrl+s save'
+wait_for has_screen 'added task'
 if has_task 'cancelled task'; then
   echo 'smoke-tui: cancelled prompt wrote a task' >&2
   exit 1
 fi
-tmux -S "$socket" send-keys -t "$session" l
+tmux -S "$socket" send-keys -t "$session" c c
 wait_for has_screen '4 fake'
 tmux -S "$socket" send-keys -t "$session" 4
 wait_for test -f "$launched"

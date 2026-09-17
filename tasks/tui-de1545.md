@@ -1,13 +1,16 @@
 ---
 id: tui-de1545
 title: Add a shared task form for editing and creation
-status: todo
+status: done
 priority: 2
 size: m
 complexity: mid
 process: direct
+owner: feat/task-form
 created: 2026-09-17T17:28:32Z
-updated: 2026-09-17T17:29:57Z
+updated: 2026-09-17T18:02:29Z
+started: 2026-09-17T17:33:45Z
+completed: 2026-09-17T18:02:29Z
 depends: []
 tags: [v2]
 agent: codex
@@ -37,3 +40,4 @@ UI tests cover centered rendering, initial title focus, field order and focus mo
 ## Notes
 
 - 2026-09-17T17:29:57Z (main): scope: scoped; promoted to a direct medium task with edit mode first and create mode replacing quick add second
+- 2026-09-17T18:02:29Z (feat/task-form): Shared centered title/body/tags form now edits tasks and replaces quick add for creation, with tag completion and typed writes

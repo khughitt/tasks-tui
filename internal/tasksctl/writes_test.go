@@ -65,13 +65,22 @@ func TestWritesBuildArgv(t *testing.T) {
 	}
 }
 
-func TestAddPassesArgsThroughWithoutDir(t *testing.T) {
+func TestAddAndEditTaskFields(t *testing.T) {
 	r := &argvRunner{reply: `{"id":"tui-2","action":"created","warnings":[]}`}
-	res, err := (&Client{R: r}).Add(context.Background(), []string{"add", "title", "--project", "tui", "--tag", "x"})
+	c := &Client{R: r}
+	fields := TaskFields{Title: "title", Body: "body\ntext", Tags: []string{"x", "y"}}
+	res, err := c.AddTask(context.Background(), "tui", fields)
 	if err != nil || res.ID != "tui-2" || res.Action != "created" {
 		t.Fatalf("res=%+v err=%v", res, err)
 	}
-	if r.dirs[0] != "" || !slices.Equal(r.calls[0], []string{"add", "title", "--project", "tui", "--tag", "x"}) {
+	r.reply = `{"id":"tui-2","warnings":[]}`
+	if _, err := c.Edit(context.Background(), "/wt", "tui-2", fields); err != nil {
+		t.Fatal(err)
+	}
+	if r.dirs[0] != "" || !slices.Equal(r.calls[0], []string{"add", "title", "--project", "tui", "-b", "body\ntext", "--tag", "x", "--tag", "y"}) {
 		t.Fatalf("argv %v dir %q", r.calls[0], r.dirs[0])
+	}
+	if r.dirs[1] != "/wt" || !slices.Equal(r.calls[1], []string{"edit", "tui-2", "--title", "title", "-b", "body\ntext", "--no-tags", "--tag", "x", "--tag", "y"}) {
+		t.Fatalf("argv %v dir %q", r.calls[1], r.dirs[1])
 	}
 }

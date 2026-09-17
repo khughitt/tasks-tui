@@ -75,13 +75,33 @@ func (c *Client) Root(ctx context.Context, id string) (res RootResult, err error
 	return res, decodeInto(raw, &res, "!prefix", "!root", "!warnings")
 }
 
-// Add runs the argv quickadd built (spec §6.1). --project is inside args; no -C.
-func (c *Client) Add(ctx context.Context, args []string) (res AddResult, err error) {
+type TaskFields struct {
+	Title string
+	Body  string
+	Tags  []string
+}
+
+func (c *Client) AddTask(ctx context.Context, prefix string, fields TaskFields) (res AddResult, err error) {
+	args := []string{"add", fields.Title, "--project", prefix}
+	if fields.Body != "" {
+		args = append(args, "-b", fields.Body)
+	}
+	for _, tag := range fields.Tags {
+		args = append(args, "--tag", tag)
+	}
 	raw, err := c.R.Run(ctx, "", args...)
 	if err != nil {
 		return res, err
 	}
 	return res, decodeInto(raw, &res, "!id", "!action", "!warnings")
+}
+
+func (c *Client) Edit(ctx context.Context, dir, id string, fields TaskFields) (WriteResult, error) {
+	args := []string{"edit", id, "--title", fields.Title, "-b", fields.Body, "--no-tags"}
+	for _, tag := range fields.Tags {
+		args = append(args, "--tag", tag)
+	}
+	return c.write(ctx, dir, args...)
 }
 
 func (c *Client) Start(ctx context.Context, dir, id string, force bool) (WriteResult, error) {

@@ -14,7 +14,6 @@ import (
 	"tasks-tui/internal/config"
 	"tasks-tui/internal/identity"
 	"tasks-tui/internal/launch"
-	"tasks-tui/internal/quickadd"
 	"tasks-tui/internal/tasksctl"
 	"tasks-tui/internal/ui"
 	"tasks-tui/internal/uitest"
@@ -70,7 +69,7 @@ func TestProjectViewAgainstRealBinary(t *testing.T) {
 		t.Fatalf("scratch project not registered: %+v", projects.Projects)
 	}
 	env := &ui.Env{Client: client, Styles: ui.NewStyles(identity.Tone{Dark: true, SatScale: 1}), Config: config.Default(),
-		Slots: map[string]int{"zz": 0}, Roots: map[string]string{"zz": root}, Prefixes: quickadd.Prefixes{"zz"},
+		Slots: map[string]int{"zz": 0}, Roots: map[string]string{"zz": root},
 		Exists:  func(p string) bool { st, err := os.Stat(p); return err == nil && st.IsDir() },
 		Environ: environ, Spawn: func(launch.Plan) error { return nil }, Timeout: 10 * time.Second}
 
@@ -104,8 +103,11 @@ func TestProjectViewAgainstRealBinary(t *testing.T) {
 		t.Fatal("a parked doing task renders once")
 	}
 	d.Key("a")
-	d.Type("third task #it !3")
-	d.Key("enter")
+	d.Type("third task")
+	d.Key("tab")
+	d.Key("tab")
+	d.Type("it")
+	d.Key("ctrl+s")
 	if !logged("created zz-") {
 		t.Fatalf("add must be logged: %+v", app.Messages())
 	}
