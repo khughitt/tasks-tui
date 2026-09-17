@@ -65,7 +65,7 @@ func (c *Client) Show(ctx context.Context, dir, id string) (res ShowResult, err 
 	if err != nil {
 		return res, err
 	}
-	return res, decodeInto(raw, &res, "!task", "spec_path", "plan_path", "step_found", "!depends_on", "parent", "!children", "claim", "park", "escalation", "periodic", "!warnings")
+	return res, decodeInto(raw, &res, "!task", "!warnings")
 }
 func (c *Client) Root(ctx context.Context, id string) (res RootResult, err error) {
 	raw, err := c.R.Run(ctx, "", "root", id)

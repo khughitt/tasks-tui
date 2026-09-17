@@ -28,8 +28,8 @@ done, drop. Everything else stays in the CLI.
   the format that drifts, and a violation of the tracker's one-writer rule the moment
   it learns to write.
 - **The JSON contract is consumed as documented, never inferred.** Every field the TUI
-  reads is named in §4. Unknown fields are ignored; a missing named field is a typed
-  error, not a zero value.
+  reads is named in §4. Unknown fields are ignored; a missing required field is a typed
+  error. Unset task fields and empty task collections may be omitted.
 - **A tracker subprocess runs with an explicit environment.** Every `tasks`
   invocation gets the TUI's environment minus `TASKS_FORMAT`, `TASKS_COLOR`,
   `TASKS_AGENT`, `TASKS_MODEL`, and `TASKS_MAX_COMPLEXITY`, plus
@@ -100,8 +100,14 @@ grammar and the set of registered prefixes it is given. `launch` depends on
 `tasks` reports `0.1.0` and has never bumped it, so a version floor would say
 nothing. At startup the TUI runs `tasks projects`; a missing binary, a non-zero exit,
 or a response without the fields below is a fatal message naming what was expected.
-Drift after that surfaces the same way: a named field missing from any response is a
-typed decode error shown in the status line, never a zero value.
+Drift after that surfaces the same way: a required field missing from any response is a
+typed decode error shown in the status line.
+
+The 2026-09-17 sparse task JSON contract omits unset optional task fields and empty
+task collections, including nested metadata. The decoder accepts those omissions as
+nil pointers and empty slices. Required scalars (including false and zero) and response
+containers such as `tasks` and `warnings` remain mandatory. Non-task shapes retain their
+existing requirements.
 
 Every invocation is `tasks [-C <dir>] <command> [flags]` with the environment of §2.
 On exit 0, stdout is parsed as JSON. On a non-zero exit stdout is empty and the CLI
@@ -138,10 +144,10 @@ never counts as ownership, and no rule below selects its worktree.
 A **parked row** (`ParkedRow`) is a different shape and is decoded by a different
 type: it has no `periodic`, adds `phase`, and its `status, priority, size,
 complexity, process, owner, created, updated, started, completed, child_count,
-open_descendant_count` are all nullable, because a park record can outlive the task
+open_descendant_count` are all optional, because a park record can outlive the task
 file in the checkout that answers (a task parked on a branch main has not merged, or
-a dropped record). An unresolved row has `id`, `title` (from the park), `park`, and
-nulls elsewhere; the TUI renders it from the park alone with an `unresolved` marker
+a dropped record). An unresolved row has `id`, `title` (from the park), `parallel`, and `park`, with
+unavailable fields omitted; the TUI renders it from the park alone with an `unresolved` marker
 and offers no transition on it, since no command can find the record from here.
 
 ### 4.1 A task's checkout
@@ -294,7 +300,7 @@ A duplicate single-valued token (`!2 … !3`) is an error. An empty title is an
 error. The project is the `>` token when present, else the view's project (Projects:
 the highlighted row; Project and Task: that project). Nothing else is defaulted:
 no size, priority, or complexity is invented, and no `--agent` is passed, so a task
-filed here carries `agent: null`, which is what a person filing means.
+filed here omits `agent`, which is what a person filing means.
 
 Example: `?tint the projects strip with each accent #ui #identity !3 ~s`
 → `add "tint the projects strip with each accent" --project tui --status idea
@@ -493,7 +499,7 @@ retried.
   length asserted against 12.
 - `tasksctl`: the argv each typed call builds, including `-C <checkout>`; JSON
   fixtures captured from the real binary under `testdata/` decoded into the types —
-  a list row, a resolved parked row, an unresolved parked row with nulls, a `show`
+  a list row, a resolved parked row, an unresolved parked row with omitted fields, a `show`
   with a park and a claim, a row with a stale claim (`live: false`), a success with
   `warnings[]`; the error envelope decoded from captured stderr with empty stdout,
   and a non-JSON stderr; the environment scrubbing of §2, asserted on the `exec.Cmd`

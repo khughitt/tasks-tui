@@ -46,6 +46,6 @@ Rebuild after changes: `just install`.
 ## Rules
 
 - The JSON contract belongs to `tasks`; anything the TUI needs and cannot get is a task there, never a workaround here.
-- A missing named field is a decode error. Fail early with a typed error; no silent fallbacks.
+- A missing required field is a decode error. Sparse task optional fields and empty collections may be omitted. Fail early with a typed error; no silent fallbacks.
 - No `--agent` on `add`: a person files from the TUI.
 - Conventional commits; no AI-attribution trailers.

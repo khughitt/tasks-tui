@@ -45,17 +45,19 @@ func decodeInto(raw []byte, into any, keys ...string) error {
 	return nil
 }
 
+// Task optional fields and empty collections may be omitted by the sparse JSON contract.
+// Only required scalars and response containers are presence-checked.
 var (
-	rowKeys    = []string{"!id", "!title", "!status", "!priority", "size", "complexity", "process", "owner", "!updated", "!tags", "parent", "!child_count", "!open_descendant_count", "claim", "park", "periodic"}
-	parkedKeys = []string{"!id", "!title", "status", "priority", "size", "complexity", "process", "owner", "updated", "!tags", "parent", "child_count", "open_descendant_count", "claim", "!park", "escalation", "phase"}
-	taskKeys   = []string{"!id", "!title", "!status", "!priority", "size", "complexity", "process", "!parallel", "every", "owner", "!created", "!updated", "started", "completed", "last_done", "!depends", "parent", "!tags", "source", "model", "agent", "spec", "plan", "step", "!body", "!notes"}
-	claimKeys  = []string{"!owner", "!session", "!host", "pid", "!worktree", "!started", "!seen", "!live"}
-	parkKeys   = []string{"!at", "!next_step", "!waiting_on", "reason", "needs", "minutes", "!session", "!owner", "!host", "!worktree"}
+	rowKeys    = []string{"!id", "!title", "!status", "!priority", "!updated", "!child_count", "!open_descendant_count"}
+	parkedKeys = []string{"!id", "!title", "!park"}
+	taskKeys   = []string{"!id", "!title", "!status", "!priority", "!parallel", "!created", "!updated", "!body"}
+	claimKeys  = []string{"!owner", "!session", "!host", "!worktree", "!started", "!seen", "!live"}
+	parkKeys   = []string{"!at", "!next_step", "!waiting_on", "!session", "!owner", "!host", "!worktree"}
 	projKeys   = []string{"!prefix", "!root", "!reachable", "counts", "total", "last_activity"}
 	countKeys  = []string{"!idea", "!todo", "!doing", "!blocked", "!shelved", "!done", "!dropped"}
-	perKeys    = []string{"!every", "last_done", "due", "!due_now"}
+	perKeys    = []string{"!every", "!due_now"}
 	relKeys    = []string{"!id", "!title", "!status"}
-	depKeys    = []string{"!id", "title", "status", "!resolved"}
+	depKeys    = []string{"!id", "!resolved"}
 	noteKeys   = []string{"!at", "!by", "!text"}
 	escKeys    = []string{"!level", "!at", "!session"}
 )

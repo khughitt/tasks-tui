@@ -174,3 +174,44 @@ func TestRoot(t *testing.T) {
 type literalRunner string
 
 func (l literalRunner) Run(context.Context, string, ...string) ([]byte, error) { return []byte(l), nil }
+
+func TestSparseTaskJSON(t *testing.T) {
+	ctx := context.Background()
+	list := literalRunner(`{"tasks":[{"id":"sci-123456","title":"Sparse","status":"todo","priority":0,"updated":"2026-09-17T00:00:00Z","child_count":0,"open_descendant_count":0}],"warnings":[]}`)
+	rows, err := (&Client{R: list}).List(ctx, "sci", ListOpts{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	row := rows.Tasks[0]
+	if row.Size != nil || row.Claim != nil || len(row.Tags) != 0 || row.Priority != 0 {
+		t.Fatalf("sparse row: %+v", row)
+	}
+	parked := literalRunner(`{"tasks":[{"id":"sci-123456","title":"Sparse","parallel":false,"park":{"at":"t","next_step":"resume","waiting_on":"agent","session":"s","owner":"o","host":"h","worktree":"/w"}}],"warnings":[]}`)
+	parks, err := (&Client{R: parked}).Parked(ctx, "sci")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !parks.Tasks[0].Unresolved() || parks.Tasks[0].Park.NextStep != "resume" || parks.Tasks[0].Park.Reason != nil {
+		t.Fatalf("sparse park: %+v", parks.Tasks[0])
+	}
+	show := literalRunner(`{"task":{"id":"sci-123456","title":"Sparse","status":"todo","priority":0,"parallel":false,"created":"t","updated":"t","body":""},"warnings":[]}`)
+	detail, err := (&Client{R: show}).Show(ctx, "/w", "sci-123456")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if detail.Task.Process != nil || len(detail.Task.Notes) != 0 || len(detail.Task.Depends) != 0 || len(detail.Children) != 0 || len(detail.DependsOn) != 0 || detail.Claim != nil {
+		t.Fatalf("sparse detail: %+v", detail)
+	}
+	var periodic Periodic
+	if err := periodic.UnmarshalJSON([]byte(`{"every":"30d","due_now":false}`)); err != nil || periodic.Due != nil || periodic.DueNow {
+		t.Fatalf("sparse periodic: %+v, %v", periodic, err)
+	}
+	var claim ClaimInfo
+	if err := claim.UnmarshalJSON([]byte(`{"owner":"o","session":"s","host":"h","worktree":"/w","started":"t","seen":"t","live":false}`)); err != nil || claim.PID != nil || claim.Live {
+		t.Fatalf("sparse claim: %+v, %v", claim, err)
+	}
+	var dep Dependency
+	if err := dep.UnmarshalJSON([]byte(`{"id":"sci-654321","resolved":false}`)); err != nil || dep.Resolved || dep.Title != nil {
+		t.Fatalf("sparse dependency: %+v, %v", dep, err)
+	}
+}
