@@ -62,6 +62,8 @@ func (d *Driver) Key(k string) {
 		d.Feed(tea.KeyPressMsg{Code: 'u', Mod: tea.ModCtrl})
 	case "ctrl+r":
 		d.Feed(tea.KeyPressMsg{Code: 'r', Mod: tea.ModCtrl})
+	case "ctrl+s":
+		d.Feed(tea.KeyPressMsg{Code: 's', Mod: tea.ModCtrl})
 	case "up":
 		d.Feed(tea.KeyPressMsg{Code: tea.KeyUp})
 	case "down":

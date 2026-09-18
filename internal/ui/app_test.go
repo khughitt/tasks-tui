@@ -56,7 +56,7 @@ func TestAppShellKeysStackAndStatus(t *testing.T) {
 		t.Fatalf("root reloads on pop: %d", root.loaded)
 	}
 	d.Key("?")
-	d.Expect("quick add", "launch agent")
+	d.Expect("add", "edit", "launch agent")
 	d.Key("q")
 	if d.Quit {
 		t.Fatal("q closes the legend without quitting")

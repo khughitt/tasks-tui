@@ -57,12 +57,11 @@ done, drop. Everything else stays in the CLI.
   boundary ops-df0842 asks for. When ops ships a visual identity, the TUI reads it
   instead. Rejected: a palette keyed by prefix — a project would then look different
   in the TUI than on its pet and its terminal glass.
-- **v1 is the daily surface.** Views, detail, quick add, quick launch, and
-  start/park/done/drop. Field editing, dependencies, shelving, notes, and the tree
-  are out (§14).
-- **Fail early.** A `tasks` that is missing or does not answer `projects`, a malformed config, an unregistered
-  project in a quick-add token, or a CLI error all surface as a message; nothing is
-  retried, defaulted, or hidden.
+- **v1 is the daily surface.** Views, detail, the task form (add and the
+  title/body/tags edit), quick launch, and start/park/done/drop. The other fields,
+  dependencies, shelving, notes, and the tree are out (§14).
+- **Fail early.** A `tasks` that is missing or does not answer `projects`, a malformed config, or a CLI
+  error all surface as a message; nothing is retried, defaulted, or hidden.
 
 ## 3. Architecture
 
@@ -74,26 +73,25 @@ One binary, `tasks-tui`, Go module `tasks-tui`. Bubble Tea v2 (`bubbletea/v2`
 cmd/tasks-tui/main.go        flags, config load, tasks probe, tea.NewProgram
 internal/tasksctl/           the subprocess boundary: Runner, typed calls, JSON types, Error
 internal/identity/           familiar's key, pins, fnv1a32, slot hues, tone → lipgloss colors
-internal/quickadd/           the one-line grammar: Parse(line) → Spec | error; Spec.Args()
 internal/launch/             harness config, prompt template, terminal spawn
 internal/ui/                 the tea model: app, views, overlays, keymap, styles
 internal/ui/projects/        the Projects view
 internal/ui/project/         the Project view
 internal/ui/task/            the Task view
+internal/ui/task_form/       the shared add/edit form
 internal/ui/overlay/         prompt, picker, confirm
 ```
 
 Data flows one way. A view asks the app for data; the app issues a `tea.Cmd` that
 calls `tasksctl`; the result comes back as a message carrying either typed data or a
 `tasksctl.Error`; the view re-renders. Views hold no subprocess handles and never
-call `tasksctl` directly. A write command (start/park/done/drop/add) is followed by a
+call `tasksctl` directly. A write command (start/park/done/drop/add/edit) is followed by a
 reload of the view that issued it; nothing is patched optimistically.
 
 Each package answers three questions: what it does, how it is used, what it depends
 on. `tasksctl` depends on `os/exec` and the JSON types. `identity` depends on the
-filesystem (pins, scheme, git remote). `quickadd` depends on nothing but the token
-grammar and the set of registered prefixes it is given. `launch` depends on
-`os/exec`. `ui` depends on all four and on the charm libraries.
+filesystem (pins, scheme, git remote). `launch` depends on `os/exec`. `ui` depends
+on all three and on the charm libraries.
 
 ## 4. The tasks contract as used
 
@@ -206,7 +204,7 @@ activity ascending/descending. `/` filters rows by prefix or name.
 To the right, a pane for the highlighted project from `prime --project <p>`:
 `doing` rows with their claim owner, `parked` rows (the parked shape of §4) with
 waiting-on and the next step, and the first eight `ready` rows. It loads on a 150 ms debounce after the highlight
-moves. `enter` opens the project. `a` quick-adds into the highlighted project.
+moves. `enter` opens the project. `a` opens the task form (§6) into the highlighted project.
 
 Below the table, a strip: `list --all-projects --status doing` and `--parked`
 counted per project — "3 doing · 2 parked across 19 projects" — so the person sees
@@ -230,8 +228,8 @@ A row: `id  P<n>  size  complexity  process  status  updated  title  [tags]`, wi
 a claim marker (`◆ owner` when `live`, `◇ owner` dimmed when stale) and a park
 marker (`⏸ user` or `⏸ agent`) after the title when present, `⟳ every` for a recurrence, and `▸ n` for a goal with open
 descendants. `enter` opens the task; the transition keys of §5.4 act on the
-highlighted row without opening it; `a` quick-adds into this project; `c` launch chords target
-the highlighted task. `g g`/Home goes to the first row and `G`/End to the last.
+highlighted row without opening it; `a` opens the task form (§6) into this project and
+`e` opens it on the highlighted task; `c` launch chords target the highlighted task. `g g`/Home goes to the first row and `G`/End to the last.
 `s p`, `s a`, and `s t` sort priority, age, and title ascending; uppercase `S`
 selects descending. The active header shows the direction, and sorting survives
 reloads and tab switches.
@@ -247,9 +245,9 @@ title. A claim shows owner, session, worktree, and whether it is live or stale; 
 shows next step,
 waiting-on, reason, and the checkout it was parked in; an escalation shows its level.
 
-Keys: the transitions of §5.4, `c` launch chords, `y` copies the id to the clipboard through
-the terminal (OSC 52, which kitty supports; no external tool), `j/k` and page keys
-scroll.
+Keys: the transitions of §5.4, `e` opens the task form (§6) on this task, `c` launch
+chords, `y` copies the id to the clipboard through the terminal (OSC 52, which kitty
+supports; no external tool), `j/k` and page keys scroll.
 
 ### 5.4 Transitions
 
@@ -271,49 +269,31 @@ reloads the view on success.
 - `x` **drop** — an optional message, with a confirm since dropping is a
   one-way status.
 
-## 6. Quick add
+## 6. Task form
 
-`a` opens a single-line input at the bottom of any view. The line is parsed on
-every keystroke; the line is echoed beneath the input with each token in its class
-color, and under that a preview line shows the command that would run, or the first
-error in the error color. `enter` files it when there is no error and is refused
-otherwise; `esc` cancels.
+One centered form serves creation and editing. `a` opens it in create mode with
+blank fields, filing into the view's project (Projects: the highlighted row; Project
+and Task: that project). `e` opens it in edit mode on the selected task after
+loading the full task with `show` in that task's checkout (§4.1), prefilled.
 
-### 6.1 Grammar
+The form has exactly three fields, in this order: title, body, tags. Title is
+focused on open and cannot be blank; body and tags may be empty. `tab` and
+`shift+tab` move focus; `ctrl+s` saves; `esc` cancels; `enter` inserts a newline in
+the body. Tags are space-separated, and the field completes them from `tasks tags
+--project <p>` (`enter` accepts the suggestion). The form captures every key, so the
+global bindings are off while it is open, and the refresh timer does not reload it.
 
-The line is split on whitespace. A word is a token when it *starts* with a marker
-and the rest matches; a word that starts with a marker and does not match is an
-error, never title text. Everything that is not a token is title text, joined with
-single spaces in order.
+Saving runs one write. Create mode runs `add <title> --project <p> [-b <body>]
+[--tag <t>]...`; nothing else is defaulted: no size, priority, or complexity is
+invented, and no `--agent` is passed, so a task filed here omits `agent`, which is
+what a person filing means. Edit mode runs `edit <id> --title <title> -b <body>
+--no-tags [--tag <t>]...` in the task's checkout, replacing all three fields. An
+error keeps the form open with the message under the fields; success closes it,
+logs the outcome, and reloads the view beneath. A second `ctrl+s` while a save is
+in flight does nothing, and `esc` waits for it.
 
-| Token | Field | Rule |
-|---|---|---|
-| `#<tag>` | `--tag` | repeatable; tag matches `[A-Za-z0-9_:./-]+` |
-| `!<n>` | `-p` | `n` in 0–4 |
-| `~<size>` | `--size` | xs, s, m, l, xl |
-| `^<level>` | `--complexity` | low, mid, high |
-| `@<n>d` / `@<n>w` | `--every` | positive integer |
-| `><prefix>` | `--project` | must be a registered prefix |
-| `?` | `--status idea` | only as the first word, alone or attached (`?fix …`) |
-| ` -- ` | `-b` | the rest of the line, verbatim, is the body |
-
-A duplicate single-valued token (`!2 … !3`) is an error. An empty title is an
-error. The project is the `>` token when present, else the view's project (Projects:
-the highlighted row; Project and Task: that project). Nothing else is defaulted:
-no size, priority, or complexity is invented, and no `--agent` is passed, so a task
-filed here omits `agent`, which is what a person filing means.
-
-Example: `?tint the projects strip with each accent #ui #identity !3 ~s`
-→ `add "tint the projects strip with each accent" --project tui --status idea
---tag ui --tag identity -p 3 --size s`.
-
-### 6.2 Styling
-
-Each token class has a color: tags in the project accent, priority in the priority
-color of §8, size and complexity in the muted foreground, recurrence in the periodic
-color, `>prefix` in that project's accent, `?` and the body separator dimmed. The
-title stays in the plain foreground. The preview line uses the same colors on the
-rendered flags.
+Priority, size, complexity, project selection, and an advanced-fields toggle are
+out (§14).
 
 ## 7. Quick launch
 
@@ -416,7 +396,7 @@ Independent of the project accent, and the same in every project:
 | park waiting on user | yellow marker; waiting on agent, dim marker |
 | claim | accent marker |
 | periodic | teal marker |
-| error | red, in the status line and the quick-add preview |
+| error | red, in the status line and under the task form's fields |
 | warning | yellow, in the status line, the `⚠ N` badge, and the console |
 
 Each is a light/dark pair resolved once from the tone (`lipgloss.LightDark`), chosen
@@ -471,7 +451,7 @@ the state of what they are looking at, and the two have different homes.
 Outcomes go to a message log kept for the session, whose most recent entry shows in
 the status line at the bottom — errors in the error color, warnings in the warning
 color, results in the info color. An error is `Kind: Detail` for a `tasksctl.Error`,
-the spawn error for a launch, the parse error for quick add, or a failed load. A
+the spawn error for a launch, a refused task-form save, or a failed load. A
 write's warning is each string of its response's `warnings[]`, prefixed with the
 command (`park tui-d6e352: …`): the CLI exits 0 while reporting that a status was
 saved but the claim store could not be cleaned, and a person must see that when it
@@ -486,8 +466,9 @@ status line; when the top view has any, a badge `⚠ N` sits left of the key hin
 Projects view's warnings are the registry and all-projects calls plus the pane's
 `prime` for the selected project; a stale or superseded load is discarded with its
 data (§10). Warnings from the startup probe and the by-id entry lookups are dropped:
-the views they open make the same calls on their first load. The quick-add tag
-lookup's warnings are dropped for the same reason.
+the views they open make the same calls on their first load. The task form's tag
+lookup's warnings are dropped for the same reason; its `show` warnings and checkout
+notice are the form's own.
 
 `W` opens the console: the top view's current warnings under a `warnings — <scope>`
 header, then the log as a scrollable list, newest last, so a message that scrolled
@@ -500,8 +481,6 @@ retried.
 
 ## 12. Testing
 
-- `quickadd`: table tests over the grammar — every token, every error, ordering,
-  the body separator, the example of §6.1 producing that exact argv.
 - `identity`: familiar's `normalizeRemote` cases ported verbatim; `fnv1a32` vectors
   (empty string, `a`, a known remote key) with expected values computed from
   familiar's implementation; pin matching through a symlinked path; the slot table
@@ -521,8 +500,10 @@ retried.
 - `ui`: a synchronous driver (`internal/uitest`) that executes every command the
   model returns and reads the rendered screen, over a `tasksctl.Runner` faked in
   memory — open a project, switch tabs, filter, open a task, park with a next step and
-  waiting-on user, the argv the fake received; quick add end to end from keystrokes
-  to argv; a write whose reload returns a warning leaves the log holding both; a
+  waiting-on user, the argv the fake received; the task form end to end from
+  keystrokes to the add and edit argv, its centered rendering, field order and
+  focus, prefill, tag completion, blank-title refusal, and a failed save staying
+  open; a write whose reload returns a warning leaves the log holding both; a
   stale-generation result is discarded and a pending reload runs after an in-flight
   one.
 - One integration test, skipped when `tasks` is not on `PATH`, that inits a scratch
@@ -550,9 +531,9 @@ process policy is part of the first commit of the plan.
 
 Filed as ideas in `tui` when the plan lands, not built now:
 
-- Field editing (`edit`), dependencies (`dep`), shelve/unshelve, `note`, `block`.
+- Editing the fields beyond title, body, and tags; dependencies (`dep`),
+  shelve/unshelve, `note`, `block`.
 - The tree and dependency graph views.
-- Tag completion in quick add from `tasks tags`.
 - A clipboard fallback for harnesses without an initial prompt.
 - Reading ops `identity.toml` for project names and purposes; the basename serves
   until visual identity (ops-df0842) decides where identity lives.

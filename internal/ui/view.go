@@ -8,21 +8,19 @@ import (
 
 	"tasks-tui/internal/config"
 	"tasks-tui/internal/launch"
-	"tasks-tui/internal/quickadd"
 	"tasks-tui/internal/tasksctl"
 )
 
 type Env struct {
-	Client   *tasksctl.Client
-	Styles   *Styles
-	Config   config.Config
-	Slots    map[string]int
-	Roots    map[string]string
-	Prefixes quickadd.Prefixes
-	Exists   func(string) bool
-	Environ  []string
-	Spawn    func(launch.Plan) error
-	Timeout  time.Duration
+	Client  *tasksctl.Client
+	Styles  *Styles
+	Config  config.Config
+	Slots   map[string]int
+	Roots   map[string]string
+	Exists  func(string) bool
+	Environ []string
+	Spawn   func(launch.Plan) error
+	Timeout time.Duration
 }
 
 func (e *Env) ctx() (context.Context, context.CancelFunc) {
@@ -88,10 +86,6 @@ type writeMsg struct {
 	force  bool
 	res    tasksctl.WriteResult
 	err    error
-}
-type addMsg struct {
-	res tasksctl.AddResult
-	err error
 }
 type launchMsg struct {
 	harness, id, dir string

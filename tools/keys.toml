@@ -170,6 +170,11 @@ action = "add"
 
 [[project.tasks-tui.binding]]
 scope = "global"
+seq = "e"
+action = "edit"
+
+[[project.tasks-tui.binding]]
+scope = "global"
 seq = "x"
 action = "remove"
 
