@@ -543,6 +543,21 @@ seq = "e"
 action = "edit"
 
 [[project.mind6.binding]]
+scope = "thought.read"
+seq = "t r"
+action = "toggle-related"
+
+[[project.mind6.binding]]
+scope = "thought.read"
+seq = "t s"
+action = "toggle-similar"
+
+[[project.mind6.binding]]
+scope = "thought.read"
+seq = "t d"
+action = "toggle-details"
+
+[[project.mind6.binding]]
 scope = "thought.edit"
 seq = "Escape"
 action = "dismiss"

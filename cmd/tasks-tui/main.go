@@ -89,17 +89,11 @@ func run() error {
 	}
 
 	cwd, _ := os.Getwd()
-	stack, warnings, err := resolveStart(ctx, env, fs.Arg(0), *all, cwd)
+	stack, err := resolveStart(ctx, env, fs.Arg(0), *all, cwd)
 	if err != nil {
 		return err
 	}
 	app := ui.New(env, ui.Options{Refresh: time.Duration(cfg.RefreshSeconds) * time.Second, Stack: stack})
-	for _, w := range projects.Warnings {
-		app.Notice(ui.LevelWarning, "projects: "+w)
-	}
-	for _, w := range warnings {
-		app.Notice(ui.LevelWarning, w)
-	}
 	_, err = tea.NewProgram(app).Run()
 	return err
 }

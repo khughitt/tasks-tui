@@ -202,7 +202,7 @@ func (v *projectsView) update(raw tea.Msg) (view, tea.Cmd) {
 			}
 			v.data = msg.data.(projectsData)
 			v.sortAndFilter()
-			return v, tea.Batch(next, v.loadPane(), v.warnings())
+			return v, tea.Batch(next, v.loadPane())
 		case v.pane.ID():
 			accept, next := v.pane.Done(msg.gen)
 			if !accept || msg.background {
@@ -219,7 +219,7 @@ func (v *projectsView) update(raw tea.Msg) (view, tea.Cmd) {
 				return v, next
 			}
 			v.prime, v.primeFor = &d.res, d.prefix
-			return v, tea.Batch(next, notices(LevelWarning, prefixed("prime --project "+d.prefix, d.res.Warnings)...))
+			return v, next
 		}
 	case paneDebounceMsg:
 		if msg.seq == v.seq {
@@ -271,11 +271,16 @@ func (v *projectsView) update(raw tea.Msg) (view, tea.Cmd) {
 	}
 	return v, nil
 }
-func (v *projectsView) warnings() tea.Cmd {
-	ws := append([]string{}, prefixed("projects", v.data.projects.Warnings)...)
+
+// warnings is the main load's, then the pane's for the selected project.
+func (v *projectsView) warnings() []string {
+	ws := prefixed("projects", v.data.projects.Warnings)
 	ws = append(ws, prefixed("list --all-projects --status doing", v.data.doing.Warnings)...)
 	ws = append(ws, prefixed("list --all-projects --parked", v.data.parked.Warnings)...)
-	return notices(LevelWarning, ws...)
+	if v.prime != nil && v.primeFor == v.project() {
+		ws = append(ws, prefixed("prime --project "+v.primeFor, v.prime.Warnings)...)
+	}
+	return ws
 }
 func (v *projectsView) render(width, height int) string {
 	s, now := v.env.Styles, time.Now()

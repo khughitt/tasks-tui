@@ -186,11 +186,21 @@ func TestProjectViewWarningSourcesAndBackgroundDrain(t *testing.T) {
 	app := New(env, Options{Stack: []view{pv}})
 	d := drive(t, app)
 	d.Key("2")
-	for _, want := range []string{"prime --project tui: prime warning", "list --project tui --status doing: doing warning", "list --project tui --parked: parked warning"} {
-		if !logged(app, LevelWarning, want) {
-			t.Fatalf("missing %q in %+v", want, app.Messages())
-		}
+	want := []string{"prime --project tui: prime warning", "list --project tui --status doing: doing warning", "list --project tui --parked: parked warning"}
+	if got := pv.warnings(); !slices.Equal(got, want) {
+		t.Fatalf("load warnings are the view's, in load order: %q", got)
 	}
+	if len(app.Messages()) != 0 {
+		t.Fatalf("load warnings stay out of the log: %+v", app.Messages())
+	}
+	d.Expect("⚠ 3")
+	f.on("", "list --project tui --status doing", `{"tasks":[],"warnings":[]}`)
+	f.on("", "list --project tui --parked", `{"tasks":[],"warnings":[]}`)
+	d.Key("f5")
+	if got := pv.warnings(); !slices.Equal(got, want[:1]) {
+		t.Fatalf("a reload replaces the warnings: %q", got)
+	}
+	d.Expect("⚠ 1")
 	pending := func(gen uint64) tea.Cmd { return func() tea.Msg { return gen } }
 	before := len(pv.rows)
 	pv.loader.Request(pending)

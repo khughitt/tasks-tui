@@ -38,12 +38,9 @@ func env(r *replyRunner) *ui.Env {
 func TestResolveStartByIdPrefersParkedFeed(t *testing.T) {
 	parked, _ := json.Marshal(map[string]any{"tasks": []tasksctl.ParkedRow{{ID: "tui-abc123", Title: "T", Tags: []string{}, Park: &tasksctl.ParkInfo{At: "t", Worktree: "/wt/x", WaitingOn: "user", NextStep: "n", Session: "s", Owner: "o", Host: "h"}}}, "warnings": []string{"store pruned"}})
 	r := &replyRunner{replies: map[string]string{"list --project tui --parked": string(parked)}}
-	stack, warnings, err := resolveStart(context.Background(), env(r), "tui-abc123", false, "/elsewhere")
+	stack, err := resolveStart(context.Background(), env(r), "tui-abc123", false, "/elsewhere")
 	if err != nil || len(stack) != 3 {
 		t.Fatalf("stack=%d err=%v", len(stack), err)
-	}
-	if len(warnings) != 1 || warnings[0] != "list --project tui --parked: store pruned" {
-		t.Fatalf("entry warnings must be returned: %v", warnings)
 	}
 	for _, c := range r.calls {
 		if strings.HasPrefix(c, "@/r/tui show") {
@@ -56,30 +53,30 @@ func TestResolveStartByIdFallsBackToRootShow(t *testing.T) {
 	empty := `{"tasks":[],"warnings":[]}`
 	show := `{"task":{"id":"tui-abc123","title":"T","status":"todo","priority":2,"size":null,"complexity":null,"process":null,"parallel":false,"every":null,"owner":null,"created":"2026-09-13T00:00:00Z","updated":"2026-09-13T00:00:00Z","started":null,"completed":null,"last_done":null,"depends":[],"parent":null,"tags":[],"source":null,"model":null,"agent":null,"spec":null,"plan":null,"step":null,"body":"","notes":[]},"spec_path":null,"plan_path":null,"step_found":null,"depends_on":[],"parent":null,"children":[],"claim":null,"park":null,"escalation":null,"periodic":null,"warnings":[]}`
 	r := &replyRunner{replies: map[string]string{"list --project tui --parked": empty, "@/r/tui show tui-abc123": show}}
-	if _, _, err := resolveStart(context.Background(), env(r), "tui-abc123", false, "/x"); err != nil {
+	if _, err := resolveStart(context.Background(), env(r), "tui-abc123", false, "/x"); err != nil {
 		t.Fatal(err)
 	}
 	r = &replyRunner{replies: map[string]string{"list --project tui --parked": empty}}
-	if _, _, err := resolveStart(context.Background(), env(r), "tui-abc123", false, "/x"); err == nil {
+	if _, err := resolveStart(context.Background(), env(r), "tui-abc123", false, "/x"); err == nil {
 		t.Fatal("an id nobody can find is an error")
 	}
-	if _, _, err := resolveStart(context.Background(), env(r), "zz-abc123", false, "/x"); err == nil {
+	if _, err := resolveStart(context.Background(), env(r), "zz-abc123", false, "/x"); err == nil {
 		t.Fatal("an unregistered prefix is an error")
 	}
 }
 
 func TestResolveStartPrefixCwdAndAll(t *testing.T) {
 	r := &replyRunner{replies: map[string]string{}}
-	if s, _, _ := resolveStart(context.Background(), env(r), "tui", false, "/x"); len(s) != 2 {
+	if s, _ := resolveStart(context.Background(), env(r), "tui", false, "/x"); len(s) != 2 {
 		t.Fatalf("prefix arg: %d views", len(s))
 	}
-	if s, _, _ := resolveStart(context.Background(), env(r), "", false, "/r/tui/sub/dir"); len(s) != 2 {
+	if s, _ := resolveStart(context.Background(), env(r), "", false, "/r/tui/sub/dir"); len(s) != 2 {
 		t.Fatalf("cwd inside a root: %d views", len(s))
 	}
-	if s, _, _ := resolveStart(context.Background(), env(r), "", true, "/r/tui"); len(s) != 1 {
+	if s, _ := resolveStart(context.Background(), env(r), "", true, "/r/tui"); len(s) != 1 {
 		t.Fatalf("--all: %d views", len(s))
 	}
-	if s, _, _ := resolveStart(context.Background(), env(r), "", false, "/x"); len(s) != 1 {
+	if s, _ := resolveStart(context.Background(), env(r), "", false, "/x"); len(s) != 1 {
 		t.Fatalf("outside every root: %d views", len(s))
 	}
 }

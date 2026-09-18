@@ -49,15 +49,17 @@ type projectView struct {
 	descending bool
 	shown      [len(tabNames)]int
 	hasCount   [len(tabNames)]bool
+	warns      []string
 }
 
 func newProjectView(env *Env, prefix string) *projectView {
 	return &projectView{env: env, prefix: prefix, loader: NewLoader()}
 }
-func (v *projectView) title() string   { return v.prefix }
-func (v *projectView) project() string { return v.prefix }
-func (v *projectView) capturing() bool { return v.filtering }
-func (v *projectView) loading() bool   { return v.loader.InFlight() }
+func (v *projectView) title() string      { return v.prefix }
+func (v *projectView) project() string    { return v.prefix }
+func (v *projectView) capturing() bool    { return v.filtering }
+func (v *projectView) loading() bool      { return v.loader.InFlight() }
+func (v *projectView) warnings() []string { return v.warns }
 func (v *projectView) current() *target {
 	if v.sel < 0 || v.sel >= len(v.rows) || v.rows[v.sel].Unresolved {
 		return nil
@@ -276,9 +278,10 @@ func (v *projectView) update(msg tea.Msg) (view, tea.Cmd) {
 			}
 			v.all, v.counts = d.rows, d.counts
 			v.loadedTab, v.hasData = d.tab, true
+			v.warns = d.warnings
 			v.applyFilter()
 		}
-		return v, tea.Batch(next, notices(LevelWarning, d.warnings...))
+		return v, next
 	case tea.KeyPressMsg:
 		if v.filtering {
 			switch msg.String() {

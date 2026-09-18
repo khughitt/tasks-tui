@@ -3,6 +3,7 @@ package ui
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -41,9 +42,18 @@ func TestProjectsViewLoadsPaneAndStripAndOpens(t *testing.T) {
 	app := New(env, Options{Stack: []view{pv}})
 	d := drive(t, app)
 	d.Expect("tui", "ops", "✗ unreachable", "1 doing · 1 parked across 2 projects", "tui-aaa111", "tui-bbb222")
-	if !logged(app, LevelWarning, "projects: registry: ops unreachable") || !logged(app, LevelWarning, "prime --project tui: tui has a stale claim file") {
-		t.Fatalf("warnings missing: %+v", app.Messages())
+	if got := pv.warnings(); !slices.Equal(got, []string{"projects: registry: ops unreachable", "prime --project tui: tui has a stale claim file"}) {
+		t.Fatalf("registry, all-projects, then pane warnings are the view's: %q", got)
 	}
+	if len(app.Messages()) != 0 {
+		t.Fatalf("load warnings stay out of the log: %+v", app.Messages())
+	}
+	d.Expect("⚠ 2")
+	d.Key("j")
+	if got := pv.warnings(); len(got) != 1 || pv.project() == "tui" {
+		t.Fatalf("a pane loaded for another project lends no warnings: %q (selected %s)", got, pv.project())
+	}
+	d.Key("k")
 	chord(t, d, app, "s", "p")
 	d.Key("k")
 	d.Key("j")
@@ -92,8 +102,8 @@ func TestProjectsPaneResultForAnotherPrefixIsDropped(t *testing.T) {
 		t.Fatalf("stale pane error logged: %+v", app.Messages())
 	}
 	d.Feed(loadMsg{loader: pv.pane.ID(), gen: gen, data: paneData{prefix: "ops", res: tasksctl.PrimeResult{Prefix: "ops", Warnings: []string{"w"}}}})
-	if logged(app, LevelWarning, "prime --project ops") || pv.primeFor != "tui" {
-		t.Fatalf("stale pane accepted: %+v", app.Messages())
+	if slices.Contains(pv.warnings(), "prime --project ops: w") || pv.primeFor != "tui" {
+		t.Fatalf("stale pane accepted: %q", pv.warnings())
 	}
 }
 

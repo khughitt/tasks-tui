@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -198,17 +199,32 @@ func TestTaskFormAllowsOnlyOneSubmissionAtATime(t *testing.T) {
 	}
 }
 
-func TestEditFormReportsCheckoutAndShowWarnings(t *testing.T) {
+func TestEditFormHoldsCheckoutAndShowWarningsAndDropsTheTagLookups(t *testing.T) {
 	f := newFake()
 	task := tasksctl.Task{ID: "tui-aaa111", Title: "T", Status: "todo", Priority: 2,
 		Created: "2026-09-13T09:00:00Z", Updated: "2026-09-13T10:00:00Z", Body: "", Tags: []string{}}
 	f.on("/r/tui", "show tui-aaa111", showJSON(task, map[string]any{"warnings": []string{"copies diverge"}}))
-	f.on("", "tags --project tui", `{"tags":[],"warnings":[]}`)
+	f.on("", "tags --project tui", `{"tags":[],"warnings":["dictionary unreadable"]}`)
 	env := testEnv(f)
 	form := newTaskFormView(env, target{ID: "tui-aaa111", Prefix: "tui", Park: &tasksctl.ParkInfo{Worktree: "/gone"}})
 	app := New(env, Options{Stack: []view{form}})
-	drive(t, app)
-	if !logged(app, LevelWarning, "parked checkout /gone is gone; using /r/tui") || !logged(app, LevelWarning, "show tui-aaa111: copies diverge") {
-		t.Fatalf("edit warnings missing: %v", app.Messages())
+	d := drive(t, app)
+	want := []string{"parked checkout /gone is gone; using /r/tui", "show tui-aaa111: copies diverge"}
+	if got := form.warnings(); !slices.Equal(got, want) || len(app.Messages()) != 0 {
+		t.Fatalf("load warnings are the form's, not the log's: %q %+v", got, app.Messages())
+	}
+	d.Expect("⚠ 2")
+}
+
+func TestTaskFormLogsATagLookupFailure(t *testing.T) {
+	f := projectFake()
+	f.on("", "tags --project tui", &tasksctl.Error{Kind: "lookup", Detail: "offline"})
+	env := testEnv(f)
+	app := New(env, Options{Stack: []view{newProjectView(env, "tui")}})
+	d := drive(t, app)
+	d.Key("a")
+	d.Expect("add task")
+	if !logged(app, LevelError, "tags --project tui: lookup: offline") {
+		t.Fatalf("tag lookup failure not logged: %v", app.Messages())
 	}
 }

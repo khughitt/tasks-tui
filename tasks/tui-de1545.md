@@ -6,13 +6,14 @@ priority: 2
 size: m
 complexity: mid
 process: direct
-owner: feat/task-form
+owner: main
 created: 2026-09-17T17:28:32Z
-updated: 2026-09-17T18:02:29Z
-started: 2026-09-17T17:33:45Z
-completed: 2026-09-17T18:02:29Z
+updated: 2026-09-18T21:13:44Z
+started: 2026-09-18T21:09:49Z
+completed: 2026-09-18T21:13:44Z
 depends: []
 tags: [v2]
+model: "claude-opus-5[1m]"
 agent: codex
 ---
 
@@ -40,4 +41,9 @@ UI tests cover centered rendering, initial title focus, field order and focus mo
 ## Notes
 
 - 2026-09-17T17:29:57Z (main): scope: scoped; promoted to a direct medium task with edit mode first and create mode replacing quick add second
-- 2026-09-17T18:02:29Z (feat/task-form): Shared centered title/body/tags form now edits tasks and replaces quick add for creation, with tag completion and typed writes
+- 2026-09-18T21:09:49Z (main): started
+  provenance: {"harness_session":"claude-code:d7132380-8d35-431d-99b2-4362c33f819e","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-09-18T21:13:44Z (feat/task-form): done
+  provenance: {"harness_session":"claude-code:d7132380-8d35-431d-99b2-4362c33f819e","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-09-18T21:13:44Z (feat/task-form): Shared centered title/body/tags form edits tasks and replaces quick add for creation, with tag completion and typed add/edit writes; load warnings are the form's own, the tag lookup's are dropped
+  provenance: {"harness_session":"claude-code:d7132380-8d35-431d-99b2-4362c33f819e","harness_session_source":"CLAUDE_CODE_SESSION_ID"}

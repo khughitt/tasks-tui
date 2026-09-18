@@ -14,12 +14,11 @@ import (
 )
 
 type taskFormData struct {
-	task        tasksctl.Task
-	checkout    tasksctl.Checkout
-	tags        []string
-	warnings    []string
-	tagWarnings []string
-	tagErr      error
+	task     tasksctl.Task
+	checkout tasksctl.Checkout
+	tags     []string
+	warnings []string
+	tagErr   error
 }
 
 type formSubmitMsg struct {
@@ -94,6 +93,16 @@ func (v *taskFormView) capturing() bool  { return true }
 func (v *taskFormView) loading() bool    { return v.loader.InFlight() }
 func (v *taskFormView) current() *target { return &v.tgt }
 
+// warnings is the checkout notice, then show's, once the load has landed. The tag
+// lookup's warnings describe the project, not the form's task (spec §11); the
+// project view reports them.
+func (v *taskFormView) warnings() []string {
+	if v.data == nil {
+		return nil
+	}
+	return v.data.warnings
+}
+
 func (v *taskFormView) reload() tea.Cmd {
 	if v.loadStarted {
 		return nil
@@ -120,7 +129,6 @@ func (v *taskFormView) reload() tea.Cmd {
 			if err != nil {
 				d.tagErr = err
 			} else {
-				d.tagWarnings = tags.Warnings
 				for _, tag := range tags.Tags {
 					d.tags = append(d.tags, tag.Tag)
 				}
@@ -168,13 +176,10 @@ func (v *taskFormView) update(msg tea.Msg) (view, tea.Cmd) {
 			v.tags.SetValue(strings.Join(d.task.Tags, " "))
 		}
 		v.suggestTags()
-		cmds := []tea.Cmd{next, notices(LevelWarning, d.warnings...)}
 		if d.tagErr != nil {
-			cmds = append(cmds, notices(LevelError, "tags --project "+v.tgt.Prefix+": "+d.tagErr.Error()))
-		} else {
-			cmds = append(cmds, notices(LevelWarning, prefixed("tags --project "+v.tgt.Prefix, d.tagWarnings)...))
+			return v, tea.Batch(next, notices(LevelError, "tags --project "+v.tgt.Prefix+": "+d.tagErr.Error()))
 		}
-		return v, tea.Batch(cmds...)
+		return v, next
 	case formSubmitMsg:
 		v.submitting = false
 		v.problem = msg.action + ": " + msg.err.Error()

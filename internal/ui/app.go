@@ -177,8 +177,8 @@ func (a *App) toTop(msg tea.Msg) tea.Cmd {
 	a.stack[len(a.stack)-1] = v
 	return cmd
 }
-func (a *App) Notice(level Level, text string) { a.log.Add(level, text) }
-func (a *App) Messages() []Message             { return a.log.Entries }
+
+func (a *App) Messages() []Message { return a.log.Entries }
 
 func (a *App) key(msg tea.KeyPressMsg) tea.Cmd {
 	switch {
@@ -223,7 +223,8 @@ func (a *App) key(msg tea.KeyPressMsg) tea.Cmd {
 		a.legendVP.GotoTop()
 	case key.Matches(msg, keys.Log):
 		a.showLog = true
-		a.logOff = max(0, len(a.log.Entries)-(a.height-4))
+		// The body less the status line, the messages header, and the warnings section.
+		a.logOff = max(0, len(a.log.Entries)-(a.height-2-len(a.consoleWarnings())))
 	case key.Matches(msg, keys.Reload):
 		return a.top().reload()
 	case key.Matches(msg, keys.Back):
@@ -320,6 +321,9 @@ func (a *App) statusLine() string {
 	if a.width <= 0 {
 		return ""
 	}
+	if n := len(a.top().warnings()); n > 0 {
+		hint = s.Warning.Render(fmt.Sprintf("⚠ %d", n)) + "  " + hint
+	}
 	hintWidth := lipgloss.Width(hint)
 	if a.width <= hintWidth {
 		return ansi.Truncate(hint, a.width, "")
@@ -354,8 +358,29 @@ func noticeText(s *Styles, m Message) string {
 		return s.Info.Render("· " + m.Text)
 	}
 }
+
+// consoleWarnings is the console's warnings section: a header, each of the top
+// view's warnings wrapped to the width so it reads whole, and a blank separator;
+// nothing when the view has none.
+func (a *App) consoleWarnings() []string {
+	ws := a.top().warnings()
+	if len(ws) == 0 {
+		return nil
+	}
+	s := a.env.Styles
+	lines := []string{s.Header.Render("warnings — " + a.top().title())}
+	for _, w := range ws {
+		lines = append(lines, strings.Split(lipgloss.NewStyle().Width(a.width).Render(noticeText(s, Message{LevelWarning, w})), "\n")...)
+	}
+	return append(lines, "")
+}
+
+// renderLog is the console of spec §11: the top view's current warnings, then the
+// session's message history.
 func (a *App) renderLog(height int) string {
-	lines := []string{a.env.Styles.Header.Render("messages") + a.env.Styles.Muted.Render("  (newest last; j/k scroll; esc close)")}
+	s := a.env.Styles
+	lines := a.consoleWarnings()
+	lines = append(lines, s.Header.Render("messages")+s.Muted.Render("  (newest last; j/k scroll; esc close)"))
 	if a.logOff > len(a.log.Entries) {
 		a.logOff = len(a.log.Entries)
 	}
