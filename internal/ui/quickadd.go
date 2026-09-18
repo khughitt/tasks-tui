@@ -151,7 +151,9 @@ func (o *quickAddOverlay) update(msg tea.Msg) (overlay, tea.Cmd) {
 		for _, tag := range d.res.Tags {
 			o.tags = append(o.tags, tag.Tag)
 		}
-		return o, tea.Batch(next, o.suggest(), notices(LevelWarning, prefixed(command, d.res.Warnings)...))
+		// The lookup's warnings describe the project, not the add, and the overlay
+		// has no scope to hold them (spec §11); the project view reports them.
+		return o, tea.Batch(next, o.suggest())
 	}
 	next, cmd := o.prompt.update(msg)
 	if next == nil {

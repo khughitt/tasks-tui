@@ -3,6 +3,7 @@ package ui
 import (
 	"encoding/json"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -42,9 +43,10 @@ func TestTaskViewShowsFromCheckoutAndRendersBody(t *testing.T) {
 	d := drive(t, app)
 	d.Expect("Do the thing", "P2", "Because", "bold", "a note", "resume here", "waiting on user", "stale", "feat/a",
 		"tui-000000", "ops-999999", "not reachable from here", "docs/specs/x.md")
-	if !logged(app, LevelWarning, "show tui-aaa111: worktree copies diverge") {
-		t.Fatalf("show warnings must reach the log: %+v", app.Messages())
+	if got := tv.warnings(); !slices.Equal(got, []string{"show tui-aaa111: worktree copies diverge"}) || len(app.Messages()) != 0 {
+		t.Fatalf("show warnings are the view's, not the log's: %q %+v", got, app.Messages())
 	}
+	d.Expect("⚠ 1")
 	if !f.called("@/wt/a show tui-aaa111") {
 		t.Fatal("show must run in the parked checkout")
 	}
@@ -65,9 +67,11 @@ func TestTaskViewReportsMissingWorktreeNotice(t *testing.T) {
 	tv := newTaskView(env, target{ID: "tui-aaa111", Prefix: "tui", Park: &tasksctl.ParkInfo{Worktree: "/gone"}})
 	app := New(env, Options{Stack: []view{tv}})
 	d := drive(t, app)
+	d.Expect("⚠ 1")
+	d.Key("W")
 	d.Expect("parked checkout /gone is gone; using /r/tui")
-	if !logged(app, LevelWarning, "parked checkout /gone is gone") {
-		t.Fatal("the notice must be in the log")
+	if got := tv.warnings(); len(got) != 1 || !strings.Contains(got[0], "parked checkout /gone is gone") {
+		t.Fatalf("the checkout notice is a load warning: %q", got)
 	}
 	if !f.called("@/r/tui show tui-aaa111") {
 		t.Fatal("show must fall back to the registered root")

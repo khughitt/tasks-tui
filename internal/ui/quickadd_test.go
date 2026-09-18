@@ -13,6 +13,7 @@ import (
 func TestQuickAddFilesIntoTheViewsProject(t *testing.T) {
 	f := projectFake()
 	f.on("", "add tint the strip --project tui --status idea -p 3 --size s --tag ui", `{"id":"tui-new001","action":"created","warnings":[]}`)
+	f.on("", "tags --project tui", `{"tags":[],"warnings":["dictionary unreadable"]}`)
 	env := testEnv(f)
 	app := New(env, Options{Stack: []view{newProjectView(env, "tui")}})
 	d := drive(t, app)
@@ -21,6 +22,9 @@ func TestQuickAddFilesIntoTheViewsProject(t *testing.T) {
 	d.Expect("quick add", "→ into tui")
 	d.Type("?tint the strip #ui !3 ~s")
 	d.Expect(`add "tint the strip" --project tui --status idea -p 3 --size s --tag ui`)
+	if !f.called("tags --project tui") || len(app.Messages()) != 0 {
+		t.Fatalf("the tag lookup's warnings are dropped: %+v", app.Messages())
+	}
 	d.Key("enter")
 	d.ExpectNot("quick add")
 	if !logged(app, LevelInfo, "created tui-new001") {

@@ -25,9 +25,6 @@ func TestQuickAddCompletesTagAndSubmitsIt(t *testing.T) {
 	if !f.called("add 修正 --project ops --tag bug") || !logged(app, LevelInfo, "created ops-new001") {
 		t.Fatalf("completed tag wasn't submitted: calls=%v messages=%v", f.calls, app.Messages())
 	}
-	if !logged(app, LevelWarning, "tags --project ops: tag notice") {
-		t.Fatalf("tag warning missing: %v", app.Messages())
-	}
 }
 
 // Complete commands but withhold their load message, modeling a delayed delivery.

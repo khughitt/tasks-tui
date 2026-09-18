@@ -33,6 +33,18 @@ func (v *taskView) title() string   { return v.tgt.ID }
 func (v *taskView) project() string { return v.tgt.Prefix }
 func (v *taskView) capturing() bool { return false }
 func (v *taskView) loading() bool   { return v.loader.InFlight() }
+
+// warnings is the checkout notice, then show's, once the first load has landed.
+func (v *taskView) warnings() []string {
+	if v.data == nil {
+		return nil
+	}
+	var ws []string
+	if v.data.checkout.Notice != "" {
+		ws = append(ws, v.data.checkout.Notice)
+	}
+	return append(ws, prefixed("show "+v.tgt.ID, v.data.res.Warnings)...)
+}
 func (v *taskView) current() *target {
 	t := v.tgt
 	if v.data != nil {
@@ -74,12 +86,7 @@ func (v *taskView) update(msg tea.Msg) (view, tea.Cmd) {
 		v.data = &d
 		v.tgt.Park, v.tgt.Claim = d.res.Park, d.res.Claim
 		v.vp.SetContent(v.content())
-		var warnings []string
-		if d.checkout.Notice != "" {
-			warnings = append(warnings, d.checkout.Notice)
-		}
-		warnings = append(warnings, prefixed("show "+v.tgt.ID, d.res.Warnings)...)
-		return v, tea.Batch(next, notices(LevelWarning, warnings...))
+		return v, next
 	case tea.KeyPressMsg:
 		switch {
 		case key.Matches(msg, keys.Down):
