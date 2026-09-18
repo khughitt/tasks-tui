@@ -11,7 +11,7 @@ out to the `tasks` binary and reads its JSON; it never touches `tasks/*.md` itse
 
 Both commands are installed in Go's binary directory, which must be on `PATH`.
 
-Keys: `?` legend · `enter`/`i` open · `a` quick add · `c c` launch picker · `space` start · `p` park · `d` done · `x` drop · `W` messages · `q` quit (or close a panel).
+Keys: `?` legend · `enter`/`i` open · `a` quick add · `c c` launch picker · `space` start · `p` park · `d` done · `x` drop · `W` console · `q` quit (or close a panel).
 
 Launch directly: `c l` Claude, `c o` Codex, `c r` Crush, `c O` OpenCode.
 `F5` reloads; `h`/`l` or Left/Right switch tabs; `g g`/Home goes to the top,

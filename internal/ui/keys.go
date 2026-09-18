@@ -84,7 +84,7 @@ type keymap struct {
 var keys = keymap{
 	Quit:     scoped("global", "quit", "", key.NewBinding(key.WithKeys("q", "ctrl+c"), key.WithHelp("q", "quit / close"))),
 	Help:     scoped("global", "help", "", key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "keys"))),
-	Log:      scoped("global", "log", "", key.NewBinding(key.WithKeys("W"), key.WithHelp("W", "messages"))),
+	Log:      scoped("global", "log", "", key.NewBinding(key.WithKeys("W"), key.WithHelp("W", "console"))),
 	Reload:   scoped("global", "reload", "", key.NewBinding(key.WithKeys("f5"), key.WithHelp("F5", "reload"))),
 	Back:     scoped("global", "dismiss", "", key.NewBinding(key.WithKeys("esc", "backspace"), key.WithHelp("esc", "back"))),
 	Add:      scoped("global", "add", "", key.NewBinding(key.WithKeys("a"), key.WithHelp("a", "quick add"))),

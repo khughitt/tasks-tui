@@ -20,6 +20,7 @@ type stubView struct {
 	loadingNow    bool
 	capturingKeys bool
 	seen          []string
+	warns         []string
 }
 
 func (s *stubView) title() string   { return s.name }
@@ -35,6 +36,7 @@ func (s *stubView) current() *target       { return nil }
 func (s *stubView) project() string        { return "tui" }
 func (s *stubView) capturing() bool        { return s.capturingKeys }
 func (s *stubView) loading() bool          { return s.loadingNow }
+func (s *stubView) warnings() []string     { return s.warns }
 
 func testApp(stack ...view) *App {
 	return New(&Env{Styles: NewStyles(identity.Tone{Dark: true})}, Options{Stack: stack})
@@ -79,12 +81,12 @@ func TestAppShellKeysStackAndStatus(t *testing.T) {
 	d.ExpectNot("↓ more")
 	d.Key("esc")
 	d.Feed(tea.WindowSizeMsg{Width: 120, Height: 40})
-	app.Notice(LevelError, "boom")
+	app.log.Add(LevelError, "boom")
 	d.Feed(tickMsg{})
 	d.Expect("✗ boom")
 	d.Key("j")
 	d.ExpectNot("boom")
-	app.Notice(LevelWarning, "careful")
+	app.log.Add(LevelWarning, "careful")
 	d.Feed(tickMsg{})
 	d.Expect("⚠ careful")
 	d.Key("j")
@@ -127,7 +129,8 @@ type loaderView struct {
 	notices int
 }
 
-func (v *loaderView) title() string { return v.name }
+func (v *loaderView) title() string      { return v.name }
+func (v *loaderView) warnings() []string { return nil }
 func (v *loaderView) reload() tea.Cmd {
 	return v.loader.Request(func(gen uint64) tea.Cmd { return v.loader.Cmd(gen, func() (any, error) { return "fresh", nil }) })
 }
@@ -188,7 +191,7 @@ func TestStatusLineKeepsHintWhenLeftTextIsLong(t *testing.T) {
 		t.Fatalf("long breadcrumb hides hint: %q", last)
 	}
 
-	app.Notice(LevelError, strings.Repeat("notice ", 20))
+	app.log.Add(LevelError, strings.Repeat("notice ", 20))
 	last = strings.Split(strings.TrimRight(d.Screen(), "\n"), "\n")[9]
 	if !strings.HasSuffix(last, "? keys") || lipgloss.Width(last) != 32 {
 		t.Fatalf("long notice hides hint: %q", last)
@@ -234,12 +237,52 @@ func TestHiddenLoadSuppressesDataAndNoticesThenReloads(t *testing.T) {
 	}
 }
 
-func TestMessagesReturnsLog(t *testing.T) {
-	app := testApp(&stubView{name: "root"})
-	app.Notice(LevelWarning, "careful")
-	if got := app.Messages(); len(got) != 1 || !strings.Contains(got[0].Text, "careful") {
-		t.Fatalf("messages: %v", got)
+func TestLoadWarningsBadgeTheStatusLineAndFillTheConsole(t *testing.T) {
+	v := &stubView{name: "root"}
+	app := testApp(v)
+	d := drive(t, app)
+	last := func() string {
+		lines := strings.Split(strings.TrimRight(d.Screen(), "\n"), "\n")
+		return lines[len(lines)-1]
 	}
+	if strings.Contains(last(), "⚠") {
+		t.Fatalf("no badge without warnings: %q", last())
+	}
+	v.warns = []string{"prime --project tui: uncommitted task files", "list --project tui --parked: store pruned"}
+	d.Feed(tickMsg{})
+	if got := last(); !strings.HasSuffix(got, "⚠ 2  ? keys") || !strings.Contains(got, "root") || lipgloss.Width(got) != 120 {
+		t.Fatalf("badge sits right of the breadcrumbs, left of the hint: %q", got)
+	}
+	if len(app.Messages()) != 0 {
+		t.Fatalf("load warnings stay out of the log: %+v", app.Messages())
+	}
+	d.Key("W")
+	d.Expect("warnings — root", "uncommitted task files", "store pruned", "messages")
+	d.Key("esc")
+	v.warns = nil
+	d.Feed(tickMsg{})
+	if strings.Contains(last(), "⚠") {
+		t.Fatalf("a reload without warnings clears the badge: %q", last())
+	}
+	d.Key("W")
+	d.ExpectNot("warnings — root")
+	d.Key("esc")
+	d.Feed(tea.WindowSizeMsg{Width: 120, Height: 12})
+	for i := range 6 {
+		v.warns = append(v.warns, fmt.Sprintf("warning %d", i))
+		app.log.Add(LevelInfo, fmt.Sprintf("message %d", i))
+	}
+	d.Feed(tickMsg{})
+	d.Key("W")
+	d.Expect("warning 5", "message 5")
+	d.Key("esc")
+	d.Feed(tea.WindowSizeMsg{Width: 40, Height: 12})
+	v.warns = []string{"prime --project tui: " + strings.Repeat("long ", 8) + "tail"}
+	app.log.Entries = nil
+	app.log.Add(LevelInfo, "after")
+	d.Feed(tickMsg{})
+	d.Key("W")
+	d.Expect("tail", "after")
 }
 
 // chord presses the prefix through Update so its expiry tick is not run by the driver, then the second key.

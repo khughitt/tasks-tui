@@ -160,8 +160,9 @@ and offers no transition on it, since no command can find the record from here.
 3. else the registered root.
 
 When a recorded worktree is missing (a merged and pruned branch), the choice falls
-to the next rule and the status line says which path was gone, so a person sees why
-a transition landed on main. Rows are the source of the record; a view that opens a
+to the next rule and a notice says which path was gone — in the status line for a
+transition or launch, among the Task view's warnings (§11) when it opens — so a
+person sees why a transition landed on main. Rows are the source of the record; a view that opens a
 task passes its row's checkout along rather than re-deriving it from `show`.
 `tasks-tui <id>`, which has no row, cannot start from `show` at the registered
 root: a task whose record exists only on its branch is `task_not_found` there, while
@@ -416,7 +417,7 @@ Independent of the project accent, and the same in every project:
 | claim | accent marker |
 | periodic | teal marker |
 | error | red, in the status line and the quick-add preview |
-| warning | yellow, in the status line and the log |
+| warning | yellow, in the status line, the `⚠ N` badge, and the console |
 
 Each is a light/dark pair resolved once from the tone (`lipgloss.LightDark`), chosen
 from the terminal's 256-color range so it sits inside any scheme. They are the only
@@ -464,25 +465,33 @@ highlighted prefix as its scope, debounced as in §5.1.
 
 ## 11. Errors and warnings
 
-Every failure and every warning has one home: a message log kept for the session,
-whose most recent entry shows in the status line at the bottom — errors in the
-error color, warnings in the warning color. An error is `Kind: Detail` for a
-`tasksctl.Error`, the spawn error for a launch, the parse error for quick add. A
-warning is each string of a successful response's `warnings[]`, prefixed with the
-command that produced it (`park tui-d6e352: …`): the CLI exits 0 while reporting that
-a status was saved but the claim store could not be cleaned, that worktree copies of
-a record diverge, or that a park record has no task file here, and all of those are
-things a person must see.
+A message is either the outcome of something the person did or a description of
+the state of what they are looking at, and the two have different homes.
 
-The status line holds its entry until the next keypress; a reload — including the
-one that follows every write — never clears it, and a reload's own warnings are
-appended to the log without displacing an error shown from the write. A load's
-error or warnings are reported only when its result is the current one for its scope
-(§10); a stale or superseded failure is discarded with its data. Warnings from the
-startup `projects` call and from the by-id entry lookups (§4.1) enter the same log
-before the first screen, since stderr is hidden once the alternate screen opens. `W` opens
-the log as a scrollable list, newest last, so a message that scrolled past is still
-readable.
+Outcomes go to a message log kept for the session, whose most recent entry shows in
+the status line at the bottom — errors in the error color, warnings in the warning
+color, results in the info color. An error is `Kind: Detail` for a `tasksctl.Error`,
+the spawn error for a launch, the parse error for quick add, or a failed load. A
+write's warning is each string of its response's `warnings[]`, prefixed with the
+command (`park tui-d6e352: …`): the CLI exits 0 while reporting that a status was
+saved but the claim store could not be cleaned, and a person must see that when it
+happens. The status line holds its entry until the next keypress; a reload —
+including the one that follows every write — never clears it.
+
+A load's warnings (`prime`, `list`, `show`, `projects`, and the missing-worktree
+notice of §4.1 when a Task view opens) describe the scope until the next reload replaces them, so they are
+the view's data, not log entries: each view exposes the warnings of its latest
+accepted load, and a reload replaces them instead of appending. They never enter the
+status line; when the top view has any, a badge `⚠ N` sits left of the key hint. The
+Projects view's warnings are the registry and all-projects calls plus the pane's
+`prime` for the selected project; a stale or superseded load is discarded with its
+data (§10). Warnings from the startup probe and the by-id entry lookups are dropped:
+the views they open make the same calls on their first load. The quick-add tag
+lookup's warnings are dropped for the same reason.
+
+`W` opens the console: the top view's current warnings under a `warnings — <scope>`
+header, then the log as a scrollable list, newest last, so a message that scrolled
+past is still readable.
 
 A fatal condition at startup (no `tasks` or a `projects` response without the
 expected fields, malformed config, unparseable pins) prints the message to stderr and
