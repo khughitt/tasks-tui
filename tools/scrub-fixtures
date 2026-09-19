@@ -1,0 +1,194 @@
+#!/usr/bin/env python3
+"""Rewrite a captured `tasks` JSON document into synthetic, structure-preserving data.
+
+    tasks <args> | tools/scrub-fixtures > internal/tasksctl/testdata/<name>.json
+
+Every key, type, array length, and null/empty distinction survives; only identifying
+values change. The layout being hidden is read from this machine, never written here:
+
+- project prefixes come from `tasks projects` and become NATO names in sorted order
+  (`tasks` and `tui`, the repositories these fixtures ship in, keep their names);
+- registered roots become /home/user/src/<generic>, and so does the same checkout under
+  `$WORK_ROOT` when that is set; `.worktrees/<name>` keeps its shape with a hashed branch
+  name;
+- the hostname becomes `workstation`;
+- branches, sessions, and sources become hashed stand-ins of the same shape;
+- titles, bodies, notes, and next steps become generated phrases.
+
+Deterministic for a given registry, so recapturing a fixture yields a stable diff. The
+output is refused (exit 1) when any registered root, its parent directory, `$WORK_ROOT`,
+the home directory, or the hostname survives. Standard library only.
+"""
+import hashlib
+import json
+import os
+import re
+import socket
+import subprocess
+import sys
+
+PUBLIC = {"tasks", "tui"}
+NATO = ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel", "india",
+        "juliet", "kilo", "lima", "mike", "november", "oscar", "papa", "quebec", "romeo",
+        "sierra", "tango", "uniform", "victor", "whiskey", "xray", "yankee", "zulu"]
+NEW_ROOT = "/home/user/src/"
+HOST = "workstation"
+VERBS = ["Add", "Fix", "Refactor", "Document", "Measure", "Wire", "Test", "Remove", "Rename", "Cache"]
+NOUNS = ["the parser", "the index", "the export", "the scheduler", "the retry loop", "the config loader",
+         "the login flow", "the sync job", "the status bar", "the report", "the migration", "the cache"]
+WORKTREE = re.compile(r"(/[^\s\"';]*?)/\.worktrees/")
+TEXT_KEYS = {"title", "body", "text", "next_step"}
+PATH_KEYS = {"root", "worktree", "plan_path", "spec_path"}
+ID_KEYS = {"id", "parent", "prefix"}
+
+
+class Layout:
+    """What this machine looks like: the strings that must not reach a tracked file."""
+
+    def __init__(self, projects, host, home, work_root=None):
+        private = sorted(p for p in projects if p not in PUBLIC)
+        if len(private) > len(NATO):
+            raise SystemExit(f"scrub-fixtures: {len(private)} private prefixes, only {len(NATO)} names")
+        self.prefix = {p: p for p in PUBLIC} | dict(zip(private, NATO))
+        roots = {p: [r.rstrip("/")] for p, r in projects.items()}
+        if work_root:  # worktrees live under $WORK_ROOT at the checkout's path below the sync root
+            common = os.path.commonpath(list(projects.values()))
+            for p, r in projects.items():
+                rel = os.path.relpath(r, common) if r.rstrip("/") != common else os.path.basename(r)
+                roots[p].append(os.path.join(work_root, rel))
+        # Longest root first so a nested checkout is rewritten before its parent.
+        self.roots = sorted(((p, r) for p, rs in roots.items() for r in rs), key=lambda pr: -len(pr[1]))
+        self.host = host
+        self.home = home
+        self.id_re = re.compile(
+            r"\b(" + "|".join(sorted(self.prefix, key=len, reverse=True)) + r")-([0-9a-f]{6})\b")
+        parents = {os.path.dirname(r.rstrip("/")) for r in projects.values()}
+        self.forbidden = sorted(
+            {*projects.values(), *parents, work_root or "", home, host} - {"", "/"}, key=len, reverse=True)
+
+    @classmethod
+    def from_machine(cls):
+        out = subprocess.run(["tasks", "projects"], check=True, capture_output=True, text=True).stdout
+        projects = {p["prefix"]: p["root"] for p in json.loads(out)["projects"]}
+        return cls(projects, socket.gethostname(), os.path.expanduser("~"), os.environ.get("WORK_ROOT"))
+
+    def generic(self, prefix):
+        return self.prefix.get(prefix, prefix)
+
+    def ids(self, s):
+        return self.id_re.sub(lambda m: f"{self.generic(m.group(1))}-{m.group(2)}", s)
+
+    def path(self, s):
+        for prefix, root in self.roots:
+            s = s.replace(root, NEW_ROOT + self.generic(prefix))
+        return re.sub(r"\.worktrees/([^/\s;]+)", lambda m: ".worktrees/" + self.branch(m.group(1)), s)
+
+    def branch(self, name):
+        if name in ("main", "master") or self.id_re.fullmatch(name):
+            return self.ids(name)
+        kind = name.split("/", 1)[0] if "/" in name else "feat"
+        return f"{kind}/branch-{h(name, 4)}"
+
+    def text(self, s):
+        return self.path(self.ids(s)).replace(self.host, HOST)
+
+
+def h(s, n=8):
+    return hashlib.sha1(s.encode()).hexdigest()[:n]
+
+
+def pick(seed, table):
+    return table[int(h(seed), 16) % len(table)]
+
+
+def session(s):
+    kind, sep, rest = s.partition(":")
+    if not sep or not rest:
+        return s
+    x = hashlib.sha1(s.encode()).hexdigest()
+    if len(rest) >= 32:  # a uuid-shaped id keeps its shape
+        return f"{kind}:{x[:8]}-{x[8:12]}-{x[12:16]}-{x[16:20]}-{x[20:32]}"
+    return f"{kind}:{x[:len(rest)]}"
+
+
+def source(s, layout):
+    """A source is provenance the TUI never interprets; only a task id keeps meaning."""
+    if layout.id_re.fullmatch(s):
+        return layout.ids(s)
+    if s.startswith(("http://", "https://")):
+        return "https://tracker.example/issue/" + h(s)
+    if ":" in s:
+        return "inbox:note:" + h(s, 32)
+    return "ref:" + h(s)
+
+
+def title(seed):
+    return f"{pick(seed, VERBS)} {pick(seed + 'n', NOUNS)}"
+
+
+def sentence(seed, kind):
+    verb = pick(seed + "v", VERBS)
+    stem = verb[:-1] if verb.endswith("e") else verb
+    return {
+        "body": f"Why: {pick(seed, NOUNS)} needs {stem.lower()}ing. Done when the check passes.",
+        "text": f"{stem}ed {pick(seed, NOUNS)}; see the plan.",
+        "next_step": f"Resume: {pick(seed + 'v', VERBS).lower()} {pick(seed, NOUNS)}, then run the gate.",
+    }[kind]
+
+
+def walk(v, layout, key=None, ident=""):
+    if isinstance(v, dict):
+        seed = v["id"] if isinstance(v.get("id"), str) else ident
+        return {k: walk(x, layout, k, seed) for k, x in v.items()}
+    if isinstance(v, list):
+        return [walk(x, layout, key, ident + str(i)) for i, x in enumerate(v)]
+    if not isinstance(v, str):
+        return v
+    if key in ("prefix", "projects"):
+        return layout.generic(v)
+    if key in ID_KEYS or key in ("depends", "children"):
+        return layout.ids(v)
+    if key in PATH_KEYS:
+        return layout.path(v)
+    if key == "host":
+        return HOST if v == layout.host else v
+    if key in ("owner", "by"):
+        return layout.branch(v)
+    if key in ("session", "harness_session"):
+        return session(v)
+    if key == "source":
+        return source(v, layout)
+    if key == "tags":
+        return "from:" + layout.generic(v[5:]) if v.startswith("from:") else layout.ids(v)
+    if key == "step":
+        m = re.match(r"(Task \d+): ", v)
+        return f"{m.group(1)}: {title(v)}" if m else title(v)
+    if key in TEXT_KEYS and v != "":
+        return title(ident + v) if key == "title" else sentence(ident + v, key)
+    return layout.text(v)
+
+
+def scrub(data: bytes, layout: Layout) -> bytes:
+    if not data.strip():
+        raise SystemExit("scrub-fixtures: empty input; did the tasks command fail?")
+    doc = json.loads(data)
+    out = walk(doc, layout)
+    pretty = data.lstrip().startswith((b"{\n", b"[\n"))
+    text = json.dumps(out, indent=2 if pretty else None, separators=None if pretty else (",", ":"))
+    for needle in layout.forbidden:
+        if needle in text:
+            raise SystemExit(f"scrub-fixtures: output still contains {needle!r}; refusing to write")
+    for m in WORKTREE.finditer(text):  # a worktree outside every known checkout is a layout leak
+        if not m.group(1).startswith(NEW_ROOT):
+            raise SystemExit(f"scrub-fixtures: unmapped worktree {m.group(0)!r}; set WORK_ROOT or register the project")
+    return (text + "\n").encode()
+
+
+def main(argv):
+    if len(argv) > 1:
+        raise SystemExit(__doc__.strip().splitlines()[2].strip())
+    sys.stdout.buffer.write(scrub(sys.stdin.buffer.read(), Layout.from_machine()))
+
+
+if __name__ == "__main__":
+    main(sys.argv)
