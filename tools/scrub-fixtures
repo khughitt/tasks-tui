@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Rewrite a captured `tasks` JSON document into synthetic, structure-preserving data.
 
-    tasks <args> | tools/scrub-fixtures > internal/tasksctl/testdata/<name>.json
+    tasks <args> | tools/scrub-fixtures [--report] > internal/tasksctl/testdata/<name>.json
 
 Every key, type, array length, and null/empty distinction survives; only identifying
 values change. The layout being hidden is read from this machine, never written here:
@@ -14,6 +14,12 @@ values change. The layout being hidden is read from this machine, never written 
 - the hostname becomes `workstation`;
 - branches, sessions, and sources become hashed stand-ins of the same shape;
 - titles, bodies, notes, and next steps become generated phrases.
+
+Every key that can carry a string is classified in KEYS; a string under a key the table
+does not know is refused (exit 1) naming the key, so a new field in tasks output breaks
+the capture instead of passing through. Numbers, booleans, and nulls carry no layout and
+are not classified; a dict-valued key is structure. `--report` prints the distinct values
+that survive verbatim (the keep and layout classes) per key to stderr for review.
 
 Deterministic for a given registry, so recapturing a fixture yields a stable diff. The
 output is refused (exit 1) when any registered root, its parent directory, `$WORK_ROOT`,
@@ -37,9 +43,23 @@ VERBS = ["Add", "Fix", "Refactor", "Document", "Measure", "Wire", "Test", "Remov
 NOUNS = ["the parser", "the index", "the export", "the scheduler", "the retry loop", "the config loader",
          "the login flow", "the sync job", "the status bar", "the report", "the migration", "the cache"]
 WORKTREE = re.compile(r"(/[^\s\"';]*?)/\.worktrees/")
-TEXT_KEYS = {"title", "body", "text", "next_step"}
-PATH_KEYS = {"root", "worktree", "plan_path", "spec_path"}
-ID_KEYS = {"id", "parent", "prefix"}
+# How a string under each key is rewritten. `keep` is vocabulary that identifies nothing
+# and `time` a timestamp; `layout` is free text where only ids, paths, and the host change.
+KEYS = {
+    "id": "id", "parent": "id", "depends": "id", "children": "id",
+    "prefix": "prefix", "projects": "prefix",
+    "root": "path", "worktree": "path", "plan_path": "path", "spec_path": "path",
+    "owner": "branch", "by": "branch",
+    "session": "session", "harness_session": "session",
+    "source": "source", "host": "host", "tags": "tags", "step": "step",
+    "title": "title", "body": "sentence", "text": "sentence", "next_step": "sentence",
+    "warnings": "layout", "detail": "layout",
+    **dict.fromkeys(["status", "size", "complexity", "process", "reason", "needs", "waiting_on", "phase",
+                     "agent", "model", "every", "kind", "harness_session_source", "plan", "spec"], "keep"),
+    **dict.fromkeys(["at", "created", "updated", "started", "completed", "seen", "last_activity",
+                     "last_done", "next_due", "defer"], "time"),
+}
+REPORTED = {"keep", "layout"}
 
 
 class Layout:
@@ -136,43 +156,64 @@ def sentence(seed, kind):
     }[kind]
 
 
-def walk(v, layout, key=None, ident=""):
-    if isinstance(v, dict):
-        seed = v["id"] if isinstance(v.get("id"), str) else ident
-        return {k: walk(x, layout, k, seed) for k, x in v.items()}
-    if isinstance(v, list):
-        return [walk(x, layout, key, ident + str(i)) for i, x in enumerate(v)]
-    if not isinstance(v, str):
-        return v
-    if key in ("prefix", "projects"):
+def rewrite(v, kind, key, layout, ident):
+    if kind == "prefix":
         return layout.generic(v)
-    if key in ID_KEYS or key in ("depends", "children"):
+    if kind == "id":
         return layout.ids(v)
-    if key in PATH_KEYS:
+    if kind == "path":
         return layout.path(v)
-    if key == "host":
+    if kind == "host":
         return HOST if v == layout.host else v
-    if key in ("owner", "by"):
+    if kind == "branch":
         return layout.branch(v)
-    if key in ("session", "harness_session"):
+    if kind == "session":
         return session(v)
-    if key == "source":
+    if kind == "source":
         return source(v, layout)
-    if key == "tags":
+    if kind == "tags":
         return "from:" + layout.generic(v[5:]) if v.startswith("from:") else layout.ids(v)
-    if key == "step":
+    if kind == "step":
         m = re.match(r"(Task \d+): ", v)
         return f"{m.group(1)}: {title(v)}" if m else title(v)
-    if key in TEXT_KEYS and v != "":
-        return title(ident + v) if key == "title" else sentence(ident + v, key)
-    return layout.text(v)
+    if kind == "title":
+        return title(ident + v) if v else v
+    if kind == "sentence":
+        return sentence(ident + v, key) if v else v
+    if kind == "layout":
+        return layout.text(v)
+    if kind in ("keep", "time"):
+        return v
+    raise AssertionError(kind)
 
 
-def scrub(data: bytes, layout: Layout) -> bytes:
+def walk(v, layout, seen, key=None, ident=""):
+    if isinstance(v, dict):
+        seed = v["id"] if isinstance(v.get("id"), str) else ident
+        return {k: walk(x, layout, seen, k, seed) for k, x in v.items()}
+    if isinstance(v, list):
+        return [walk(x, layout, seen, key, ident + str(i)) for i, x in enumerate(v)]
+    if not isinstance(v, str):
+        return v
+    kind = KEYS.get(key)
+    if kind is None:
+        raise SystemExit(f"scrub-fixtures: unclassified key {key!r} holds a string; add it to KEYS")
+    out = rewrite(v, kind, key, layout, ident)
+    if kind in REPORTED:
+        seen.setdefault(key, set()).add(out)
+    return out
+
+
+def report(seen):
+    for key in sorted(seen):
+        print(f"{key}: " + " | ".join(sorted(seen[key])), file=sys.stderr)
+
+
+def scrub(data: bytes, layout: Layout, seen=None) -> bytes:
     if not data.strip():
         raise SystemExit("scrub-fixtures: empty input; did the tasks command fail?")
     doc = json.loads(data)
-    out = walk(doc, layout)
+    out = walk(doc, layout, {} if seen is None else seen)
     pretty = data.lstrip().startswith((b"{\n", b"[\n"))
     text = json.dumps(out, indent=2 if pretty else None, separators=None if pretty else (",", ":"))
     for needle in layout.forbidden:
@@ -185,9 +226,13 @@ def scrub(data: bytes, layout: Layout) -> bytes:
 
 
 def main(argv):
-    if len(argv) > 1:
+    if argv[1:] not in ([], ["--report"]):
         raise SystemExit(__doc__.strip().splitlines()[2].strip())
-    sys.stdout.buffer.write(scrub(sys.stdin.buffer.read(), Layout.from_machine()))
+    seen = {}
+    out = scrub(sys.stdin.buffer.read(), Layout.from_machine(), seen)
+    if argv[1:]:
+        report(seen)
+    sys.stdout.buffer.write(out)
 
 
 if __name__ == "__main__":
