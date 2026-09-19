@@ -720,6 +720,183 @@ scope = "working"
 seq = "Escape"
 action = "dismiss"
 arg = "close working set"
+
+[[project.mind6.binding]]
+scope = "tui.global"
+seq = "?"
+action = "help"
+
+[[project.mind6.binding]]
+scope = "tui.global"
+seq = "Escape"
+action = "dismiss"
+arg = "back"
+
+[[project.mind6.binding]]
+scope = "tui.global"
+seq = "q"
+action = "quit"
+
+[[project.mind6.binding]]
+scope = "tui.global"
+seq = "ctrl+c"
+action = "quit"
+
+[[project.mind6.binding]]
+scope = "tui.global"
+seq = "a"
+action = "add"
+
+[[project.mind6.binding]]
+scope = "tui.global"
+seq = "/"
+action = "search"
+
+[[project.mind6.binding]]
+scope = "tui.global"
+seq = "g h"
+action = "goto"
+arg = "home"
+
+[[project.mind6.binding]]
+scope = "tui.global"
+seq = "y"
+action = "yank"
+
+[[project.mind6.binding]]
+scope = "tui.home"
+seq = "j"
+action = "down"
+
+[[project.mind6.binding]]
+scope = "tui.home"
+seq = "Down"
+action = "down"
+
+[[project.mind6.binding]]
+scope = "tui.home"
+seq = "k"
+action = "up"
+
+[[project.mind6.binding]]
+scope = "tui.home"
+seq = "Up"
+action = "up"
+
+[[project.mind6.binding]]
+scope = "tui.home"
+seq = "g g"
+action = "top"
+
+[[project.mind6.binding]]
+scope = "tui.home"
+seq = "G"
+action = "bottom"
+
+[[project.mind6.binding]]
+scope = "tui.home"
+seq = "Enter"
+action = "open"
+
+[[project.mind6.binding]]
+scope = "tui.home"
+seq = "e"
+action = "edit"
+
+[[project.mind6.binding]]
+scope = "tui.home"
+seq = "F5"
+action = "reload"
+
+[[project.mind6.binding]]
+scope = "tui.search"
+seq = "Enter"
+action = "open"
+arg = "run the search"
+
+[[project.mind6.binding]]
+scope = "tui.search"
+seq = "Escape"
+action = "dismiss"
+arg = "leave the search input"
+
+[[project.mind6.binding]]
+scope = "tui.thought.read"
+seq = "e"
+action = "edit"
+
+[[project.mind6.binding]]
+scope = "tui.thought.read"
+seq = "j"
+action = "down"
+
+[[project.mind6.binding]]
+scope = "tui.thought.read"
+seq = "k"
+action = "up"
+
+[[project.mind6.binding]]
+scope = "tui.thought.read"
+seq = "t r"
+action = "toggle-related"
+
+[[project.mind6.binding]]
+scope = "tui.thought.read"
+seq = "t s"
+action = "toggle-similar"
+
+[[project.mind6.binding]]
+scope = "tui.thought.read"
+seq = "t d"
+action = "toggle-details"
+
+[[project.mind6.binding]]
+scope = "tui.thought.read"
+seq = "Enter"
+action = "open"
+
+[[project.mind6.binding]]
+scope = "tui.thought.read"
+seq = "/"
+action = "search"
+arg = "find in body"
+
+[[project.mind6.binding]]
+scope = "tui.thought.read"
+seq = "n"
+action = "find-next"
+
+[[project.mind6.binding]]
+scope = "tui.thought.read"
+seq = "N"
+action = "find-prev"
+
+[[project.mind6.binding]]
+scope = "tui.thought.read"
+seq = "Escape"
+action = "dismiss"
+arg = "clear find"
+
+[[project.mind6.binding]]
+scope = "tui.editor"
+seq = "Escape"
+action = "dismiss"
+arg = "save and view"
+
+[[project.mind6.binding]]
+scope = "tui.editor"
+seq = "ctrl+s"
+action = "save"
+
+[[project.mind6.binding]]
+scope = "tui.editor"
+seq = "Tab"
+action = "next-field"
+
+[[project.mind6.binding]]
+scope = "tui.editor"
+seq = "shift+Tab"
+action = "prev-field"
 [[project.wali.binding]]
 scope = "panel"
 seq = "h"
