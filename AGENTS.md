@@ -32,6 +32,9 @@ shown to the user are relative to the main checkout (.worktrees/<name>/…).
 `just test`: `go test ./...` — the integration test skips when `tasks` is not on `PATH`.
 Hooks: `git config core.hooksPath .githooks` (done by `just setup`).
 Rebuild after changes: `just install`.
+Fixtures under internal/tasksctl/testdata/ are recaptured with `just capture <name> <tasks
+args>`, which pipes live output through `tools/scrub-fixtures`; raw `tasks` output is never
+committed.
 
 ## Layout
 

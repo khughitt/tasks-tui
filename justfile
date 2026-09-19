@@ -26,6 +26,20 @@ test:
 smoke:
     tools/smoke-tui
 
+# Recapture one tasksctl fixture from live output, scrubbed of this machine's layout by
+# tools/scrub-fixtures (registry, hostname, WORK_ROOT); raw tasks output never lands in
+# testdata. The tracked fixtures came from: projects `projects`; prime `prime --project
+# tasks`; list_parked `list --all-projects --parked`; show `show <id>`. list_rows.json and
+# error_claimed.json are hand-shaped (claim liveness, a claimed error) and are edited, not
+# recaptured. Example: just capture show show tui-ce6c9f
+capture name +args:
+    #!/bin/sh
+    set -eu
+    raw=$(mktemp) && trap 'rm -f "$raw"' EXIT
+    tasks {{args}} > "$raw"
+    tools/scrub-fixtures < "$raw" > internal/tasksctl/testdata/{{name}}.json.tmp
+    mv internal/tasksctl/testdata/{{name}}.json.tmp internal/tasksctl/testdata/{{name}}.json
+
 # Seconds: hygiene, format, vet, staticcheck, tasks check.
 check:
     {{tt}} check -- sh -c '{{check_cmd}}'
