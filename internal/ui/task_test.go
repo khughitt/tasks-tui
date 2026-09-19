@@ -9,7 +9,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"tasks-tui/internal/tasksctl"
+	"github.com/khughitt/tasks-tui/internal/tasksctl"
 )
 
 func showJSON(t tasksctl.Task, extra map[string]any) string {

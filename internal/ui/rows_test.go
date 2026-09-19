@@ -7,7 +7,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
-	"tasks-tui/internal/tasksctl"
+	"github.com/khughitt/tasks-tui/internal/tasksctl"
 )
 
 func TestAgo(t *testing.T) {

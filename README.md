@@ -8,11 +8,16 @@ touches `tasks/*.md` itself, so the CLI stays the only writer and the whole cont
 
 Needs Go and a `tasks` binary on `PATH` (install it from the tasks repository first).
 
+    go install github.com/khughitt/tasks-tui/cmd/tasks-tui@latest
+
+From a checkout:
+
     just setup      # deps and git hooks
     just install    # installs tasks-tui and the short command tui
 
-Both commands land in Go's binary directory (`go env GOBIN`, else `$GOPATH/bin`), which
-must be on `PATH`.
+Either way the binary lands in Go's binary directory (`go env GOBIN`, else
+`$GOPATH/bin`), which must be on `PATH`. Only `just install` creates the `tui` symlink;
+after `go install`, alias it or link it yourself.
 
 ## Use
 

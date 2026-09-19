@@ -1,4 +1,4 @@
-module tasks-tui
+module github.com/khughitt/tasks-tui
 
 go 1.27
 

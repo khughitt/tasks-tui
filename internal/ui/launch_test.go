@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"tasks-tui/internal/launch"
+	"github.com/khughitt/tasks-tui/internal/launch"
 )
 
 func TestLaunchSpawnsInTheParkedWorktreeWithoutChangingStatus(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"tasks-tui/internal/identity"
+	"github.com/khughitt/tasks-tui/internal/identity"
 )
 
 func TestSlotStylesCarrySurfaceAndPill(t *testing.T) {

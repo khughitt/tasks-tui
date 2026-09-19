@@ -11,11 +11,11 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"tasks-tui/internal/config"
-	"tasks-tui/internal/identity"
-	"tasks-tui/internal/launch"
-	"tasks-tui/internal/tasksctl"
-	"tasks-tui/internal/ui"
+	"github.com/khughitt/tasks-tui/internal/config"
+	"github.com/khughitt/tasks-tui/internal/identity"
+	"github.com/khughitt/tasks-tui/internal/launch"
+	"github.com/khughitt/tasks-tui/internal/tasksctl"
+	"github.com/khughitt/tasks-tui/internal/ui"
 )
 
 const version = "0.1.0"

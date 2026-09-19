@@ -3,7 +3,7 @@ package ui
 import (
 	tea "charm.land/bubbletea/v2"
 
-	"tasks-tui/internal/launch"
+	"github.com/khughitt/tasks-tui/internal/launch"
 )
 
 // launch resolves a completed c-chord: a fixed harness spawns directly when it is

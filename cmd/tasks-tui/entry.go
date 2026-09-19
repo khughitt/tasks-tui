@@ -7,10 +7,10 @@ import (
 	"regexp"
 	"strings"
 
-	"tasks-tui/internal/config"
-	"tasks-tui/internal/identity"
-	"tasks-tui/internal/tasksctl"
-	"tasks-tui/internal/ui"
+	"github.com/khughitt/tasks-tui/internal/config"
+	"github.com/khughitt/tasks-tui/internal/identity"
+	"github.com/khughitt/tasks-tui/internal/tasksctl"
+	"github.com/khughitt/tasks-tui/internal/ui"
 )
 
 var idRe = regexp.MustCompile(`^([a-z0-9]+)-([0-9a-f]{6})$`)

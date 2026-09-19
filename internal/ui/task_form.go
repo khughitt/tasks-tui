@@ -10,7 +10,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	"tasks-tui/internal/tasksctl"
+	"github.com/khughitt/tasks-tui/internal/tasksctl"
 )
 
 type taskFormData struct {
