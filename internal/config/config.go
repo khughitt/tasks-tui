@@ -11,8 +11,8 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"tasks-tui/internal/identity"
-	"tasks-tui/internal/launch"
+	"github.com/khughitt/tasks-tui/internal/identity"
+	"github.com/khughitt/tasks-tui/internal/launch"
 )
 
 type Identity struct {

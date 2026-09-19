@@ -3,7 +3,7 @@ package ui
 import (
 	"charm.land/lipgloss/v2"
 
-	"tasks-tui/internal/identity"
+	"github.com/khughitt/tasks-tui/internal/identity"
 )
 
 // Styles holds the semantic colours of spec §8.3 — the only hard-coded colours — and

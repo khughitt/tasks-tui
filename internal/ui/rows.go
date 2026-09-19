@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"charm.land/lipgloss/v2"
-	"tasks-tui/internal/tasksctl"
+	"github.com/khughitt/tasks-tui/internal/tasksctl"
 )
 
 type rowView struct {

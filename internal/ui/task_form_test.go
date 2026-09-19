@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
-	"tasks-tui/internal/tasksctl"
+	"github.com/khughitt/tasks-tui/internal/tasksctl"
 )
 
 func TestEditFormPrefillsAndSavesThreeFields(t *testing.T) {

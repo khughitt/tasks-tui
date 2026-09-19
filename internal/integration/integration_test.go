@@ -11,12 +11,12 @@ import (
 	"testing"
 	"time"
 
-	"tasks-tui/internal/config"
-	"tasks-tui/internal/identity"
-	"tasks-tui/internal/launch"
-	"tasks-tui/internal/tasksctl"
-	"tasks-tui/internal/ui"
-	"tasks-tui/internal/uitest"
+	"github.com/khughitt/tasks-tui/internal/config"
+	"github.com/khughitt/tasks-tui/internal/identity"
+	"github.com/khughitt/tasks-tui/internal/launch"
+	"github.com/khughitt/tasks-tui/internal/tasksctl"
+	"github.com/khughitt/tasks-tui/internal/ui"
+	"github.com/khughitt/tasks-tui/internal/uitest"
 )
 
 func TestProjectViewAgainstRealBinary(t *testing.T) {
