@@ -8,7 +8,7 @@ complexity: mid
 process: direct
 owner: feat/tag-completion
 created: 2026-09-14T12:42:09Z
-updated: 2026-09-15T21:20:41Z
+updated: 2026-09-19T13:13:54Z
 started: 2026-09-15T21:18:03Z
 completed: 2026-09-15T21:20:41Z
 depends: []
@@ -22,3 +22,4 @@ Why: complete quick-add tags from the tracker without leaving the prompt. Done: 
 
 - 2026-09-15T21:17:26Z (main): scope: scoped; promoted to direct implementation from the established 174855b branch, retaining its typed boundary, native suggestions, and stale-result checks
 - 2026-09-15T21:20:41Z (feat/tag-completion): Complete project-scoped trailing-tag suggestions in quick add via tasks tags, with typed decoding and stale-request protection
+- 2026-09-19T13:13:54Z (main): History was rewritten on 2026-09-19 before publishing (fixture scrub); commit hashes cited in earlier notes no longer resolve

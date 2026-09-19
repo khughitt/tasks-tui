@@ -8,7 +8,7 @@ complexity: mid
 process: planned
 owner: feat/ui-polish
 created: 2026-09-14T23:20:08Z
-updated: 2026-09-15T02:17:41Z
+updated: 2026-09-19T13:13:54Z
 started: 2026-09-14T23:20:18Z
 completed: 2026-09-15T02:17:41Z
 depends: []
@@ -32,3 +32,4 @@ Polish pass over every view after v1 landed. Alignment: the Projects table pads 
 - 2026-09-15T01:07:59Z (feat/ui-polish): Resolved the final plan-review finding: Task 5 explicitly changes tabNames to an inferred-length array before declaring shown/hasCount; corrected its file summary. Implementation remains pending.
 - 2026-09-15T01:20:17Z (feat/ui-polish): User approved implementation; executing the reviewed plan with subagent-driven development in ui-polish.
 - 2026-09-15T02:17:41Z (feat/ui-polish): v1.1 polish implemented on branch: column model, marks column, surface selection, pill tabs, legend panel, spinner, q/i keys
+- 2026-09-19T13:13:54Z (main): History was rewritten on 2026-09-19 before publishing (fixture scrub); commit hashes cited in earlier notes no longer resolve
