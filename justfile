@@ -3,6 +3,8 @@
 # which run the same commands under their own target names for the cross-project audit.
 # Every recipe runs through the vendored timing wrapper tools/tt (source: ops bin/tt).
 
+set quiet
+
 tt := "python3 tools/tt"
 
 fast_cmd := "go test $(go list ./internal/... | grep -v '/integration$')"
