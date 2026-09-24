@@ -538,6 +538,18 @@ action = "goto"
 arg = "exploration walk"
 
 [[project.mind6.binding]]
+scope = "global"
+seq = "g o"
+action = "goto"
+arg = "old walk"
+
+[[project.mind6.binding]]
+scope = "global"
+seq = "g d"
+action = "goto"
+arg = "garden walk"
+
+[[project.mind6.binding]]
 scope = "thought.read"
 seq = "e"
 action = "edit"
@@ -689,6 +701,49 @@ scope = "structure"
 seq = "Escape"
 action = "dismiss"
 arg = "cancel the member gesture"
+
+[[project.mind6.binding]]
+scope = "walk"
+seq = "r"
+action = "random"
+
+[[project.mind6.binding]]
+scope = "walk"
+seq = "h"
+action = "prev"
+arg = "lens"
+
+[[project.mind6.binding]]
+scope = "walk"
+seq = "l"
+action = "next"
+arg = "lens"
+
+[[project.mind6.binding]]
+scope = "walk"
+seq = "-"
+action = "noise-down"
+
+[[project.mind6.binding]]
+scope = "walk"
+seq = "="
+action = "noise-up"
+
+[[project.mind6.binding]]
+scope = "walk"
+seq = "e"
+action = "edit"
+arg = "open the thought's editor"
+
+[[project.mind6.binding]]
+scope = "walk"
+seq = "#"
+action = "tag"
+
+[[project.mind6.binding]]
+scope = "walk"
+seq = "u"
+action = "unhide"
 
 [[project.mind6.binding]]
 scope = "working"
