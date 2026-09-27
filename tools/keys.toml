@@ -746,6 +746,18 @@ seq = "u"
 action = "unhide"
 
 [[project.mind6.binding]]
+scope = "walk"
+seq = "PgDn"
+action = "page"
+arg = "down"
+
+[[project.mind6.binding]]
+scope = "walk"
+seq = "PgUp"
+action = "page"
+arg = "up"
+
+[[project.mind6.binding]]
 scope = "working"
 seq = "j"
 action = "down"
