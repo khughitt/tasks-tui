@@ -813,6 +813,7 @@ action = "quit"
 scope = "tui.global"
 seq = "a"
 action = "add"
+arg = "open scratch"
 
 [[project.mind6.binding]]
 scope = "tui.global"
@@ -948,7 +949,7 @@ arg = "clear find"
 scope = "tui.editor"
 seq = "Escape"
 action = "dismiss"
-arg = "save and view"
+arg = "close"
 
 [[project.mind6.binding]]
 scope = "tui.editor"
@@ -957,13 +958,87 @@ action = "save"
 
 [[project.mind6.binding]]
 scope = "tui.editor"
-seq = "Tab"
-action = "next-field"
+seq = "shift+Enter"
+action = "save"
+arg = "save and close"
+alias = true
 
 [[project.mind6.binding]]
 scope = "tui.editor"
+seq = "alt+Enter"
+action = "save"
+arg = "save and close"
+alias = true
+
+[[project.mind6.binding]]
+scope = "tui.offline"
+seq = "F5"
+action = "reload"
+
+[[project.mind6.binding]]
+scope = "tui.global"
+seq = "p"
+action = "toggle-scratch"
+
+[[project.mind6.binding]]
+scope = "tui.global"
+seq = "m"
+action = "attach-context"
+
+[[project.mind6.binding]]
+scope = "tui.global"
+seq = "M"
+action = "detach-context"
+
+[[project.mind6.binding]]
+scope = "tui.scratch"
+seq = "Escape"
+action = "dismiss"
+arg = "to the page"
+
+[[project.mind6.binding]]
+scope = "tui.scratch"
+seq = "ctrl+s"
+action = "save"
+
+[[project.mind6.binding]]
+scope = "tui.scratch"
+seq = "shift+Enter"
+action = "save"
+arg = "save and return to the page"
+alias = true
+
+[[project.mind6.binding]]
+scope = "tui.scratch"
+seq = "alt+Enter"
+action = "save"
+arg = "save and return to the page"
+alias = true
+
+[[project.mind6.binding]]
+scope = "tui.scratch"
+seq = "Tab"
+action = "focus-note"
+arg = "to the note"
+
+[[project.mind6.binding]]
+scope = "tui.scratch-note"
+seq = "Tab"
+action = "focus-text"
+arg = "to the text"
+
+[[project.mind6.binding]]
+scope = "tui.scratch-note"
 seq = "shift+Tab"
-action = "prev-field"
+action = "focus-text"
+arg = "to the text"
+
+[[project.mind6.binding]]
+scope = "tui.scratch-note"
+seq = "Escape"
+action = "dismiss"
+arg = "to the page"
+
 [[project.wali.binding]]
 scope = "panel"
 seq = "h"
