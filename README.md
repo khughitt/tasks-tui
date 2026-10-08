@@ -91,3 +91,7 @@ in `~/.config/familiar/identities.yaml` are honoured when that file exists.
     just gate       # both
 
 Design: `docs/specs/`. Plans: `docs/plans/`. Agent guide: `AGENTS.md`.
+
+## License
+
+[MIT](LICENSE).
