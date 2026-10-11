@@ -9,7 +9,7 @@ Go TUI (`tasks-tui`) over the `tasks` tracker, on Bubble Tea v2. It shells out t
 - Start with `tasks prime`; pick from `tasks ready`; `tasks start <id>` before changing code.
 - `tasks note <id> "<one line>"` when scope or understanding changes.
 - `tasks park <id> "<next step>" [--waiting-on user]` when setting work down.
-- `tasks done <id> "<what landed>"` in the same commit as the code. `tasks check` before every commit.
+- `tasks done <id> "<what landed>"` on the task's branch before it merges. `tasks check` before every commit.
 - Never edit `tasks/*.md` by hand. Full protocol: the tasks skill.
 
 ## Process and workspace

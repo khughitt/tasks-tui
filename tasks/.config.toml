@@ -3,3 +3,6 @@ prefix = "tui"
 [tags]
 ui = "Rendering, layout, colour, and keys of the views and overlays"
 v2 = "Deferred past v1; scoped later"
+
+[git]
+commit = true
