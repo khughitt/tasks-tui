@@ -3,8 +3,9 @@ id: tui-0fa4d0
 title: Read ops identity.toml for project names and purposes
 status: idea
 priority: 2
+reviewed: true
 created: 2026-09-14T12:42:09Z
-updated: 2026-09-15T21:17:26Z
+updated: 2026-10-12T18:14:30Z
 depends: []
 tags: [v2]
 agent: codex
