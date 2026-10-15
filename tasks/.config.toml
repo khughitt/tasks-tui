@@ -1,4 +1,5 @@
 prefix = "tui"
+color = "#2f63e1"
 
 [tags]
 ui = "Rendering, layout, colour, and keys of the views and overlays"
