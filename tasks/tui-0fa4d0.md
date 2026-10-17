@@ -7,8 +7,8 @@ size: s
 complexity: mid
 process: direct
 created: 2026-09-14T12:42:09Z
-updated: 2026-10-17T21:05:31Z
-depends: []
+updated: 2026-10-17T21:05:32Z
+depends: [tasks-6845e6]
 tags: [v2]
 agent: codex
 ---
