@@ -3,11 +3,8 @@ id: tui-c6e459
 title: Watch tasks/ with inotify instead of the refresh timer
 status: idea
 priority: 2
-reviewed: true
-awaiting_user: true
-reviewed_at: 2026-10-17T20:37:04Z
 created: 2026-09-14T12:42:09Z
-updated: 2026-10-17T20:37:04Z
+updated: 2026-10-17T20:53:44Z
 depends: []
 parent: tui-29c34d
 tags: [v2]
@@ -25,3 +22,4 @@ Evidence 2026-10-17: refresh is a `tea.Tick` every `refresh_seconds` (default 30
 ## Notes
 
 - 2026-10-17T20:37:04Z (main): scope: question; inotify on tasks/ misses claim/park changes held in the claim store, so the idea as titled is rejected; whether any push refresh is wanted depends on whether the lag is felt; parented under tui-29c34d; brief: docs/notes/2026-10-17-tasks-tui-v2-surface-brief.md
+- 2026-10-17T20:53:44Z (main): user 2026-10-17: has not noticed the refresh lag or the poll cost
