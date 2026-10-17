@@ -7,7 +7,7 @@ size: s
 complexity: mid
 process: direct
 created: 2026-09-19T13:13:54Z
-updated: 2026-10-17T20:58:53Z
+updated: 2026-10-17T20:58:54Z
 depends: []
 tags: []
 agent: "claude-code/claude-opus-5[1m]"
@@ -21,3 +21,7 @@ Done:
 - The user has looked at the rendered images and accepted them before the commit.
 
 Where: `tools/smoke-tui` (headless tmux pattern), README.md, go.mod's `tool` directives (staticcheck is one). Renderer lean: charmbracelet `freeze` as a `go tool` (ANSI → SVG/PNG, no ttyd/ffmpeg); a recording (vhs) is out of scope unless the stills fall short. None of freeze, vhs, or asciinema is installed on this host.
+
+## Notes
+
+- 2026-10-17T20:58:54Z (main): scope: scoped; todo P3 s/mid/direct; approach from tools/smoke-tui's isolated registry + tmux capture (tasks reads registry from XDG_CONFIG_HOME, claims from XDG_STATE_HOME), demo data to keep the public README free of real projects, freeze lean as renderer; user judges the images
