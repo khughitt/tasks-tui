@@ -7,7 +7,7 @@ size: l
 complexity: mid
 process: direct
 created: 2026-09-14T12:42:09Z
-updated: 2026-10-17T20:36:05Z
+updated: 2026-10-17T20:36:46Z
 depends: []
 parent: tui-29c34d
 tags: [v2]
@@ -23,3 +23,7 @@ Established 2026-10-17: every write exists in the tasks CLI — `edit -p/--size/
 Done: the three children are closed: one-line overlays (note, block/unblock, shelve/unshelve), rubric fields in the task form, and dependency editing.
 
 Where: internal/ui/transitions.go and overlay.go (the §5.4 overlay pattern), internal/ui/task_form.go (§6), internal/tasksctl/client.go, tools/keys.toml; brief docs/notes/2026-10-17-tasks-tui-v2-surface-brief.md.
+
+## Notes
+
+- 2026-10-17T20:36:46Z (main): scope: scoped; every write exists in the tasks CLI (checked against `tasks edit/dep/note/block/shelve --help` 2026-10-17), so the idea became a goal under tui-29c34d with children tui-55cb9e (note/block/shelve overlays, direct), tui-662270 (rubric fields in the form, planned), tui-c2a9df (dependency editing, planned); brief: docs/notes/2026-10-17-tasks-tui-v2-surface-brief.md
