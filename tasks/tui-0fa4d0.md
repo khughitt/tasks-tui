@@ -5,13 +5,18 @@ status: idea
 priority: 2
 reviewed: true
 created: 2026-09-14T12:42:09Z
-updated: 2026-10-12T18:14:30Z
+updated: 2026-10-17T20:58:35Z
 depends: []
 tags: [v2]
 agent: codex
 ---
 
-Deferred from v1 (docs/specs/2026-09-13-tasks-tui-v1-design.md §14).
+Deferred from v1 (docs/specs/2026-09-13-tasks-tui-v1-design.md §14). Show canonical project names and purposes in the Projects view instead of the root basename. Handoff: docs/notes/2026-09-15-project-identity-brief.md.
+
+## Open questions
+
+- Should `tasks projects` expose `name` and `purpose` (read from each root's `identity.toml`, or from ops's `identity-mirror.toml`), so the TUI only decodes them? Recommendation: yes, from the root's `identity.toml`, optional until all projects adopt one (16 of 34 on 2026-10-17). If yes, file the field task in `tasks` and a dependent TUI consumer task here.
+- Where should a purpose render: the selected-project pane header (lean), a wide-layout column, or task detail?
 
 ## Notes
 
