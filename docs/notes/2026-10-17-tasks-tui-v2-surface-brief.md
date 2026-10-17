@@ -67,7 +67,7 @@ Refresh (c6e459):
 
 - Which of tree A/B/C is wanted, and is a whole-project graph needed at all? The
   design task (tui-c30d88) frames it for the user; the user decides.
-- Is the 30 s lag or the poll cost felt in use? Only the user can say (on c6e459).
+- Is the 30 s lag or the poll cost felt in use? Answered 2026-10-17: not noticed; refresh option A stands.
 
 ## 6. Proposed decomposition
 
@@ -78,4 +78,4 @@ Refresh (c6e459):
   direct), tui-662270 (rubric fields in the task form, planned), tui-c2a9df
   (dependency editing, planned).
 - tui-f67715 scoped (planned): lane data in rows and a lanes pane.
-- tui-c6e459 waits on the user's answer.
+- tui-c6e459 shelved until the lag or poll cost is felt.
