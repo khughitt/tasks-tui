@@ -1,6 +1,6 @@
 # Project identity brief
 
-Updated 2026-10-17: ops moved identity into per-project files since the first pass.
+Updated 2026-10-17: ops moved identity into per-project files since the first pass; the user then settled the contract and placement.
 
 ## Problem
 
@@ -25,11 +25,11 @@ The TUI must continue to obtain project membership from `tasks`. AGENTS.md: anyt
 
 ## Unanswered questions
 
-- Should `tasks` expose name and purpose in `tasks projects` (alternative 2), and from which source: per-project `identity.toml` or the mirror? The user, as owner of tasks and ops, decides. Recommendation: yes, from the root's `identity.toml`, with the field optional until adoption is complete.
-- Where should a purpose render: the selected-project pane header, a wide-layout column, or task detail? The user's call on density. Lean: the pane header, which costs no column.
-- Are aliases display or filter metadata, or only instructions for agents? Lean: filter-only, if at all.
+- Answered by the user 2026-10-17: `tasks` exposes `name` and `purpose` in `tasks projects`, from each root's `identity.toml`, optional until adoption is complete (alternative 2).
+- Answered by the user 2026-10-17: the purpose renders at the head of the selected project's pane.
+- Open, for the tasks-side scoping: whether aliases travel too (the TUI's lean: filter-only, if at all), and how a malformed `identity.toml` surfaces.
 
 ## Proposed decomposition
 
-- `tui-0fa4d0` stays an idea, awaiting the user on the first two questions.
-- If alternative 2 is chosen: a task in `tasks` for the fields, then a bounded TUI consumer task here (typed decoding, name column and filter from the new field, purpose placement, narrow-width behaviour, a recaptured `projects` fixture) that depends on it.
+- `tasks-6845e6` (idea in `tasks`): the `name` and `purpose` fields on `tasks projects` rows.
+- `tui-0fa4d0` (todo, depends on `tasks-6845e6`): the TUI consumer — typed decoding, name column and filter from `name` with the basename when absent, the purpose line at the head of the pane, a recaptured `projects` fixture.
