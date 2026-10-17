@@ -7,7 +7,7 @@ size: s
 complexity: mid
 process: direct
 created: 2026-09-14T12:42:09Z
-updated: 2026-10-17T21:05:32Z
+updated: 2026-10-17T21:05:34Z
 depends: [tasks-6845e6]
 tags: [v2]
 agent: codex
@@ -31,3 +31,4 @@ Where: internal/ui/projects.go (`name`, filter at the rows build, `renderPane`, 
 - 2026-09-15T21:17:26Z (main): scope: briefed; current table only derives a basename and the canonical identity file has no settled TUI contract or purpose placement; brief: docs/notes/2026-09-15-project-identity-brief.md
 - 2026-10-17T20:58:36Z (main): scope: question; brief updated for per-project identity.toml + identity-mirror.toml (ops-03f3e3), 16/34 roots adopted, tasks 0.4.0 projects JSON still has no name/purpose, no tasks-project task for it; questions moved to body; brief: docs/notes/2026-09-15-project-identity-brief.md
 - 2026-10-17T21:04:21Z (main): answer (user, 2026-10-17): 1. yes — tasks projects exposes name and purpose, from each root's identity.toml, optional until adoption is complete; 2. the purpose renders at the head of the selected project's pane
+- 2026-10-17T21:05:34Z (main): scope: rescoped from idea to todo after the user's answer; P2 s/mid/direct; depends on tasks-6845e6 (the tasks projects name/purpose fields), filed in tasks this pass; pane header placement and basename-when-absent rule specified
