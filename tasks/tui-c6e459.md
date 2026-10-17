@@ -3,8 +3,11 @@ id: tui-c6e459
 title: Watch tasks/ with inotify instead of the refresh timer
 status: idea
 priority: 2
+reviewed: true
+awaiting_user: true
+reviewed_at: 2026-10-17T20:37:04Z
 created: 2026-09-14T12:42:09Z
-updated: 2026-10-17T20:37:03Z
+updated: 2026-10-17T20:37:04Z
 depends: []
 parent: tui-29c34d
 tags: [v2]
@@ -18,3 +21,7 @@ Evidence 2026-10-17: refresh is a `tea.Tick` every `refresh_seconds` (default 30
 ## Open questions
 
 - Is the up-to-30 s lag behind agents, or the Projects view's ~2 s poll every tick, felt in use? If neither, shelve this; if the lag is, file a change feed (`tasks watch` or a per-project change stamp) in tasks and have this wait on it.
+
+## Notes
+
+- 2026-10-17T20:37:04Z (main): scope: question; inotify on tasks/ misses claim/park changes held in the claim store, so the idea as titled is rejected; whether any push refresh is wanted depends on whether the lag is felt; parented under tui-29c34d; brief: docs/notes/2026-10-17-tasks-tui-v2-surface-brief.md
