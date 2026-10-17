@@ -8,7 +8,7 @@ complexity: low
 process: direct
 owner: main
 created: 2026-10-16T16:33:15Z
-updated: 2026-10-17T01:03:20Z
+updated: 2026-10-17T01:03:21Z
 started: 2026-10-17T01:03:20Z
 depends: [ops-e5b39c]
 tags: []
@@ -22,3 +22,4 @@ Rewrite this repository's t <t@t> commits (from the 2026-10-07 global-config lea
 
 - 2026-10-17T01:03:20Z (main): started
   provenance: {"harness_session":"claude-code:c6863573-34c2-470d-b394-259f7cc75503","harness_session_source":"CLAUDE_CODE_SESSION_ID"}
+- 2026-10-17T01:03:21Z (main): Direct history maintenance under ops-e5b39c's pilot procedure (as tasks-bce5ec). No agent session in tui on Titan or Europa; one worktree (main) on both hosts. Inventory: 161 commits, 16 t@t, all on main (origin/main reaches 9, pushed). No tags, stash, signatures, extra headers, repo-local user.*. Remote khughitt/tasks-tui main 3df4bfe100f80d099cc8efdc3e19f16c8902b7a4 (lease). Steps: bundle --all; mirror; filter-repo --mailmap; byte-verify; citation check in every project; guarded update-ref; attach map; test-fast; push main --force-with-lease.
