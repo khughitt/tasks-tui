@@ -1,21 +1,30 @@
 ---
 id: tui-0fa4d0
 title: Read ops identity.toml for project names and purposes
-status: idea
+status: todo
 priority: 2
+size: s
+complexity: mid
+process: direct
 created: 2026-09-14T12:42:09Z
-updated: 2026-10-17T21:04:21Z
+updated: 2026-10-17T21:05:31Z
 depends: []
 tags: [v2]
 agent: codex
 ---
 
-Deferred from v1 (docs/specs/2026-09-13-tasks-tui-v1-design.md §14). Show canonical project names and purposes in the Projects view instead of the root basename. Handoff: docs/notes/2026-09-15-project-identity-brief.md.
+Deferred from v1 (docs/specs/2026-09-13-tasks-tui-v1-design.md §14). Handoff: docs/notes/2026-09-15-project-identity-brief.md.
 
-## Open questions
+Why: the Projects view shows each root's basename (`name()` in internal/ui/projects.go) where projects have canonical names and one-line purposes. Decided by the user 2026-10-17: `tasks projects` carries `name` and `purpose` from each root's `identity.toml` (tasks-6845e6, which this depends on), optional until every project adopts one; the purpose renders at the head of the selected project's pane.
 
-- Should `tasks projects` expose `name` and `purpose` (read from each root's `identity.toml`, or from ops's `identity-mirror.toml`), so the TUI only decodes them? Recommendation: yes, from the root's `identity.toml`, optional until all projects adopt one (16 of 34 on 2026-10-17). If yes, file the field task in `tasks` and a dependent TUI consumer task here.
-- Where should a purpose render: the selected-project pane header (lean), a wide-layout column, or task detail?
+Done:
+- `tasksctl` decodes the optional `name` and `purpose` on a projects row (absent is nil; types.go beside `Prefix`/`Root`); fixture `projects.json` recaptured with `just capture projects projects`.
+- The `name` column and the filter use `name` when present and the root basename when absent, as an explicit rule tested both ways.
+- `renderPane` gains a first line with the purpose (muted, cut to the pane width), shown also when the pane is otherwise empty (the early "nothing doing, parked, or ready" return), and omitted when the project has no purpose.
+- Narrow layouts keep dropping the `name` column as now; the pane line survives because it is not a column.
+- `just gate` green.
+
+Where: internal/ui/projects.go (`name`, filter at the rows build, `renderPane`, the column table), internal/tasksctl/types.go and testdata/projects.json, README if it describes the name column.
 
 ## Notes
 
