@@ -4,8 +4,10 @@ title: Read ops identity.toml for project names and purposes
 status: idea
 priority: 2
 reviewed: true
+awaiting_user: true
+reviewed_at: 2026-10-17T20:58:36Z
 created: 2026-09-14T12:42:09Z
-updated: 2026-10-17T20:58:35Z
+updated: 2026-10-17T20:58:36Z
 depends: []
 tags: [v2]
 agent: codex
@@ -21,3 +23,4 @@ Deferred from v1 (docs/specs/2026-09-13-tasks-tui-v1-design.md §14). Show canon
 ## Notes
 
 - 2026-09-15T21:17:26Z (main): scope: briefed; current table only derives a basename and the canonical identity file has no settled TUI contract or purpose placement; brief: docs/notes/2026-09-15-project-identity-brief.md
+- 2026-10-17T20:58:36Z (main): scope: question; brief updated for per-project identity.toml + identity-mirror.toml (ops-03f3e3), 16/34 roots adopted, tasks 0.4.0 projects JSON still has no name/purpose, no tasks-project task for it; questions moved to body; brief: docs/notes/2026-09-15-project-identity-brief.md
