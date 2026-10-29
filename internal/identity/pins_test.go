@@ -10,7 +10,7 @@ const pinsYAML = `
 identities:
   - remote: GitHub.com/Me/API
     slot: 3
-  - path: ~/d/tasks
+  - path: ~/src/tasks
     slot: 2
   - path: relative/tasks
     slot: 4
@@ -31,10 +31,10 @@ func TestParsePinsAndPrecedence(t *testing.T) {
 	if err := os.MkdirAll(real, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.MkdirAll(filepath.Join(home, "d"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(home, "src"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(real, filepath.Join(home, "d", "tasks")); err != nil {
+	if err := os.Symlink(real, filepath.Join(home, "src", "tasks")); err != nil {
 		t.Fatal(err)
 	}
 	realpath := filepath.EvalSymlinks
