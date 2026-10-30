@@ -321,3 +321,28 @@ func TestProjectViewSortChordsHLTabsAndGGTop(t *testing.T) {
 		t.Fatalf("3 selects tab 3: tab=%d sel=%d", pv.tab, pv.sel)
 	}
 }
+
+func TestOpenShowsShelfAndStartRefusalPreservesReviewRoute(t *testing.T) {
+	f := projectFake()
+	f.on("", "list --project tui", rowsJSON(row("tui-abc999", "shelved", 2)))
+	f.on("/r/tui", "start tui-abc999", &tasksctl.Error{Kind: "invalid_transition", Detail: "shelved work must return to review: tasks unshelve tui-abc999"})
+	env := testEnv(f)
+	app := New(env, Options{Stack: []view{newProjectView(env, "tui")}})
+	d := drive(t, app)
+	d.Expect("tui-aaa111", "tui-ddd444")
+	d.ExpectNot("tui-abc999")
+	d.Key("3")
+	d.Expect("tui-abc999", "shelved")
+	d.Key("space")
+	d.Expect("tasks unshelve tui-abc999")
+	d.ExpectNot("[F]")
+	if !logged(app, LevelError, "start tui-abc999: invalid_transition: shelved work must return to review: tasks unshelve tui-abc999") {
+		t.Fatalf("refusal missing: %+v", app.Messages())
+	}
+	if countCalls(f, "@/r/tui start --force tui-abc999") != 0 || len(f.writes()) != 1 {
+		t.Fatalf("unexpected writes: %v", f.writes())
+	}
+	d.Key("4")
+	d.Expect("tui-eee555")
+	d.ExpectNot("tui-abc999")
+}

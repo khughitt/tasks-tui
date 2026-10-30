@@ -630,6 +630,29 @@
       "park": null,
       "escalation": null,
       "periodic": null
+    },
+    {
+      "id": "tui-abc999",
+      "title": "Review the retained shelf",
+      "status": "shelved",
+      "priority": 2,
+      "parallel": false,
+      "lane": false,
+      "reviewed": false,
+      "awaiting_user": false,
+      "needs_review": true,
+      "review_reason": "woken",
+      "wake_on": [
+        "tui-abc998"
+      ],
+      "created": "2026-10-30T10:00:00Z",
+      "updated": "2026-10-30T10:00:00Z",
+      "child_count": 0,
+      "open_descendant_count": 0,
+      "deferred": {
+        "until": "2099-01-01",
+        "due": false
+      }
     }
   ],
   "warnings": []

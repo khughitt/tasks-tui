@@ -215,3 +215,18 @@ func TestSparseTaskJSON(t *testing.T) {
 		t.Fatalf("sparse dependency: %+v, %v", dep, err)
 	}
 }
+
+func TestOpenListRetainsShelfCheckpointFields(t *testing.T) {
+	r := &recorder{fixture: "list_rows.json"}
+	res, err := (&Client{R: r}).List(context.Background(), "tui", ListOpts{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(r.calls[0], []string{"list", "--project", "tui"}) {
+		t.Fatalf("argv %v", r.calls[0])
+	}
+	shelf := res.Tasks[len(res.Tasks)-1]
+	if shelf.ID != "tui-abc999" || shelf.Status != "shelved" {
+		t.Fatalf("shelf lost: %+v", shelf)
+	}
+}
