@@ -9,7 +9,7 @@ tt := "python3 tools/tt"
 
 fast_cmd := "go test $(go list ./internal/... | grep -v '/integration$')"
 test_cmd := "go test ./..."
-check_cmd := "python3 tools/ops-check && test -z \"$(gofmt -l .)\" && go vet ./... && go tool staticcheck ./... && tasks check"
+check_cmd := "python3 tools/ops-check && python3 tools/ops-docs check && test -z \"$(gofmt -l .)\" && go vet ./... && go tool staticcheck ./... && tasks check"
 
 # Dependencies and hooks; run once after `git worktree add`.
 setup:
@@ -26,6 +26,11 @@ test:
 smoke:
     tools/smoke-tui
 
+# Regenerate the identity and family regions of README.md and AGENTS.md from
+# identity.toml and tools/family.toml (ops docs/project-guides.md).
+docs:
+    {{tt}} docs -- python3 tools/ops-docs write
+
 # Recapture one tasksctl fixture from live output, scrubbed of this machine's layout by
 # tools/scrub-fixtures (registry, hostname, WORK_ROOT); raw tasks output never lands in
 # testdata, and the values kept verbatim are listed on stderr for review. The tracked
@@ -41,7 +46,7 @@ capture name +args:
     tools/scrub-fixtures --report < "$raw" > internal/tasksctl/testdata/{{name}}.json.tmp
     mv internal/tasksctl/testdata/{{name}}.json.tmp internal/tasksctl/testdata/{{name}}.json
 
-# Seconds: hygiene, format, vet, staticcheck, tasks check.
+# Seconds: hygiene, guide check, format, vet, staticcheck, tasks check.
 check:
     {{tt}} check -- sh -c '{{check_cmd}}'
 
