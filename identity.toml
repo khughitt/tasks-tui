@@ -18,3 +18,7 @@ subsystems = []
 
 [documents]
 standard = 1
+
+[code]
+standard = 1
+
