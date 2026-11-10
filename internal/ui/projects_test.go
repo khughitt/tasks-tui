@@ -33,7 +33,6 @@ func logged(app *App, level Level, text string) bool {
 func TestProjectsViewLoadsPaneAndStripAndOpens(t *testing.T) {
 	f := newFake()
 	f.on("", "projects", projectsJSON())
-	f.on("", "list --all-projects --status doing", rowsJSON(row("tui-bbb222", "doing", 1)))
 	f.on("", "list --all-projects --parked", parkedJSON(parkedRow("ops-ccc333", "p", "todo", "/r/ops")))
 	f.on("", "prime --project tui", primeJSON("tui"))
 	f.on("", "ready --project tui", rowsJSON(row("tui-aaa111", "todo", 2)))
@@ -85,10 +84,28 @@ func TestProjectsViewLoadsPaneAndStripAndOpens(t *testing.T) {
 	d.Expect("1 doing · 1 parked across 2 projects")
 }
 
+func TestProjectsStripUsesCountsAcrossUnfilteredProjects(t *testing.T) {
+	f := newFake()
+	f.on("", "projects", `{"projects":[
+		{"prefix":"one","root":"/r/one","reachable":true,"counts":{"idea":0,"todo":0,"doing":2,"blocked":0,"shelved":0,"done":0,"dropped":0},"total":2,"last_activity":null},
+		{"prefix":"two","root":"/r/two","reachable":true,"counts":{"idea":0,"todo":0,"doing":3,"blocked":0,"shelved":0,"done":0,"dropped":0},"total":3,"last_activity":null},
+		{"prefix":"gone","root":"/r/gone","reachable":false,"counts":null,"total":null,"last_activity":null}
+	],"warnings":[]}`)
+	f.on("", "list --all-projects --parked", parkedJSON())
+	f.on("", "prime --project one", primeJSON("one"))
+	f.on("", "prime --project two", primeJSON("two"))
+	env := testEnv(f)
+	d := drive(t, New(env, Options{Stack: []view{newProjectsView(env)}}))
+	d.Expect("5 doing · 0 parked across 3 projects")
+	d.Key("/")
+	d.Type("one")
+	d.Key("enter")
+	d.Expect("5 doing · 0 parked across 3 projects")
+}
+
 func TestProjectsPaneResultForAnotherPrefixIsDropped(t *testing.T) {
 	f := newFake()
 	f.on("", "projects", `{"projects":[{"prefix":"tui","root":"/r/tui","reachable":true,"counts":{"idea":1,"todo":2,"doing":1,"blocked":0,"shelved":0,"done":3,"dropped":0},"total":7,"last_activity":"2026-09-13T10:00:00Z"},{"prefix":"ops","root":"/r/ops","reachable":true,"counts":{"idea":0,"todo":1,"doing":0,"blocked":0,"shelved":0,"done":0,"dropped":0},"total":1,"last_activity":"2026-09-12T10:00:00Z"}],"warnings":[]}`)
-	f.on("", "list --all-projects --status doing", rowsJSON())
 	f.on("", "list --all-projects --parked", parkedJSON())
 	f.on("", "prime --project tui", primeJSON("tui"))
 	env := testEnv(f)
@@ -125,7 +142,6 @@ func TestProjectsSelectionWindowUTF8BackspaceAndReloadPosition(t *testing.T) {
 	}
 	f := newFake()
 	f.on("", "projects", `{"projects":[`+strings.Join(entries, ",")+`],"warnings":[]}`)
-	f.on("", "list --all-projects --status doing", rowsJSON())
 	f.on("", "list --all-projects --parked", parkedJSON())
 	env := testEnv(f)
 	pv := newProjectsView(env)
@@ -179,7 +195,6 @@ func lineWith(t *testing.T, screen, needle string) string {
 func TestProjectsCountsRightAlignUnderHeadersWhateverThePrefixLength(t *testing.T) {
 	f := newFake()
 	f.on("", "projects", wideProjectsJSON())
-	f.on("", "list --all-projects --status doing", rowsJSON())
 	f.on("", "list --all-projects --parked", parkedJSON())
 	f.on("", "prime --project ai", primeJSON("ai"))
 	f.on("", "prime --project naturalsystemsv2xx", primeJSON("naturalsystemsv2xx"))
@@ -206,7 +221,6 @@ func TestProjectsCountsRightAlignUnderHeadersWhateverThePrefixLength(t *testing.
 func TestProjectsZeroCountsAreMutedAndBlockedIsRed(t *testing.T) {
 	f := newFake()
 	f.on("", "projects", wideProjectsJSON())
-	f.on("", "list --all-projects --status doing", rowsJSON())
 	f.on("", "list --all-projects --parked", parkedJSON())
 	f.on("", "prime --project ai", primeJSON("ai"))
 	env := testEnv(f)
@@ -226,7 +240,6 @@ func TestProjectsZeroCountsAreMutedAndBlockedIsRed(t *testing.T) {
 func TestProjectsPaneHidesUnderTaskMinWidthAndTableClipsNarrower(t *testing.T) {
 	f := newFake()
 	f.on("", "projects", wideProjectsJSON())
-	f.on("", "list --all-projects --status doing", rowsJSON())
 	f.on("", "list --all-projects --parked", parkedJSON())
 	f.on("", "prime --project ai", primeJSON("ai"))
 	env := testEnv(f)

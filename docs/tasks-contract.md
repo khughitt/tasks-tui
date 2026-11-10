@@ -90,7 +90,6 @@ the id is there, it takes the title, park and claim from that row. Otherwise it 
 | Call | Issued by | Fields used |
 | --- | --- | --- |
 | `projects` | startup; Projects load | `projects[]`: `prefix`, `root`, `reachable`, `counts.{doing,todo,idea,blocked}`, `last_activity` |
-| `list --all-projects --status doing` | Projects load | the number of `tasks[]` |
 | `list --all-projects --parked` | Projects load | the number of `tasks[]` |
 | `prime --project <p>` | Projects pane; every Project load | `doing[]` and `ready[]` list rows, `parked[]` parked rows (pane); `counts` (Project header) |
 | `ready --project <p>` | Ready tab | `tasks[]` list rows |
@@ -195,8 +194,10 @@ what the harness does afterwards is not observed.
 - **The error envelope.** On a non-zero exit, stderr is decoded as
   `{"error": {"kind": "<kind>", "detail": "<detail>"}}`, with `kind` a non-empty
   string and `detail` a string; it is shown as `<kind>: <detail>`.
+- **`timeout` / `canceled`.** A call stopped by its context reports the command
+  and the context's deadline or cancellation cause.
 - **`unparseable`.** A non-zero exit whose stderr is not that envelope (a usage
-  error, a panic, a call killed at its time limit) has kind `unparseable` and the
+  error or a panic) has kind `unparseable` and the
   trimmed stderr as detail.
 - **`spawn`.** A binary that cannot be started: detail `<bin>: <error>`.
 - **`decode`.** Exit 0 with a response that is not an object, lacks a required key,

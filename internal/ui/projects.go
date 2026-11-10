@@ -18,7 +18,7 @@ const paneDebounce = 150 * time.Millisecond
 
 type projectsData struct {
 	projects tasksctl.ProjectsResult
-	doing    tasksctl.RowsResult
+	doing    int
 	parked   tasksctl.ParkedResult
 }
 type paneData struct {
@@ -70,8 +70,10 @@ func (v *projectsView) reload() tea.Cmd {
 			if d.projects, err = v.env.Client.Projects(ctx); err != nil {
 				return nil, err
 			}
-			if d.doing, err = v.env.Client.DoingAll(ctx); err != nil {
-				return nil, err
+			for _, p := range d.projects.Projects {
+				if p.Counts != nil {
+					d.doing += p.Counts.Doing
+				}
 			}
 			if d.parked, err = v.env.Client.Parked(ctx, ""); err != nil {
 				return nil, err
@@ -275,7 +277,6 @@ func (v *projectsView) update(raw tea.Msg) (view, tea.Cmd) {
 // warnings is the main load's, then the pane's for the selected project.
 func (v *projectsView) warnings() []string {
 	ws := prefixed("projects", v.data.projects.Warnings)
-	ws = append(ws, prefixed("list --all-projects --status doing", v.data.doing.Warnings)...)
 	ws = append(ws, prefixed("list --all-projects --parked", v.data.parked.Warnings)...)
 	if v.prime != nil && v.primeFor == v.project() {
 		ws = append(ws, prefixed("prime --project "+v.primeFor, v.prime.Warnings)...)
@@ -335,7 +336,7 @@ func (v *projectsView) render(width, height int) string {
 		sep := strings.TrimSuffix(strings.Repeat(s.Muted.Render("│")+"\n", bodyH), "\n")
 		body = lipgloss.JoinHorizontal(lipgloss.Top, lipgloss.NewStyle().Width(tableW).Render(body), sep, lipgloss.NewStyle().Width(paneW).Render(pane))
 	}
-	strip := lipgloss.NewStyle().MaxWidth(width).Render(s.Muted.Render(fmt.Sprintf("%d doing · %d parked across %d projects", len(v.data.doing.Tasks), len(v.data.parked.Tasks), len(v.data.projects.Projects))))
+	strip := lipgloss.NewStyle().MaxWidth(width).Render(s.Muted.Render(fmt.Sprintf("%d doing · %d parked across %d projects", v.data.doing, len(v.data.parked.Tasks), len(v.data.projects.Projects))))
 	return lipgloss.NewStyle().Height(max(0, height-1)).MaxHeight(max(0, height-1)).Render(body) + "\n" + strip
 }
 

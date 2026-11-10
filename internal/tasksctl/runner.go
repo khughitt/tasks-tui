@@ -73,6 +73,13 @@ func (r ExecRunner) Run(ctx context.Context, dir string, args ...string) ([]byte
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if err := cmd.Run(); err != nil {
+		if ctx.Err() != nil {
+			kind := "canceled"
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				kind = "timeout"
+			}
+			return nil, &Error{Kind: kind, Detail: fmt.Sprintf("%s: %v", strings.Join(cmd.Args, " "), ctx.Err())}
+		}
 		var exit *exec.ExitError
 		if errors.As(err, &exit) {
 			return nil, decodeFailure(stderr.Bytes())

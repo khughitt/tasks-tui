@@ -39,9 +39,6 @@ func (c *Client) List(ctx context.Context, prefix string, opts ListOpts) (RowsRe
 	}
 	return c.rows(ctx, args...)
 }
-func (c *Client) DoingAll(ctx context.Context) (RowsResult, error) {
-	return c.rows(ctx, "list", "--all-projects", "--status", "doing")
-}
 func (c *Client) rows(ctx context.Context, args ...string) (res RowsResult, err error) {
 	raw, err := c.R.Run(ctx, "", args...)
 	if err != nil {

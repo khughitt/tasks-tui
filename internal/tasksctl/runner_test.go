@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestChildEnvScrubsAndSetsSession(t *testing.T) {
@@ -100,7 +101,7 @@ func fakeTasks(t *testing.T) string {
 }
 
 func TestRunSuccessAndFailure(t *testing.T) {
-	r := ExecRunner{Bin: fakeTasks(t), Env: os.Environ()}
+	r := ExecRunner{Bin: fakeTasks(t), Env: []string{"PATH=/usr/bin:/bin", "HOME=" + t.TempDir()}}
 	out, err := r.Run(context.Background(), "", "projects")
 	if err != nil || string(out) != `{"ok":true}` {
 		t.Fatalf("out=%q err=%v", out, err)
@@ -116,5 +117,32 @@ func TestRunSuccessAndFailure(t *testing.T) {
 	}
 	if _, ok := err.(*exec.Error); ok {
 		t.Fatal("spawn failure must be wrapped as *Error")
+	}
+}
+
+func TestRunReportsContextFailure(t *testing.T) {
+	for _, kind := range []string{"timeout", "canceled"} {
+		t.Run(kind, func(t *testing.T) {
+			bin := filepath.Join(t.TempDir(), "tasks")
+			if err := os.WriteFile(bin, []byte("#!/bin/sh\nexec sleep 30\n"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			var ctx context.Context
+			var cancel context.CancelFunc
+			if kind == "timeout" {
+				ctx, cancel = context.WithTimeout(context.Background(), 100*time.Millisecond)
+			} else {
+				ctx, cancel = context.WithCancel(context.Background())
+				stop := time.AfterFunc(100*time.Millisecond, cancel)
+				defer stop.Stop()
+			}
+			defer cancel()
+			r := ExecRunner{Bin: bin, Env: []string{"PATH=/usr/bin:/bin", "HOME=" + t.TempDir()}}
+			_, err := r.Run(ctx, "", "list", "--all-projects", "--status", "doing")
+			var e *Error
+			if !errors.As(err, &e) || e.Kind != kind || !strings.Contains(e.Detail, "list --all-projects --status doing") || !strings.Contains(e.Detail, ctx.Err().Error()) {
+				t.Fatalf("expected %s with command and context cause; got %v", kind, err)
+			}
+		})
 	}
 }

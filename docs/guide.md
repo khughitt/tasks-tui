@@ -29,7 +29,8 @@ When the terminal is wide enough, a pane beside the table shows the highlighted
 project's doing tasks, its parked tasks each followed by `→ <next step>`, and its
 first eight ready tasks, with `N ready · 8 shown` when there are more. The pane loads
 150 ms after the highlight stops moving. A strip under everything counts across all
-projects: `3 doing · 2 parked across 19 projects`.
+projects: `3 doing · 2 parked across 19 projects`. The doing total sums the counts
+returned by `projects`; projects without counts do not contribute to it.
 
 **Project** opens with a header (accent bar, prefix, name, root, and doing, todo,
 idea and blocked counts) over five tabs. The active tab shows how many rows it lists.

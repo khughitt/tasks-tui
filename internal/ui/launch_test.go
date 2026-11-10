@@ -83,7 +83,6 @@ func TestNoPromptLaunchCopiesTheRenderedPrompt(t *testing.T) {
 func TestLaunchNeedsATarget(t *testing.T) {
 	f := newFake()
 	f.on("", "projects", projectsJSON())
-	f.on("", "list --all-projects --status doing", rowsJSON())
 	f.on("", "list --all-projects --parked", parkedJSON())
 	f.on("", "prime --project tui", primeJSON("tui"))
 	env := testEnv(f)
