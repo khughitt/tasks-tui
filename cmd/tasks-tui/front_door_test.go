@@ -910,6 +910,11 @@ func TestFrontDoorCICoverageVerifierEnforcesDynamicPackagesAndUncachedTests(t *t
 		env := []string{
 			"PATH=" + bin + string(os.PathListSeparator) + os.Getenv("PATH"),
 			"HOME=" + home,
+			"XDG_CONFIG_HOME=" + filepath.Join(home, ".config"),
+			"XDG_DATA_HOME=" + filepath.Join(home, ".local", "share"),
+			"XDG_CACHE_HOME=" + filepath.Join(home, ".cache"),
+			"XDG_STATE_HOME=" + filepath.Join(home, ".local", "state"),
+			"TT_LOG=" + filepath.Join(home, ".local", "state", "test-timings.jsonl"),
 			"EVIDENCE_DIR=" + evidence,
 			"GIT_CONFIG_GLOBAL=/dev/null",
 			"GIT_CONFIG_NOSYSTEM=1",
@@ -921,13 +926,37 @@ func TestFrontDoorCICoverageVerifierEnforcesDynamicPackagesAndUncachedTests(t *t
 			"TERM=dumb",
 			"LANG=C.UTF-8",
 		}
-		for _, gArgs := range [][]string{{"init", "-q"}, {"commit", "--allow-empty", "-qm", "init"}} {
-			c := exec.Command("git", gArgs...)
-			c.Dir = repo
-			c.Env = env
-			if out, err := c.CombinedOutput(); err != nil {
-				t.Fatalf("git %v: %v\n%s", gArgs, err, out)
-			}
+		initCmd := exec.Command("git", "init", "-q")
+		initCmd.Dir = repo
+		initCmd.Env = env
+		if out, err := initCmd.CombinedOutput(); err != nil {
+			t.Fatalf("git init: %v\n%s", err, out)
+		}
+		topCmd := exec.Command("git", "rev-parse", "--show-toplevel")
+		topCmd.Dir = repo
+		topCmd.Env = env
+		topOut, err := topCmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git rev-parse --show-toplevel: %v\n%s", err, topOut)
+		}
+		if gotTop := strings.TrimSpace(string(topOut)); gotTop != repo {
+			t.Fatalf("expected show-toplevel %q, got %q", repo, gotTop)
+		}
+		gitDirCmd := exec.Command("git", "rev-parse", "--absolute-git-dir")
+		gitDirCmd.Dir = repo
+		gitDirCmd.Env = env
+		gitDirOut, err := gitDirCmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("git rev-parse --absolute-git-dir: %v\n%s", err, gitDirOut)
+		}
+		if gotGitDir := strings.TrimSpace(string(gitDirOut)); !strings.HasPrefix(gotGitDir, repo+string(filepath.Separator)) {
+			t.Fatalf("expected absolute-git-dir inside %q, got %q", repo, gotGitDir)
+		}
+		commitCmd := exec.Command("git", "commit", "--allow-empty", "-qm", "init")
+		commitCmd.Dir = repo
+		commitCmd.Env = env
+		if out, err := commitCmd.CombinedOutput(); err != nil {
+			t.Fatalf("git commit: %v\n%s", err, out)
 		}
 
 		// Stub `go` and `just`
