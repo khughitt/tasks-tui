@@ -42,6 +42,16 @@ func (c cell) width() int {
 	return w
 }
 
+// table is the column model of every task list and the Projects table. Invariants:
+//   - widths are measured over every row the table is given, not the visible window,
+//     so scrolling never shifts a column;
+//   - a table has at most one flexible column (the width arithmetic assumes it;
+//     nothing enforces it): widths gives it the whole remainder after the other
+//     columns and the gaps, never less than zero;
+//   - when the row is too wide, columns go in falling drop order (the highest first),
+//     and a column with drop 0 never goes;
+//   - in the flexible column the head (a task's title) is truncated first, but not
+//     below flexMin, before the tail (tags and marker words) is clipped.
 type table struct {
 	cols    []column
 	gap     int

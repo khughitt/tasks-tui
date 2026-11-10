@@ -67,7 +67,7 @@ func pad(s string, w int) string {
 	return s
 }
 
-// taskTable is spec v1.1 §4: the columns of every task list.
+// taskTable holds the columns of every task list.
 var taskTable = table{gap: 2, flexMin: 24, cols: []column{
 	{key: "gutter", min: 2},
 	{key: "id", label: "id", min: 2},

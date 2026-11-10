@@ -146,7 +146,7 @@ func projectLess(column string, a, b tasksctl.Project) bool {
 	return deref(a.LastActivity) < deref(b.LastActivity)
 }
 
-// projectsTable is spec v1.1 §5. No flexible column and no gutter: the accent bar is the row's identity.
+// projectsTable is the Projects view's columns. No flexible column and no gutter: the accent bar is the row's identity.
 var projectsTable = table{gap: 2, cols: []column{
 	{key: "project", label: "project", min: 7},
 	{key: "name", label: "name", min: 4, drop: 1},
@@ -165,7 +165,7 @@ func count(s *Styles, n int, hot lipgloss.Style) cell {
 	return text(hot, strconv.Itoa(n))
 }
 
-// unreachableLine is spec v1.1 §5: the bar and prefix muted, then the indicator across
+// unreachableLine is an unreachable project's row: the bar and prefix muted, then the indicator across
 // the rest of the row, so it survives the name column dropping.
 func (v *projectsView) unreachableLine(p tasksctl.Project, widths []int, tableW int, base lipgloss.Style) string {
 	s := v.env.Styles

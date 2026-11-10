@@ -15,9 +15,10 @@ import (
 
 var idRe = regexp.MustCompile(`^([a-z0-9]+)-([0-9a-f]{6})$`)
 
-// resolveStart is spec §5 and §4.1: which views open for an argument, --all, or the
-// cwd. Warnings from the lookups it makes are dropped: the views it opens make the
-// same calls on their first load and report them (spec §11).
+// resolveStart picks the views that open for an argument, --all, or the cwd (startup
+// and checkout selection, docs/tasks-contract.md). Warnings from the lookups it makes
+// are dropped: the views it opens make the same calls on their first load and report
+// them.
 func resolveStart(ctx context.Context, env *ui.Env, arg string, all bool, cwd string) ([]ui.View, error) {
 	projects := ui.NewProjectsView(env)
 	if all {

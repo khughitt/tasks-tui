@@ -49,7 +49,8 @@ type view interface {
 	capturing() bool
 	loading() bool
 	// warnings is the warnings[] of the view's latest accepted load, prefixed with the
-	// command (spec §11): the state of its scope, replaced by every reload.
+	// command: the state of its scope, replaced by every reload (messages and warnings,
+	// docs/guide.md).
 	warnings() []string
 }
 

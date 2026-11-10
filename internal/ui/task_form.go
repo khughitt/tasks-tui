@@ -94,8 +94,8 @@ func (v *taskFormView) loading() bool    { return v.loader.InFlight() }
 func (v *taskFormView) current() *target { return &v.tgt }
 
 // warnings is the checkout notice, then show's, once the load has landed. The tag
-// lookup's warnings describe the project, not the form's task (spec §11); the
-// project view reports them.
+// lookup's warnings describe the project, not the form's task, so they are dropped:
+// no view reports them, and only a failed tag lookup is shown, as an error.
 func (v *taskFormView) warnings() []string {
 	if v.data == nil {
 		return nil

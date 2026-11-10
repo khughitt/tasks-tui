@@ -1,7 +1,7 @@
 package ui
 
-// The message log of spec §11: every error and warning of the session, and the one
-// entry the status line shows until the next keypress.
+// The message log (messages and warnings, docs/guide.md): every error and warning of
+// the session, and the one entry the status line shows until the next keypress.
 
 type Level int
 

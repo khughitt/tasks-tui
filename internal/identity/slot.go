@@ -31,7 +31,7 @@ func GitOriginURL(root string) (string, error) {
 	return strings.TrimSpace(string(out)), nil
 }
 
-// SlotFor is spec §8.1: pins by familiar's precedence, else fnv1a32(remote ?? root) mod 12.
+// SlotFor is familiar's slot rule: pins by familiar's precedence, else fnv1a32(remote ?? root) mod 12.
 func SlotFor(root string, pins Pins, git GitRemote) (int, error) {
 	url, err := git(root)
 	if err != nil {

@@ -1,5 +1,6 @@
-// Package launch opens a terminal window running a coding agent on a task (spec §7).
-// It never changes the task's status; the launched agent runs `tasks start` itself.
+// Package launch opens a terminal window running a coding agent on a task (launch
+// handoff, docs/tasks-contract.md). It never changes the task's status; the launched
+// agent runs `tasks start` itself.
 package launch
 
 import (
@@ -21,7 +22,8 @@ type Config struct {
 	Harness  map[string]Harness `toml:"harness"`
 }
 
-// Default is spec §7's table, verified against the installed binaries on 2026-09-13.
+// Default is the stock terminal and harness table: claude and codex take the prompt
+// positionally, opencode takes it with --prompt, and interactive crush takes none.
 func Default() Config {
 	return Config{
 		Terminal: []string{"kitty", "--directory", "{dir}", "--"},
@@ -56,7 +58,8 @@ type Plan struct {
 
 // Build substitutes {dir} in the terminal, {id}/{title} in the prompt, and {prompt}
 // in the harness command. The environment is environ minus the TUI's session identity
-// plus the harness env; agent variables are kept on purpose (spec §7).
+// plus the harness env; agent variables are kept on purpose, since the harness is an
+// agent (launch handoff, docs/tasks-contract.md).
 func Build(cfg Config, harness, dir, id, title string, environ []string) (Plan, error) {
 	h, ok := cfg.Harness[harness]
 	if !ok {

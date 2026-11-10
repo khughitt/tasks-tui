@@ -29,7 +29,8 @@ func (a *App) launch(seq string) tea.Cmd {
 	return nil
 }
 
-// openLaunch is spec §7: pick a harness, spawn it in the task's checkout, touch nothing.
+// openLaunch picks a harness and spawns it in the task's checkout, touching nothing
+// (launching an agent, docs/guide.md).
 func (a *App) openLaunch() tea.Cmd {
 	t := a.selected()
 	if t == nil {
