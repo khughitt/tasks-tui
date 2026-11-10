@@ -13,6 +13,9 @@ it is in [the guide](guide.md); installing and configuring are in the
 - **The `tasks` CLI** ([tasks](https://github.com/khughitt/tasks)), the only reader
   and writer of task data. tasks-tui never opens task files, the registry or the
   claim store: every read and write is one `tasks` subprocess whose JSON it decodes.
+- **git**, asked read-only at startup for each reachable project's origin URL
+  (`git -C <root> config --get remote.origin.url`, 2 s limit) to choose its colour.
+  A failure other than "no origin" is fatal (see [Failures](#failures)).
 - **A terminal and a harness**, started for a launch (kitty and claude, codex,
   crush or opencode by default). tasks-tui hands them an argv, a directory and an
   environment, and never talks to them again.
@@ -103,13 +106,13 @@ form-tag lookups'.
 A **list row** gives `id`, `title`, `status`, `priority`, `size`, `complexity`,
 `process`, `updated`, `tags`, `open_descendant_count`, `periodic.every`, `claim`
 (`owner`, `worktree`, `live`) and `park` (`next_step`, `waiting_on`, `worktree`). A
-**parked row** is a separate shape with the same fields used: only `id`, `title` and
-`park` are required, because a park record can outlive the task file in the checkout
-that answers. A parked row without `status` is unresolved: it is shown from the park
-alone and offers no transition or launch.
+**parked row** is a separate shape with the same fields used except `periodic`, which
+it lacks: only `id`, `title` and `park` are required, because a park record can
+outlive the task file in the checkout that answers. A parked row without `status` is
+unresolved: it is shown from the park alone and offers no transition or launch.
 
-A claim is returned whether or not its session is alive; `live` is the only signal.
-A claim with `live: false` is shown as stale and never counts as ownership.
+A claim with `live: false` is shown as stale and never counts as ownership (see
+[Known gaps](#known-gaps)).
 
 **Decoding.** A response must be a JSON object. Unknown fields are ignored, and a
 value of the wrong JSON type is a decode error. The keys below must be present and
@@ -140,7 +143,8 @@ A project row's `counts`, `total` and `last_activity`, and a tag's `meaning`, mu
 present but may be null. Every other field may be omitted or null, including empty
 collections: a row's `tags`, a task's `tags`, `depends` and `notes`, and `show`'s
 `children` and `depends_on`. A nested object's keys are checked only when the object
-is present and not null.
+is present and not null. An array's elements must be objects: a `null` element is a
+decode error.
 
 ## Writes
 
@@ -169,8 +173,8 @@ warnings are logged and the top view reloads; no write patches the view in place
    an inherited one. Agent variables such as `TASKS_AGENT` and `TASKS_MODEL` are
    kept: the harness is an agent.
 4. The process starts in the checkout, in its own session (`setsid`), with standard
-   input, output and error on the null device. It is reaped in the background and
-   never waited on.
+   input, output and error on the null device. A background goroutine reaps it;
+   the app never blocks on it.
 
 Launch never changes the task: the prompt asks the agent to run `tasks start`, so the
 claim belongs to the agent's session. The default terminal is
@@ -219,10 +223,10 @@ what the harness does afterwards is not observed.
   this contract is unversioned; drift shows up only as `decode` errors.
 - **Liveness is one boolean.** Claims come back live or not, and `live` is the only
   signal; a stale claim is still returned.
-- **Unresolved parked rows offer no transition.** No command can find the record
-  from where the app would run it. A task opened by id from such a row is not
-  marked: its `show` and transitions run in the park's worktree and succeed or fail
-  there.
+- **Unresolved parked rows offer nothing.** The row carries no `status`, so the app
+  offers nothing on it, even though the park's worktree might resolve it. A task
+  opened by id from such a row is not marked unresolved: its `show` and transitions
+  run in the park's worktree and succeed or fail there.
 - **No file watching.** Changes made elsewhere appear only when the view reloads: on
   the refresh timer, `F5`, a write, or opening or returning to the view. With
   `refresh_seconds = 0` there is no timer.

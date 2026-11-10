@@ -52,9 +52,9 @@ A row shows the id in the project's accent, `P<n>`, size, complexity, process,
 status, the age of the last update, a marker column, and the title followed by its
 tags in brackets and the markers' words. Ages read `now`, then minutes (`m`), hours
 (`h`), days (`d`) under two weeks and weeks (`w`); days and weeks are dimmed. On a
-narrow terminal the age column goes first, then size, complexity and process; the
-title keeps at least 24 columns. The highlighted row is tinted with the project's
-colour behind an accent bar.
+narrow terminal the process column goes first, then complexity, size and age; the
+title keeps at least 24 columns. The highlighted row carries an accent bar on a faint
+wash of the project's hue.
 
 | Marker | Meaning |
 | --- | --- |
@@ -65,8 +65,8 @@ colour behind an accent bar.
 | `▸` and `N open` | a goal with open descendants |
 
 A parked row the CLI could not resolve from here (for example, its task file exists
-only on another branch) reads `unresolved` in the status column. It cannot be opened,
-changed or launched: those keys report `no task highlighted`.
+only on another branch) reads `unresolved` in the status column. It cannot be opened
+(`enter` does nothing), and changing or launching it reports `no task highlighted`.
 
 **Task** shows `show` in a scrolling viewport: the id and title; status, priority,
 size, complexity, process, owner, created, started, updated, completed, tags and
@@ -108,10 +108,10 @@ in its checkout and prefilled. The form has three fields: title (required), body
 (several lines) and tags (space-separated, completed from the project's tags: Up/Down
 choose a match, `enter` accepts it). `tab` and `shift+tab` move between fields,
 `ctrl+s` saves, `esc` cancels; while a save runs, a second `ctrl+s` and `esc` do
-nothing. An error stays under the fields; a save closes the form, logs what the CLI
-reports, and reloads the view beneath. Edit replaces the title, body and the whole
-tag set. Add sets nothing else: no priority, size, complexity or status (the CLI
-files a todo), and no agent, because a person filed it.
+nothing. An error shows under the fields until the next edit; a save closes the
+form, logs what the CLI reports, and reloads the view beneath. Edit replaces the
+title, body and the whole tag set. Add sets nothing else: no priority, size,
+complexity or status (the CLI files a todo), and no agent, because a person filed it.
 
 ## Where commands run
 
@@ -174,10 +174,8 @@ messages: a reload replaces them. When the top view has any, `⚠ N` sits left o
 <view>`, then every message of the session, newest last (`j`/`k` scroll; `esc`, `W`,
 `?` or `q` close). `?` opens the key legend.
 
-A failure at startup (a malformed config, a `tasks` that does not answer `projects`,
-unreadable familiar settings, an argument that is neither a prefix nor a task id)
-prints `tasks-tui: <message>` to stderr and exits 1 before the screen opens. The
-full list is under [Failures](tasks-contract.md#failures).
+A failure at startup prints `tasks-tui: <message>` to stderr and exits 1 before the
+screen opens; the conditions are listed under [Failures](tasks-contract.md#failures).
 
 ## Colours
 
@@ -186,9 +184,10 @@ Each project has one of twelve colour slots, chosen as familiar
 here as on its pet. `identity.slot` in the config pins a slot by prefix and wins over
 everything. Otherwise familiar's pins in `$XDG_CONFIG_HOME/familiar/identities.yaml`
 apply, matched by git remote, then path, then the root's directory name; unpinned, the
-slot is a hash of the normalized `origin` remote, or of the root when there is none. The
-slot's accent marks the bar, ids, doing counts, the active tab, the highlighted row's
-tint, the spinner and panel rules. familiar's `scheme.json` beside it sets light or
+slot is a hash of the normalized `origin` remote, or of the root when there is none.
+The slot's accent marks the bars, ids, doing counts, the active tab, the spinner and
+panel rules; the highlighted row's tint is the same hue at half saturation and low
+lightness (high on a light tone). familiar's `scheme.json` beside it sets light or
 dark and a saturation scale; without it the tone is dark at full saturation.
 
 Other colours mean the same in every project, as light and dark pairs from the
