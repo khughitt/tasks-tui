@@ -23,8 +23,9 @@ downloads the Go modules and points `core.hooksPath` at `.githooks`.
 
     just gate
 
-`just check` (seconds): `tools/ops-check`, `tools/ops-docs check`, `gofmt`, `go vet`, `staticcheck`, `tasks check`.
-`just test`: `go test ./...` — the integration test skips when `tasks` is not on `PATH`.
+`just check` runs `just check-hygiene` (`tools/ops-check`, `tools/ops-docs check`, `tasks check`) and `just check-code` (`gofmt`, `go vet`, `staticcheck`); `just ci-check-hygiene` omits `tasks check` on hosted runners without private detached records.
+`just test-one <args>` runs focused `go test` targets; `just test-fast` skips the real-binary integration test; `just test` runs `go test -count=1 -v ./...` (the integration test skips when `tasks` is not on `PATH`); `just test-full` (`TT_FORCE=1 just test`) forces the full suite locally.
+Hook recipes (`just hook-pre-commit`, `just hook-pre-commit-docs`, `just hook-pre-push`, `just hook-pre-push-fast`) time mandatory hygiene only and invoke broad children separately (making hook durations after the split incomparable with earlier whole-hook series). Checkout-root .tt.toml policy remains enabled until remote CI activation on `.github/workflows/ci.yml` is verified.
 `just docs` regenerates the identity and family regions of README.md and AGENTS.md
 from identity.toml and tools/family.toml; edit those files, never the regions.
 Rebuild from the main checkout after changes merge: `just install` replaces the

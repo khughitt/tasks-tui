@@ -710,3 +710,473 @@ func TestPrePushHookRoutingAndPolicyWarning(t *testing.T) {
 		t.Fatalf("expected no recipe execution when SSH keepalive check fails, got %v", f.markerNames())
 	}
 }
+
+func TestFrontDoorCleanHomeCIHygienePassesWithoutRegistry(t *testing.T) {
+	root := checkoutRoot(t)
+	tmpHome, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatalf("eval symlinks: %v", err)
+	}
+	env := []string{
+		"PATH=" + os.Getenv("PATH"),
+		"HOME=" + tmpHome,
+		"XDG_CONFIG_HOME=" + filepath.Join(tmpHome, ".config"),
+		"XDG_DATA_HOME=" + filepath.Join(tmpHome, ".local", "share"),
+		"XDG_CACHE_HOME=" + filepath.Join(tmpHome, ".cache"),
+		"XDG_STATE_HOME=" + filepath.Join(tmpHome, ".local", "state"),
+		"GIT_CONFIG_GLOBAL=/dev/null",
+		"GIT_CONFIG_NOSYSTEM=1",
+		"USER=testuser",
+		"TERM=dumb",
+		"LANG=C.UTF-8",
+	}
+	for _, args := range [][]string{
+		{"tools/ops-check"},
+		{"tools/ops-docs", "check"},
+	} {
+		cmd := exec.Command("python3", args...)
+		cmd.Dir = root
+		cmd.Env = env
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("python3 %v failed: %v\n%s", args, err, out)
+		}
+		if len(bytes.TrimSpace(out)) != 0 {
+			t.Fatalf("python3 %v unexpected output: %s", args, out)
+		}
+	}
+}
+
+func extractWorkflowStepRun(t *testing.T, workflowText, stepName string) string {
+	t.Helper()
+	re := regexp.MustCompile(`(?ms)^\s*-\s*name:\s*` + regexp.QuoteMeta(stepName) + `\s*\n\s*run:\s*\|\n((?:\s{10,}.*\n|\s*\n)+)`)
+	m := re.FindStringSubmatch(workflowText)
+	if m == nil {
+		t.Fatalf("step %q run block not found in ci.yml", stepName)
+	}
+	lines := strings.Split(m[1], "\n")
+	var unindented []string
+	for _, line := range lines {
+		if strings.HasPrefix(line, "          ") {
+			unindented = append(unindented, strings.TrimPrefix(line, "          "))
+		} else if strings.TrimSpace(line) == "" {
+			unindented = append(unindented, "")
+		} else {
+			break
+		}
+	}
+	return strings.Join(unindented, "\n")
+}
+
+func TestFrontDoorCIWorkflowStructureAndPins(t *testing.T) {
+	root := checkoutRoot(t)
+	wfPath := filepath.Join(root, ".github", "workflows", "ci.yml")
+	raw, err := os.ReadFile(wfPath)
+	if err != nil {
+		t.Fatalf("read .github/workflows/ci.yml: %v", err)
+	}
+	text := string(raw)
+
+	if strings.Contains(text, "pull_request") {
+		t.Fatalf("ci.yml must not declare a duplicate pull_request trigger")
+	}
+	for _, needle := range []string{
+		"branches: ['**']",
+		"workflow_dispatch:",
+		"contents: read",
+		"group: ${{ github.workflow }}-${{ github.ref }}",
+		"cancel-in-progress: true",
+		"runs-on: ubuntu-24.04",
+		"timeout-minutes: 15",
+		`TT_FORCE: "1"`,
+		`GIT_CONFIG_NOSYSTEM: "1"`,
+		`TASKS_PINNED_SHA: "c47a2537386dd9cc357a6576445bf5838e0c8c3e"`,
+		"actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1",
+		"fetch-depth: 0",
+		"persist-credentials: false",
+		"actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e",
+		"go-version-file: go.mod",
+		"cache: true",
+		"extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3",
+		"just-version: 1.59.0",
+		"actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+		"retention-days: 7",
+		"if-no-files-found: error",
+		"$RUNNER_TEMP/tasks-src",
+		"$RUNNER_TEMP/tasks-src/target/release",
+	} {
+		if !strings.Contains(text, needle) {
+			t.Fatalf("ci.yml missing required substring %q", needle)
+		}
+	}
+
+	stepOrder := []string{
+		"- name: Prepare isolated Git config and evidence directory",
+		"- name: Checkout",
+		"- name: Setup Go",
+		"- name: Install just",
+		"- name: Build pinned tasks CLI",
+		"- name: Record tool versions",
+		"- name: Run setup",
+		"- name: Run portable hygiene checks",
+		"- name: Run Go format, vet, and staticcheck",
+		"- name: Run full test suite and verify coverage",
+		"- name: Upload CI evidence",
+	}
+	lastIdx := -1
+	for _, step := range stepOrder {
+		idx := strings.Index(text, step)
+		if idx < 0 {
+			t.Fatalf("ci.yml missing step %q", step)
+		}
+		if idx <= lastIdx {
+			t.Fatalf("ci.yml step %q out of order", step)
+		}
+		lastIdx = idx
+	}
+
+	verifyScript := extractWorkflowStepRun(t, text, "Run full test suite and verify coverage")
+	cpIdx := strings.Index(verifyScript, `cp "$HOME/.local/share/ops/runs.jsonl" "$EVIDENCE_DIR/runs.jsonl"`)
+	exitIdx := strings.Index(verifyScript, `if [ "$rc" -ne 0 ]; then`)
+	if cpIdx < 0 || exitIdx < 0 || cpIdx > exitIdx {
+		t.Fatalf("ci.yml must copy runs.jsonl into EVIDENCE_DIR before exiting on nonzero rc")
+	}
+}
+
+func TestFrontDoorCICoverageVerifierEnforcesDynamicPackagesAndUncachedTests(t *testing.T) {
+	root := checkoutRoot(t)
+	raw, err := os.ReadFile(filepath.Join(root, ".github", "workflows", "ci.yml"))
+	if err != nil {
+		t.Fatalf("read .github/workflows/ci.yml: %v", err)
+	}
+	script := extractWorkflowStepRun(t, string(raw), "Run full test suite and verify coverage")
+
+	allPkgs := []string{
+		"github.com/khughitt/tasks-tui/cmd/tasks-tui",
+		"github.com/khughitt/tasks-tui/internal/config",
+		"github.com/khughitt/tasks-tui/internal/identity",
+		"github.com/khughitt/tasks-tui/internal/integration",
+		"github.com/khughitt/tasks-tui/internal/launch",
+		"github.com/khughitt/tasks-tui/internal/tasksctl",
+		"github.com/khughitt/tasks-tui/internal/ui",
+		"github.com/khughitt/tasks-tui/internal/uitest",
+	}
+
+	validLog := strings.Join([]string{
+		"=== RUN   TestMainFlag",
+		"--- PASS: TestMainFlag (0.01s)",
+		"ok  \tgithub.com/khughitt/tasks-tui/cmd/tasks-tui\t0.020s",
+		"=== RUN   TestConfigLoad",
+		"--- PASS: TestConfigLoad (0.01s)",
+		"ok  \tgithub.com/khughitt/tasks-tui/internal/config\t0.015s",
+		"=== RUN   TestIdentitySlot",
+		"--- PASS: TestIdentitySlot (0.01s)",
+		"ok  \tgithub.com/khughitt/tasks-tui/internal/identity\t0.012s",
+		"=== RUN   TestProjectViewAgainstRealBinary",
+		"--- PASS: TestProjectViewAgainstRealBinary (0.50s)",
+		"ok  \tgithub.com/khughitt/tasks-tui/internal/integration\t0.510s",
+		"=== RUN   TestLaunchCommand",
+		"--- PASS: TestLaunchCommand (0.01s)",
+		"ok  \tgithub.com/khughitt/tasks-tui/internal/launch\t0.010s",
+		"=== RUN   TestRunnerList",
+		"--- PASS: TestRunnerList (0.01s)",
+		"ok  \tgithub.com/khughitt/tasks-tui/internal/tasksctl\t0.025s",
+		"=== RUN   TestAppUpdate",
+		"=== RUN   TestAppUpdate/subcase",
+		"--- PASS: TestAppUpdate (0.02s)",
+		"    --- PASS: TestAppUpdate/subcase (0.01s)",
+		"ok  \tgithub.com/khughitt/tasks-tui/internal/ui\t0.030s",
+		"?   \tgithub.com/khughitt/tasks-tui/internal/uitest\t[no test files]",
+	}, "\n") + "\n"
+
+	validRunRow := `{"target":"test","execution":"ran","execution_reason":"forced","exit":0}` + "\n"
+
+	runStep := func(pkgs []string, testLog, runsJSONL string, justExit int) (int, string, string, string) {
+		base, err := filepath.EvalSymlinks(t.TempDir())
+		if err != nil {
+			t.Fatalf("eval symlinks: %v", err)
+		}
+		repo := filepath.Join(base, "repo")
+		home := filepath.Join(base, "home")
+		bin := filepath.Join(base, "bin")
+		evidence := filepath.Join(base, "evidence")
+		for _, d := range []string{repo, home, bin, evidence} {
+			if err := os.MkdirAll(d, 0o755); err != nil {
+				t.Fatalf("mkdir: %v", err)
+			}
+		}
+
+		// Initialize isolated git repo with one commit so `git rev-parse HEAD` succeeds
+		env := []string{
+			"PATH=" + bin + string(os.PathListSeparator) + os.Getenv("PATH"),
+			"HOME=" + home,
+			"EVIDENCE_DIR=" + evidence,
+			"GIT_CONFIG_GLOBAL=/dev/null",
+			"GIT_CONFIG_NOSYSTEM=1",
+			"GIT_AUTHOR_NAME=Test",
+			"GIT_AUTHOR_EMAIL=test@example.invalid",
+			"GIT_COMMITTER_NAME=Test",
+			"GIT_COMMITTER_EMAIL=test@example.invalid",
+			"USER=testuser",
+			"TERM=dumb",
+			"LANG=C.UTF-8",
+		}
+		for _, gArgs := range [][]string{{"init", "-q"}, {"commit", "--allow-empty", "-qm", "init"}} {
+			c := exec.Command("git", gArgs...)
+			c.Dir = repo
+			c.Env = env
+			if out, err := c.CombinedOutput(); err != nil {
+				t.Fatalf("git %v: %v\n%s", gArgs, err, out)
+			}
+		}
+
+		// Stub `go` and `just`
+		goStub := "#!/bin/sh\nif [ \"$1\" = \"list\" ] && [ \"$2\" = \"./...\" ]; then\n  cat <<'EOF'\n" + strings.Join(pkgs, "\n") + "\nEOF\n  exit 0\nfi\nexit 1\n"
+		if err := os.WriteFile(filepath.Join(bin, "go"), []byte(goStub), 0o755); err != nil {
+			t.Fatalf("write go stub: %v", err)
+		}
+		logFile := filepath.Join(base, "stub-test.log")
+		if err := os.WriteFile(logFile, []byte(testLog), 0o644); err != nil {
+			t.Fatalf("write stub test log: %v", err)
+		}
+		runsSource := filepath.Join(base, "stub-runs.jsonl")
+		if err := os.WriteFile(runsSource, []byte(runsJSONL), 0o644); err != nil {
+			t.Fatalf("write stub runs: %v", err)
+		}
+		justStub := `#!/bin/sh
+if [ "$1" = "test" ]; then
+  mkdir -p "$HOME/.local/share/ops"
+  if [ -s "` + runsSource + `" ]; then
+    cp "` + runsSource + `" "$HOME/.local/share/ops/runs.jsonl"
+  fi
+  cat "` + logFile + `"
+  exit ` + strings.TrimSpace(string(rune('0'+justExit))) + `
+fi
+exit 1
+`
+		if err := os.WriteFile(filepath.Join(bin, "just"), []byte(justStub), 0o755); err != nil {
+			t.Fatalf("write just stub: %v", err)
+		}
+
+		cmd := exec.Command("bash", "-c", script)
+		cmd.Dir = repo
+		cmd.Env = env
+		var stdout, stderr bytes.Buffer
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
+		err = cmd.Run()
+		code := 0
+		if err != nil {
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				code = exitErr.ExitCode()
+			} else {
+				t.Fatalf("run verifier: %v", err)
+			}
+		}
+		return code, stdout.String(), stderr.String(), evidence
+	}
+
+	// 1. Positive case
+	code, stdout, stderr, evidence := runStep(allPkgs, validLog, validRunRow, 0)
+	if code != 0 {
+		t.Fatalf("positive verifier case failed (%d):\nstdout=%s\nstderr=%s", code, stdout, stderr)
+	}
+	summaryBytes, err := os.ReadFile(filepath.Join(evidence, "coverage-summary.json"))
+	if err != nil {
+		t.Fatalf("read coverage-summary.json: %v", err)
+	}
+	var summary struct {
+		PackageCount    int `json:"package_count"`
+		ExecutedTests   int `json:"executed_tests"`
+		FailedTests     int `json:"failed_tests"`
+		SkippedTests    int `json:"skipped_tests"`
+		SkippedModules  int `json:"skipped_modules"`
+		ExcludedModules int `json:"excluded_modules"`
+	}
+	if err := json.Unmarshal(summaryBytes, &summary); err != nil {
+		t.Fatalf("unmarshal coverage-summary.json: %v", err)
+	}
+	if summary.PackageCount != 8 || summary.ExecutedTests != 7 || summary.FailedTests != 0 ||
+		summary.SkippedTests != 0 || summary.SkippedModules != 0 || summary.ExcludedModules != 0 {
+		t.Fatalf("unexpected coverage summary: %+v", summary)
+	}
+
+	// 2. Suite failure preserves runs.jsonl in EVIDENCE_DIR before exiting nonzero
+	failRow := `{"target":"test","execution":"ran","execution_reason":"forced","exit":1}` + "\n"
+	code, _, _, evidence = runStep(allPkgs, validLog, failRow, 1)
+	if code != 1 {
+		t.Fatalf("expected exit 1 on suite failure, got %d", code)
+	}
+	if _, err := os.Stat(filepath.Join(evidence, "runs.jsonl")); err != nil {
+		t.Fatalf("expected runs.jsonl copied to EVIDENCE_DIR on failure: %v", err)
+	}
+
+	// 3. Negative cases
+	negatives := []struct {
+		name string
+		pkgs []string
+		log  string
+		runs string
+	}{
+		{
+			name: "missing integration package from output",
+			pkgs: allPkgs,
+			log:  strings.ReplaceAll(validLog, "ok  \tgithub.com/khughitt/tasks-tui/internal/integration\t0.510s\n", ""),
+			runs: validRunRow,
+		},
+		{
+			name: "cached package result",
+			pkgs: allPkgs,
+			log:  strings.ReplaceAll(validLog, "ok  \tgithub.com/khughitt/tasks-tui/internal/ui\t0.030s", "ok  \tgithub.com/khughitt/tasks-tui/internal/ui\t(cached)"),
+			runs: validRunRow,
+		},
+		{
+			name: "skipped test line",
+			pkgs: allPkgs,
+			log:  strings.ReplaceAll(validLog, "--- PASS: TestProjectViewAgainstRealBinary (0.50s)", "--- SKIP: TestProjectViewAgainstRealBinary (0.00s)"),
+			runs: validRunRow,
+		},
+		{
+			name: "failed test line",
+			pkgs: allPkgs,
+			log:  strings.ReplaceAll(validLog, "--- PASS: TestConfigLoad (0.01s)", "--- FAIL: TestConfigLoad (0.01s)"),
+			runs: validRunRow,
+		},
+		{
+			name: "unexpected no test files package",
+			pkgs: allPkgs,
+			log:  strings.ReplaceAll(validLog, "ok  \tgithub.com/khughitt/tasks-tui/internal/launch\t0.010s", "?   \tgithub.com/khughitt/tasks-tui/internal/launch\t[no test files]"),
+			runs: validRunRow,
+		},
+		{
+			name: "zero executed tests",
+			pkgs: []string{"github.com/khughitt/tasks-tui/internal/uitest"},
+			log:  "?   \tgithub.com/khughitt/tasks-tui/internal/uitest\t[no test files]\n",
+			runs: validRunRow,
+		},
+		{
+			name: "missing tt test row",
+			pkgs: allPkgs,
+			log:  validLog,
+			runs: `{"target":"check-code","execution":"ran","execution_reason":"forced","exit":0}` + "\n",
+		},
+		{
+			name: "unforced tt test row",
+			pkgs: allPkgs,
+			log:  validLog,
+			runs: `{"target":"test","execution":"ran","execution_reason":"default","exit":0}` + "\n",
+		},
+	}
+	for _, tc := range negatives {
+		code, _, _, _ := runStep(tc.pkgs, tc.log, tc.runs, 0)
+		if code == 0 {
+			t.Fatalf("negative verifier case %q unexpectedly succeeded", tc.name)
+		}
+	}
+}
+
+func checkRepoPolicyContract(root string, env []string) error {
+	evalJust := func(variable string) (string, error) {
+		cmd := exec.Command("just", "--evaluate", variable)
+		cmd.Dir = root
+		cmd.Env = env
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			return "", err
+		}
+		return strings.TrimSpace(string(out)), nil
+	}
+	ciRemote, err := evalJust("ci_remote")
+	if err != nil || ciRemote != "origin" {
+		return os.ErrInvalid
+	}
+	ciSuiteRefs, err := evalJust("ci_suite_refs")
+	if err != nil {
+		return err
+	}
+	policyBytes, err := os.ReadFile(filepath.Join(root, ".tt.toml"))
+	if os.IsNotExist(err) {
+		if ciSuiteRefs != "" {
+			return os.ErrInvalid
+		}
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	policyText := string(policyBytes)
+	if strings.Contains(policyText, "automatic_broad = true") {
+		if ciSuiteRefs != "" {
+			return os.ErrInvalid
+		}
+		return nil
+	}
+	if !strings.Contains(policyText, "automatic_broad = false") ||
+		!strings.Contains(policyText, `broad_targets = ["test", "test-fast", "check-code"]`) {
+		return os.ErrInvalid
+	}
+	if ciSuiteRefs != "refs/heads/*" {
+		return os.ErrInvalid
+	}
+	wfBytes, err := os.ReadFile(filepath.Join(root, ".github", "workflows", "ci.yml"))
+	if err != nil || !strings.Contains(string(wfBytes), `TT_FORCE: "1"`) {
+		return os.ErrInvalid
+	}
+	return nil
+}
+
+func TestFrontDoorLiveRepoPolicyAndCICoverageContract(t *testing.T) {
+	f := newFrontDoorFixture(t)
+	if err := checkRepoPolicyContract(f.root, f.env(nil)); err != nil {
+		t.Fatalf("live repo failed policy/CI coverage contract: %v", err)
+	}
+
+	// Copy ci.yml into fixture repo for activated-state checks
+	wfSrc, err := os.ReadFile(filepath.Join(f.root, ".github", "workflows", "ci.yml"))
+	if err != nil {
+		t.Fatalf("read ci.yml: %v", err)
+	}
+	wfDst := filepath.Join(f.repo, ".github", "workflows", "ci.yml")
+	if err := os.MkdirAll(filepath.Dir(wfDst), 0o755); err != nil {
+		t.Fatalf("mkdir workflows: %v", err)
+	}
+	if err := os.WriteFile(wfDst, wfSrc, 0o644); err != nil {
+		t.Fatalf("write fixture ci.yml: %v", err)
+	}
+
+	// Valid enabled (absent .tt.toml, ci_suite_refs == "")
+	f.setPolicy(nil)
+	f.writeJustfile("")
+	if err := checkRepoPolicyContract(f.repo, f.env(nil)); err != nil {
+		t.Fatalf("expected absent .tt.toml + empty ci_suite_refs to pass: %v", err)
+	}
+
+	// Valid rolled-back (automatic_broad = true, ci_suite_refs == "")
+	policyTrue := "automatic_broad = true\nbroad_targets = [\"test\", \"test-fast\", \"check-code\"]\n"
+	f.setPolicy(&policyTrue)
+	f.writeJustfile("")
+	if err := checkRepoPolicyContract(f.repo, f.env(nil)); err != nil {
+		t.Fatalf("expected automatic_broad=true + empty ci_suite_refs to pass: %v", err)
+	}
+
+	// Valid activated (automatic_broad = false, ci_suite_refs == "refs/heads/*")
+	policyFalse := "automatic_broad = false\nbroad_targets = [\"test\", \"test-fast\", \"check-code\"]\n"
+	f.setPolicy(&policyFalse)
+	f.writeJustfile("refs/heads/*")
+	if err := checkRepoPolicyContract(f.repo, f.env(nil)); err != nil {
+		t.Fatalf("expected automatic_broad=false + refs/heads/* to pass: %v", err)
+	}
+
+	// Invalid: automatic_broad = false with empty ci_suite_refs
+	f.writeJustfile("")
+	if err := checkRepoPolicyContract(f.repo, f.env(nil)); err == nil {
+		t.Fatalf("expected automatic_broad=false + empty ci_suite_refs to fail contract")
+	}
+
+	// Invalid: automatic_broad = true with ci_suite_refs == "refs/heads/*"
+	f.setPolicy(&policyTrue)
+	f.writeJustfile("refs/heads/*")
+	if err := checkRepoPolicyContract(f.repo, f.env(nil)); err == nil {
+		t.Fatalf("expected automatic_broad=true + refs/heads/* to fail contract")
+	}
+}

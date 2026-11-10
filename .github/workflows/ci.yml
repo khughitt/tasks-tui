@@ -1,0 +1,171 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      TT_FORCE: "1"
+      GIT_CONFIG_NOSYSTEM: "1"
+      TASKS_PINNED_SHA: "c47a2537386dd9cc357a6576445bf5838e0c8c3e"
+    steps:
+      - name: Prepare isolated Git config and evidence directory
+        run: |
+          touch "$RUNNER_TEMP/gitconfig"
+          mkdir -p "$RUNNER_TEMP/ci-evidence"
+          echo "GIT_CONFIG_GLOBAL=$RUNNER_TEMP/gitconfig" >> "$GITHUB_ENV"
+          echo "EVIDENCE_DIR=$RUNNER_TEMP/ci-evidence" >> "$GITHUB_ENV"
+
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Install just
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4
+        with:
+          just-version: 1.59.0
+
+      - name: Build pinned tasks CLI
+        run: |
+          git clone --no-checkout https://github.com/khughitt/tasks.git "$RUNNER_TEMP/tasks-src"
+          git -C "$RUNNER_TEMP/tasks-src" checkout "$TASKS_PINNED_SHA"
+          rustup toolchain install 1.99.1 --profile minimal
+          cargo +1.99.1 build --locked --release --manifest-path "$RUNNER_TEMP/tasks-src/Cargo.toml"
+          echo "$RUNNER_TEMP/tasks-src/target/release" >> "$GITHUB_PATH"
+
+      - name: Record tool versions
+        run: |
+          {
+            cat /etc/os-release
+            go version
+            tasks --version
+            just --version
+            python3 --version
+            git --version
+          } > "$EVIDENCE_DIR/setup-report.txt"
+
+      - name: Run setup
+        run: |
+          just setup
+
+      - name: Run portable hygiene checks
+        run: |
+          just ci-check-hygiene
+
+      - name: Run Go format, vet, and staticcheck
+        run: |
+          just check-code
+
+      - name: Run full test suite and verify coverage
+        run: |
+          set -uo pipefail
+          rc=0
+          just test 2>&1 | tee "$EVIDENCE_DIR/test-output.log" || rc=$?
+          if [ -f "$HOME/.local/share/ops/runs.jsonl" ]; then
+            cp "$HOME/.local/share/ops/runs.jsonl" "$EVIDENCE_DIR/runs.jsonl"
+          fi
+          if [ "$rc" -ne 0 ]; then
+            exit "$rc"
+          fi
+          python3 - <<'PY'
+          import json
+          import os
+          import pathlib
+          import re
+          import subprocess
+
+          evidence = pathlib.Path(os.environ['EVIDENCE_DIR'])
+          expected_pkgs = [
+              line.strip()
+              for line in subprocess.check_output(['go', 'list', './...'], text=True).splitlines()
+              if line.strip()
+          ]
+          assert expected_pkgs, 'No Go packages declared'
+          no_test_allowed = {'github.com/khughitt/tasks-tui/internal/uitest'}
+
+          log_text = (evidence / 'test-output.log').read_text(encoding='utf-8')
+          pkg_results = {}
+          passed_tests = 0
+          failed_tests = 0
+          skipped_tests = 0
+
+          for line in log_text.splitlines():
+              m_pass = re.match(r'^--- PASS: ([^/\s]+)\s+\(', line)
+              m_fail = re.match(r'^--- FAIL: ([^\s]+)\s+\(', line)
+              m_skip = re.match(r'^--- SKIP: ([^\s]+)\s+\(', line)
+              m_ok = re.match(r'^ok\s+(\S+)\s+(.+)$', line)
+              m_notest = re.match(r'^\?\s+(\S+)\s+\[no test files\]$', line)
+              if m_pass:
+                  passed_tests += 1
+              elif m_fail:
+                  failed_tests += 1
+              elif m_skip:
+                  skipped_tests += 1
+              elif m_ok:
+                  pkg, detail = m_ok.groups()
+                  assert '(cached)' not in detail, f'Cached package result: {line}'
+                  assert pkg in expected_pkgs and pkg not in pkg_results, f'Unexpected or duplicate package: {pkg}'
+                  assert pkg not in no_test_allowed, f'Expected no-test helper package got ok: {pkg}'
+                  pkg_results[pkg] = {'package': pkg, 'status': 'ok', 'detail': detail.strip()}
+              elif m_notest:
+                  pkg = m_notest.group(1)
+                  assert pkg in no_test_allowed, f'Unexpected [no test files] package: {pkg}'
+                  assert pkg not in pkg_results, f'Duplicate package summary: {pkg}'
+                  pkg_results[pkg] = {'package': pkg, 'status': 'no_test_files'}
+
+          assert set(pkg_results.keys()) == set(expected_pkgs), (
+              f'Package set mismatch: missing={set(expected_pkgs) - set(pkg_results.keys())}'
+          )
+          assert failed_tests == 0, f'Failed tests detected: {failed_tests}'
+          assert skipped_tests == 0, f'Skipped tests detected: {skipped_tests}'
+          assert passed_tests > 0, 'No tests executed'
+
+          rows = [json.loads(line) for line in (evidence / 'runs.jsonl').read_text(encoding='utf-8').splitlines() if line.strip()]
+          tests = [row for row in rows if row.get('target') == 'test']
+          assert tests, 'No tt test record'
+          row = tests[-1]
+          assert (row.get('execution'), row.get('execution_reason'), row.get('exit')) == ('ran', 'forced', 0), row
+
+          report = {
+              'revision': subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(),
+              'package_count': len(expected_pkgs),
+              'packages': [pkg_results[p] for p in expected_pkgs],
+              'executed_tests': passed_tests,
+              'failed_tests': failed_tests,
+              'skipped_tests': skipped_tests,
+              'skipped_modules': 0,
+              'excluded_modules': 0,
+              'tt_record': row,
+          }
+          (evidence / 'coverage-summary.json').write_text(json.dumps(report, indent=2) + '\n', encoding='utf-8')
+          print(f'Verified {passed_tests} tests across {len(expected_pkgs)} packages; 0 excluded modules, 0 skipped tests')
+          PY
+
+      - name: Upload CI evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ci-evidence
+          path: ${{ env.EVIDENCE_DIR }}
+          retention-days: 7
+          if-no-files-found: error
