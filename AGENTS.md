@@ -36,7 +36,7 @@ committed.
 ## Layout
 
 - `cmd/tasks-tui/` — flags, config, startup probe, program.
-- internal/tasksctl/ — the only subprocess boundary: `Runner`, typed calls, JSON types, `Error`, `CheckoutFor`.
+- internal/tasksctl/ — the only place `tasks` runs: `Runner`, typed calls, JSON types, `Error`, `CheckoutFor`.
 - internal/identity/ — familiar's slot algorithm (remote key, pins, fnv1a32, hue table, tone).
 - internal/launch/ — harness commands and the terminal spawn.
 - internal/config/ — `~/.config/tasks-tui/config.toml`.
@@ -51,8 +51,8 @@ committed.
 - The JSON contract belongs to `tasks`; [docs/tasks-contract.md](docs/tasks-contract.md) records the part tasks-tui uses.
   Anything the TUI needs and cannot get is a task in the tasks project, never a workaround here.
 - Views get data only through the commands they return: no `update` or `render` runs `tasks`; each call runs inside a
-  `tea.Cmd` through `env.Client` (internal/tasksctl/), and its result comes back as a message. Every write is followed
-  by a reload of the top view, never by patching rows in place (`TestStartRunsInCheckoutAndReloads`).
+  `tea.Cmd` through `env.Client` (internal/tasksctl/), and its result comes back as a message. Every successful write
+  is followed by a reload of the top view, never by patching rows in place (`TestStartRunsInCheckoutAndReloads`).
 - The legend is generated from the keymap: `legendGroups` in internal/ui/keys.go renders each binding's help text, so a
   grouped binding without help text fails `TestEveryGroupedBindingHasHelp`.
 - Column widths (internal/ui/columns.go and the tables in rows.go and projects.go), the Projects pane's ready cap

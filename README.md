@@ -47,7 +47,7 @@ for their second key.
 
 | | |
 |---|---|
-| move | `j`/`k` or Up/Down · `h`/`l` or Left/Right switch tabs · `tab`/`shift+tab` cycle tabs · `1`–`5` pick a tab · `g g`/Home top · `G`/End bottom · `pgup`/`pgdn` page the Task view |
+| move | `j`/`k` or Up/Down · `h`/`l` or Left/Right switch tabs · `tab`/`shift+tab` cycle tabs · `1`–`5` pick a tab · `g g`/Home top (Project and Task views) · `G`/End bottom (Project view) · `pgup`/`pgdn` (`ctrl+b`/`ctrl+f`) page the Task view and the legend |
 | open | `enter`/`i` open · `esc` back · `/` filter · `F5` reload |
 | sort | `s p` priority · `s a` age · `s t` title, ascending; `S` as the prefix sorts descending. In Projects, `p` is prefix and `a` is activity |
 | task | `a` add · `e` edit · `space` start · `p` park · `d` done · `x` drop · `y` copy id in the Task view |
