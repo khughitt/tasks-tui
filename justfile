@@ -19,10 +19,9 @@ check_code_cmd := "test -z \"$(gofmt -l .)\" && go vet ./... && go tool staticch
 docs_paths := "AGENTS.md"
 docs_check_cmd := check_hygiene_cmd
 
-# Remote CI suite declaration for .githooks/pre-push. Keep ci_suite_refs empty
-# until remote CI runs the broad suite for the matching refs.
+# CI workflow covers every branch push on origin.
 ci_remote := "origin"
-ci_suite_refs := ""
+ci_suite_refs := "refs/heads/*"
 
 # Dependencies and hooks; run once after `git worktree add`.
 setup:
