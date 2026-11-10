@@ -182,7 +182,8 @@ screen opens; the conditions are listed under [Failures](tasks-contract.md#failu
 Each project has one of twelve colour slots, chosen as familiar
 (https://github.com/khughitt/familiar) chooses them, so a project looks the same
 here as on its pet. `identity.slot` in the config pins a slot by prefix and wins over
-everything. Otherwise familiar's pins in `$XDG_CONFIG_HOME/familiar/identities.yaml`
+everything. Otherwise familiar's pins in `identities.yaml` under `$XDG_CONFIG_HOME/familiar/` (else
+`~/.config/familiar/`)
 apply, matched by git remote, then path, then the root's directory name; unpinned, the
 slot is a hash of the normalized `origin` remote, or of the root when there is none.
 The slot's accent marks the bars, ids, doing counts, the active tab, the spinner and

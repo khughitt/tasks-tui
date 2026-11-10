@@ -35,7 +35,7 @@ after `go install`, alias it or link it yourself.
     tui                 # Projects view, or the project you are standing in
     tui --all           # Projects view even inside a registered project
     tui tui             # one project by prefix
-    tui tui-d6e352      # one task
+    tui tui-1a2b3c      # one task
     tui --config path   # a config file other than the default
 
 A project opens on five tabs: Ready, Doing, Open, Ideas, Done.
