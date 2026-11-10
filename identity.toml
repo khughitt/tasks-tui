@@ -15,3 +15,6 @@ It shells out to the tasks CLI and reads its JSON, so the CLI stays the only wri
 authority = ["docs/specs/2026-09-13-tasks-tui-v1-design.md"]
 # Directories with their own identity.toml, README.md, and AGENTS.md.
 subsystems = []
+
+[documents]
+standard = 1
