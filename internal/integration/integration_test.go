@@ -1,5 +1,5 @@
 // Package integration drives the TUI against the real tasks binary in a scratch
-// project whose registry lives under a temporary XDG_CONFIG_HOME (spec §12).
+// project whose registry lives under a temporary XDG_CONFIG_HOME.
 package integration
 
 import (

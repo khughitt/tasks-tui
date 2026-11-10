@@ -1,7 +1,7 @@
 // Package identity reproduces familiar's project identity: the same key, pins, hash,
 // and hue table, so a project's accent in the TUI matches its pet and terminal tint
-// (spec §8). Nothing here imports familiar; the algorithm is copied and tested against
-// familiar's own vectors.
+// (colours, docs/guide.md). Nothing here imports familiar; the algorithm is copied and
+// tested against familiar's own vectors.
 package identity
 
 import (

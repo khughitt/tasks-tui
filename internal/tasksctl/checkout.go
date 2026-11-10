@@ -2,13 +2,14 @@ package tasksctl
 
 import "strings"
 
-// Checkout is where a task's commands run and where launch opens (spec §4.1).
+// Checkout is where a task's commands run and where launch opens (checkout selection,
+// docs/tasks-contract.md).
 type Checkout struct {
 	Dir    string
 	Notice string // non-empty when a recorded worktree was missing and the rule fell through
 }
 
-// CheckoutFor applies §4.1: the park's worktree, else a live claim's worktree, else root.
+// CheckoutFor picks the park's worktree, else a live claim's worktree, else root.
 // exists is injected so the policy is testable without a filesystem.
 func CheckoutFor(park *ParkInfo, claim *ClaimInfo, root string, exists func(string) bool) Checkout {
 	var missing []string

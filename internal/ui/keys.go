@@ -111,7 +111,7 @@ var keys = keymap{
 	Copy:     scoped("tasks", "yank", "", key.NewBinding(key.WithKeys("y"), key.WithHelp("y", "copy id"))),
 }
 
-// legendGroups is spec v1.1 §9: the panel renders these bindings' Help(); a grouped
+// legendGroups is the key legend's content: the panel renders these bindings' Help(); a grouped
 // binding without help text fails TestEveryGroupedBindingHasHelp.
 var legendGroups = []legendGroup{
 	{"move", []key.Binding{keys.Down, keys.Next, keys.Top, keys.PageDown, keys.Tab, keys.Digits}},

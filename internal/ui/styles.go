@@ -6,8 +6,8 @@ import (
 	"github.com/khughitt/tasks-tui/internal/identity"
 )
 
-// Styles holds the semantic colours of spec §8.3 — the only hard-coded colours — and
-// the per-slot accent styles derived from identity.
+// Styles holds the semantic colours (colours, docs/guide.md) — the only hard-coded
+// colours — and the per-slot accent styles derived from identity.
 type Styles struct {
 	Tone        identity.Tone
 	Base        lipgloss.Style
@@ -108,7 +108,7 @@ func (s *Styles) StatusStyle(status string) lipgloss.Style {
 	return s.Base
 }
 
-// GlamourStyle is the standard style matching the tone (spec §8.2).
+// GlamourStyle is the standard style matching the tone.
 func (s *Styles) GlamourStyle() string {
 	if s.Tone.Dark {
 		return "dark"

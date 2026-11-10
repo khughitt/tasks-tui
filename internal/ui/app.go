@@ -291,7 +291,7 @@ func (a *App) render() string {
 	return body + "\n" + bottom
 }
 
-// renderLegend is spec v1.1 §9: a centred framed panel, or a top-placed scrolling one
+// renderLegend draws the key legend: a centred framed panel, or a top-placed scrolling one
 // when the content is taller than the body.
 func (a *App) renderLegend(width, height int) string {
 	s := a.env.Styles
@@ -375,8 +375,8 @@ func (a *App) consoleWarnings() []string {
 	return append(lines, "")
 }
 
-// renderLog is the console of spec §11: the top view's current warnings, then the
-// session's message history.
+// renderLog is the console (messages and warnings, docs/guide.md): the top view's
+// current warnings, then the session's message history.
 func (a *App) renderLog(height int) string {
 	s := a.env.Styles
 	lines := a.consoleWarnings()

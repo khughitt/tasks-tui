@@ -1,6 +1,6 @@
 // Package tasksctl is the only place tasks-tui runs the tasks binary. Every call goes
 // through a Runner; the typed Client on top builds argv and decodes JSON. The binary is
-// the sole reader and writer of task data (spec §2).
+// the sole reader and writer of task data (participants, docs/tasks-contract.md).
 package tasksctl
 
 import (
@@ -17,7 +17,8 @@ import (
 )
 
 // Runner executes `tasks [-C dir] args...` and returns stdout on exit 0. A non-zero
-// exit yields *Error decoded from stderr (spec §4). dir == "" omits -C.
+// exit yields *Error decoded from stderr (failures, docs/tasks-contract.md). dir == ""
+// omits -C.
 type Runner interface {
 	Run(ctx context.Context, dir string, args ...string) ([]byte, error)
 }

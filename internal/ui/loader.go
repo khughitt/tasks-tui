@@ -17,8 +17,8 @@ type loadMsg struct {
 
 var loaderIDs atomic.Uint64
 
-// Loader is spec §10: reloads coalesce into at most one pending request, and a result
-// older than the latest generation is discarded.
+// Loader is the refresh rule (refresh, docs/guide.md): reloads coalesce into at most
+// one pending request, and a result older than the latest generation is discarded.
 type Loader struct {
 	id       uint64
 	gen      uint64

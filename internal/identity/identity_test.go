@@ -2,7 +2,7 @@ package identity
 
 import "testing"
 
-// Ported verbatim from familiar test/identity.test.js (spec §8.1).
+// Ported verbatim from familiar test/identity.test.js.
 func TestNormalizeRemoteCollapsesForms(t *testing.T) {
 	const want = "github.com/me/api"
 	for _, in := range []string{
