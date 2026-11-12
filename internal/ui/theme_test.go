@@ -90,9 +90,8 @@ func TestStartupProjectColors(t *testing.T) {
 		t.Fatalf("direct task/relation colors: %q", out)
 	}
 	pv := newProjectsView(e)
-	gen := pv.main.gen
 	pv.main.Request(func(uint64) tea.Cmd { return nil })
-	gen = pv.main.gen
+	gen := pv.main.gen
 	pv.update(loadMsg{loader: pv.main.ID(), gen: gen, data: projectsData{projects: tasksctl.ProjectsResult{
 		Projects: []tasksctl.Project{{Prefix: "tui", Root: "/r/tui", Reachable: true}},
 	}}})
