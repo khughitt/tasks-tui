@@ -83,7 +83,7 @@ func (a *App) openPark() tea.Cmd {
 		if r == "" {
 			r = "none"
 		}
-		return s.Muted.Render("ctrl+u ") + "waiting on: " + who + s.Muted.Render("   ctrl+r ") + "reason: " + r
+		return s.Base.Render("ctrl+u ") + "waiting on: " + who + s.Base.Render("   ctrl+r ") + "reason: " + r
 	}
 	p.submit = func(value string) (overlay, tea.Cmd) {
 		spec.NextStep = strings.TrimSpace(value)
@@ -126,7 +126,7 @@ func (a *App) openDrop() tea.Cmd {
 	p := newPrompt(s, "drop "+tgt.ID+" — why", "optional message")
 	p.submit = func(value string) (overlay, tea.Cmd) {
 		message := strings.TrimSpace(value)
-		return &confirmOverlay{styles: s, text: "really drop " + tgt.ID + "? " + s.Muted.Render(strings.TrimSpace(tgt.Title)), accept: "y", label: "drop",
+		return &confirmOverlay{styles: s, text: "really drop " + tgt.ID + "? " + s.Base.Render(strings.TrimSpace(tgt.Title)), accept: "y", label: "drop",
 			onAccept: func() tea.Cmd {
 				return a.write("drop", tgt, false, func(dir string) (tasksctl.WriteResult, error) {
 					ctx, cancel := a.env.ctx()

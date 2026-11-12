@@ -245,7 +245,7 @@ func TestProjectViewPillTabCountHeaderRowAndEmptyStates(t *testing.T) {
 	app := New(env, Options{Stack: []view{pv}})
 	d := drive(t, app)
 	d.Expect(" 1 Ready 2 ", "status", "title", "  2 Doing")
-	if pill := env.Styles.Pill(2).Render(" 1 Ready 2 "); !strings.Contains(app.render(), pill) {
+	if pill := env.Styles.ActiveLabel("tui", " 1 Ready 2 "); !strings.Contains(app.render(), pill) {
 		t.Fatalf("active tab is a pill: %q", app.render())
 	}
 	d.ExpectNot("2 rows")
@@ -273,7 +273,7 @@ func TestProjectViewPillTabCountHeaderRowAndEmptyStates(t *testing.T) {
 	d.Key("2")
 	d.Expect(" 2 Doing 2 ")
 	cmd := pv.setTab(tabReady)
-	if !strings.Contains(app.render(), " 1 Ready 2 ") || !strings.Contains(app.render(), " 2 Doing ") {
+	if !strings.Contains(d.Screen(), " 1 Ready 2 ") || !strings.Contains(d.Screen(), " 2 Doing ") {
 		t.Fatalf("pending tab keeps its last count:\n%s", app.render())
 	}
 	d.Run(cmd)

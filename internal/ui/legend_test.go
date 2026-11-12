@@ -22,7 +22,7 @@ func TestEveryGroupedBindingHasHelp(t *testing.T) {
 }
 
 func TestLegendReflowsFourAcrossTwoByTwoThenStacked(t *testing.T) {
-	s := NewStyles(darkTone)
+	s := coloredStyles()
 	wide := ansi.Strip(legendContent(s, 200))
 	if lipgloss.Height(wide) > 9 {
 		t.Fatalf("four across is one band:\n%s", wide)

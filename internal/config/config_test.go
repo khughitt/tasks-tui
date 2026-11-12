@@ -33,8 +33,6 @@ terminal = ["ghostty", "--working-directory={dir}", "-e"]
 [launch.harness.crush]
 command = ["crush"]
 env = { TASKS_MAX_COMPLEXITY = "mid" }
-[identity]
-slot = { tui = 2 }
 `))
 	if err != nil {
 		t.Fatal(err)
@@ -47,9 +45,6 @@ slot = { tui = 2 }
 	}
 	if cfg.Launch.Harness["crush"].Env["TASKS_MAX_COMPLEXITY"] != "mid" || len(cfg.Launch.Harness["claude"].Command) == 0 {
 		t.Fatalf("harness merge %+v", cfg.Launch.Harness)
-	}
-	if cfg.Identity.Slot["tui"] != 2 {
-		t.Fatalf("identity %+v", cfg.Identity)
 	}
 }
 
@@ -70,6 +65,13 @@ func TestUnknownKeyIsAnError(t *testing.T) {
 	_, err := Load(write(t, "refresh = 5\n"))
 	if err == nil || !strings.Contains(err.Error(), "refresh") {
 		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestRemovedIdentityKeyRejected(t *testing.T) {
+	_, err := Load(write(t, "[identity]\nslot = { tui = 2 }\n"))
+	if err == nil || !strings.Contains(err.Error(), "unknown key") {
+		t.Fatalf("removed identity configuration must fail explicitly: %v", err)
 	}
 }
 

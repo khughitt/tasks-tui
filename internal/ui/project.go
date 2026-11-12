@@ -69,7 +69,7 @@ func (v *projectView) current() *target {
 }
 
 func (v *projectView) reload() tea.Cmd {
-	tab, prefix, slot := v.tab, v.prefix, v.env.slot(v.prefix)
+	tab, prefix := v.tab, v.prefix
 	return v.loader.Request(func(gen uint64) tea.Cmd {
 		return v.loader.Cmd(gen, func() (any, error) {
 			ctx, cancel := v.env.ctx()
@@ -84,7 +84,7 @@ func (v *projectView) reload() tea.Cmd {
 					return err
 				}
 				for _, r := range res.Tasks {
-					d.rows = append(d.rows, fromRow(r, slot))
+					d.rows = append(d.rows, fromRow(r))
 				}
 				d.warnings = append(d.warnings, prefixed(command, res.Warnings)...)
 				return nil
@@ -115,7 +115,7 @@ func (v *projectView) reload() tea.Cmd {
 						d.rows[i].Park = r.Park
 						continue
 					}
-					d.rows = append(d.rows, fromParked(r, slot))
+					d.rows = append(d.rows, fromParked(r))
 				}
 				d.warnings = append(d.warnings, prefixed("list --project "+prefix+" --parked", parked.Warnings)...)
 			case tabOpen:
@@ -347,13 +347,13 @@ func (v *projectView) chip(n int, label string, hot lipgloss.Style) string {
 	if n > 0 {
 		num = hot.Render(fmt.Sprint(n))
 	}
-	return num + " " + v.env.Styles.Muted.Render(label)
+	return num + " " + v.env.Styles.Base.Render(label)
 }
 
 func (v *projectView) render(width, height int) string {
-	s, root, slot := v.env.Styles, v.env.Roots[v.prefix], v.env.slot(v.prefix)
+	s, root, prefix := v.env.Styles, v.env.Roots[v.prefix], v.prefix
 	c := v.counts
-	head := s.Accent(slot).Render("▌ ") + s.Header.Render(v.prefix) + "  " + s.Muted.Render(name(root)+"  "+root) + "   " + strings.Join([]string{v.chip(c.Doing, "doing", s.Accent(slot)), v.chip(c.Todo, "todo", s.Base), v.chip(c.Idea, "idea", s.Base), v.chip(c.Blocked, "blocked", s.Error.UnsetBold())}, "  ")
+	head := s.Accent(prefix).Render("▌ ") + s.Accent(prefix).Bold(true).Render(v.prefix) + "  " + s.Base.Render(name(root)+"  "+root) + "   " + strings.Join([]string{v.chip(c.Doing, "doing", s.Accent(prefix)), v.chip(c.Todo, "todo", s.Base), v.chip(c.Idea, "idea", s.Base), v.chip(c.Blocked, "blocked", s.Error.UnsetBold())}, "  ")
 	tabs := make([]string, len(tabNames))
 	for i, n := range tabNames {
 		label := fmt.Sprintf("%d %s", i+1, n)
@@ -364,7 +364,7 @@ func (v *projectView) render(width, height int) string {
 		if v.hasCount[i] {
 			label += " " + fmt.Sprint(v.shown[i])
 		}
-		tabs[i] = s.Pill(slot).Render(" " + label + " ")
+		tabs[i] = s.ActiveLabel(prefix, " "+label+" ")
 	}
 	rt := s.layoutRowsWithLabels(v.rows, width, time.Now(), v.headerLabels())
 	clipped := lipgloss.NewStyle().MaxWidth(width)
@@ -392,7 +392,7 @@ func (v *projectView) render(width, height int) string {
 		}
 	}
 	if filtering {
-		lines = append(lines, s.Muted.Render(fmt.Sprintf("/%s · %d of %d", v.filter, len(v.rows), len(v.all))))
+		lines = append(lines, s.Base.Render(fmt.Sprintf("/%s · %d of %d", v.filter, len(v.rows), len(v.all))))
 	}
 	return lipgloss.NewStyle().MaxHeight(height).Render(strings.Join(lines, "\n"))
 }

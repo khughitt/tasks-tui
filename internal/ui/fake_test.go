@@ -10,7 +10,6 @@ import (
 
 	"charm.land/lipgloss/v2"
 	"github.com/khughitt/tasks-tui/internal/config"
-	"github.com/khughitt/tasks-tui/internal/identity"
 	"github.com/khughitt/tasks-tui/internal/launch"
 	"github.com/khughitt/tasks-tui/internal/tasksctl"
 	"github.com/khughitt/tasks-tui/internal/uitest"
@@ -22,8 +21,6 @@ type fakeRunner struct {
 	errors  map[string]*tasksctl.Error
 	calls   []string
 }
-
-var darkTone = identity.Tone{Dark: true, SatScale: 1}
 
 //lint:ignore U1000 shared by subsequent UI tests
 func col(t *testing.T, line, tok string) int {
@@ -116,8 +113,10 @@ func parkedJSON(rows ...tasksctl.ParkedRow) string {
 	return string(data)
 }
 func testEnv(f *fakeRunner) *Env {
-	styles := NewStyles(identity.Tone{Dark: true, SatScale: 1})
+	styles := NewStyles()
 	styles.cursorBlink = false
-	return &Env{Client: &tasksctl.Client{R: f}, Styles: styles, Config: config.Default(), Slots: map[string]int{"tui": 2, "ops": 1}, Roots: map[string]string{"tui": "/r/tui", "ops": "/r/ops"}, Exists: func(path string) bool { return strings.HasPrefix(path, "/r/") || strings.HasPrefix(path, "/wt/") }, Environ: []string{"HOME=/h"}, Spawn: func(launch.Plan) error { return nil }, Timeout: 2 * time.Second}
+	env := &Env{Client: &tasksctl.Client{R: f}, Styles: styles, Config: config.Default(), Roots: map[string]string{"tui": "/r/tui", "ops": "/r/ops"}, Exists: func(path string) bool { return strings.HasPrefix(path, "/r/") || strings.HasPrefix(path, "/wt/") }, Environ: []string{"HOME=/h"}, Spawn: func(launch.Plan) error { return nil }, Timeout: 2 * time.Second}
+	seedColors(env)
+	return env
 }
 func drive(t *testing.T, app *App) *uitest.Driver { t.Helper(); return uitest.New(t, app, 120, 40) }

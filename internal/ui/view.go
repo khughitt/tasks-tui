@@ -15,7 +15,6 @@ type Env struct {
 	Client  *tasksctl.Client
 	Styles  *Styles
 	Config  config.Config
-	Slots   map[string]int
 	Roots   map[string]string
 	Exists  func(string) bool
 	Environ []string
@@ -26,7 +25,16 @@ type Env struct {
 func (e *Env) ctx() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), e.Timeout)
 }
-func (e *Env) slot(prefix string) int { return e.Slots[prefix] }
+
+// SetProjects seeds startup identity and refreshes it only from accepted CLI data.
+func (e *Env) SetProjects(projects []tasksctl.Project) {
+	e.Roots = make(map[string]string, len(projects))
+	e.Styles.projects = make(map[string]tasksctl.Project, len(projects))
+	for _, p := range projects {
+		e.Roots[p.Prefix] = p.Root
+		e.Styles.projects[p.Prefix] = p
+	}
+}
 
 type target struct {
 	ID, Title, Prefix string

@@ -11,19 +11,13 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"github.com/khughitt/tasks-tui/internal/identity"
 	"github.com/khughitt/tasks-tui/internal/launch"
 )
-
-type Identity struct {
-	Slot map[string]int `toml:"slot"`
-}
 
 type Config struct {
 	Tasks          string        `toml:"tasks"`
 	RefreshSeconds int           `toml:"refresh_seconds"`
 	Launch         launch.Config `toml:"launch"`
-	Identity       Identity      `toml:"identity"`
 }
 
 func Default() Config {
@@ -31,7 +25,6 @@ func Default() Config {
 		Tasks:          "tasks",
 		RefreshSeconds: 30,
 		Launch:         launch.Default(),
-		Identity:       Identity{Slot: map[string]int{}},
 	}
 }
 
@@ -100,11 +93,6 @@ func validate(path string, cfg Config) error {
 	for name, h := range cfg.Launch.Harness {
 		if len(h.Command) == 0 {
 			return fmt.Errorf("%s: launch.harness.%s.command must not be empty", path, name)
-		}
-	}
-	for prefix, slot := range cfg.Identity.Slot {
-		if slot < 0 || slot >= identity.SlotCount {
-			return fmt.Errorf("%s: identity.slot.%s must be 0..%d", path, prefix, identity.SlotCount-1)
 		}
 	}
 	return nil

@@ -10,7 +10,6 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	"github.com/khughitt/tasks-tui/internal/identity"
 	"github.com/khughitt/tasks-tui/internal/uitest"
 )
 
@@ -39,7 +38,7 @@ func (s *stubView) loading() bool          { return s.loadingNow }
 func (s *stubView) warnings() []string     { return s.warns }
 
 func testApp(stack ...view) *App {
-	return New(&Env{Styles: NewStyles(identity.Tone{Dark: true})}, Options{Stack: stack})
+	return New(&Env{Styles: NewStyles()}, Options{Stack: stack})
 }
 func TestAppShellKeysStackAndStatus(t *testing.T) {
 	root, child := &stubView{name: "root"}, &stubView{name: "child"}

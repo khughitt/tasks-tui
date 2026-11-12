@@ -24,7 +24,7 @@ func newPrompt(s *Styles, title, placeholder string) *promptOverlay {
 	in := textinput.New()
 	in.Placeholder = placeholder
 	in.Prompt = "> "
-	styles := textinput.DefaultStyles(s.Tone.Dark)
+	styles := s.inputStyles()
 	styles.Cursor.Blink = s.cursorBlink
 	in.SetStyles(styles)
 	in.Focus()
@@ -35,6 +35,12 @@ func newPrompt(s *Styles, title, placeholder string) *promptOverlay {
 // esc/enter/extra keys, and everything else (a tea.PasteMsg, cursor blinks) goes to
 // the text input, which handles pastes itself.
 func (o *promptOverlay) update(msg tea.Msg) (overlay, tea.Cmd) {
+	if _, ok := msg.(stylesChangedMsg); ok {
+		styles := o.styles.inputStyles()
+		styles.Cursor.Blink = o.styles.cursorBlink
+		o.input.SetStyles(styles)
+		return o, nil
+	}
 	if k, ok := msg.(tea.KeyPressMsg); ok {
 		switch k.String() {
 		case "esc":
@@ -59,7 +65,7 @@ func (o *promptOverlay) update(msg tea.Msg) (overlay, tea.Cmd) {
 
 func (o *promptOverlay) render(width int) string {
 	s := o.styles
-	lines := []string{s.Header.Render(o.title) + s.Muted.Render("   enter submit · esc cancel"), o.input.View()}
+	lines := []string{s.Header.Render(o.title) + s.Base.Render("   enter submit · esc cancel"), o.input.View()}
 	if o.problem != "" {
 		lines = append(lines, s.Error.Render(o.problem))
 	} else if o.hint != nil {
@@ -95,7 +101,7 @@ func (o *confirmOverlay) update(msg tea.Msg) (overlay, tea.Cmd) {
 
 func (o *confirmOverlay) render(width int) string {
 	s := o.styles
-	return o.text + "\n" + s.Bold.Render("["+o.accept+"] "+o.label) + s.Muted.Render("   [esc] cancel")
+	return o.text + "\n" + s.Bold.Render("["+o.accept+"] "+o.label) + s.Base.Render("   [esc] cancel")
 }
 
 // pickerOverlay chooses one of a few names by j/k+enter or a digit.
@@ -103,7 +109,7 @@ type pickerOverlay struct {
 	styles *Styles
 	title  string
 	items  []string
-	slot   int
+	prefix string
 	sel    int
 	onPick func(name string) tea.Cmd
 }
@@ -141,10 +147,10 @@ func (o *pickerOverlay) render(width int) string {
 	for i, it := range o.items {
 		label := strconv.Itoa(i+1) + " " + it
 		if i == o.sel {
-			parts = append(parts, s.Gutter(o.slot).Render(" "+label+" "))
+			parts = append(parts, s.ActiveLabel(o.prefix, label))
 		} else {
 			parts = append(parts, " "+label+" ")
 		}
 	}
-	return s.Header.Render(o.title) + s.Muted.Render("   enter/digit choose · esc cancel") + "\n" + strings.Join(parts, " ")
+	return s.Header.Render(o.title) + s.Base.Render("   enter/digit choose · esc cancel") + "\n" + strings.Join(parts, " ")
 }

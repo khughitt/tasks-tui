@@ -165,19 +165,19 @@ func (t table) header(widths []int, s *Styles) string {
 }
 
 func (t table) headerWithLabels(widths []int, s *Styles, labels map[string]string) string {
-	return t.headerWithCandidate(widths, s, labels, "", 0)
+	return t.headerWithCandidate(widths, s, labels, "", "")
 }
 
-func (t table) headerWithCandidate(widths []int, s *Styles, labels map[string]string, candidate string, slot int) string {
+func (t table) headerWithCandidate(widths []int, s *Styles, labels map[string]string, candidate string, prefix string) string {
 	cells := make([]cell, len(t.cols))
 	for i, c := range t.cols {
 		label := c.label
 		if labels[c.key] != "" {
 			label = labels[c.key]
 		}
-		style := s.Muted
+		style := s.Base
 		if c.key == candidate {
-			style = s.Surface(slot)
+			style = s.Surface(prefix)
 		}
 		cells[i] = text(style, label)
 	}

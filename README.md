@@ -86,8 +86,6 @@ command = ["opencode", "--prompt", "{prompt}"]
 [launch.harness.crush]
 command = ["crush"]
 
-[identity]
-slot = { tui = 2 }
 ```
 
 `{dir}` is the task's checkout, `{id}` and `{title}` the task, `{prompt}` the rendered
@@ -102,12 +100,15 @@ env = { TASKS_MAX_COMPLEXITY = "mid" }
 
 A new harness table needs a `command`, and appears in the `c c` picker.
 
-Each project gets one of twelve colour slots, derived from its git remote (or root) the
-way familiar's identity scheme does, so a project looks the same here as in familiar's
-pets; `identity.slot` pins a project's slot by prefix, and familiar's own pins in
-`~/.config/familiar/identities.yaml` (under `$XDG_CONFIG_HOME/familiar/` when that is
-set) are honoured when that file exists. The [guide](docs/guide.md#colours) says how
-the slot is chosen.
+Project labels and task IDs use the authored `color` returned by `tasks projects`;
+256-color terminals use its supplied `color_256` index. Basic-color terminals keep
+project labels neutral. Ordinary text follows the terminal foreground; semantic
+red/yellow/cyan roles and inactive dim text follow its ANSI theme. The
+[guide](docs/guide.md#colours) describes selection and terminal queries.
+
+Upgrading from the familiar-based version: remove the old `[identity]` table
+from your config. It is no longer supported and is reported as an unknown key.
+The app no longer reads familiar files or queries project git remotes.
 
 ## Layout
 

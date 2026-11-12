@@ -71,6 +71,13 @@ func (v *taskView) reload() tea.Cmd {
 
 func (v *taskView) update(msg tea.Msg) (view, tea.Cmd) {
 	switch msg := msg.(type) {
+	case stylesChangedMsg:
+		if v.data != nil {
+			offset := v.vp.YOffset()
+			v.vp.SetContent(v.content())
+			v.vp.SetYOffset(offset)
+		}
+		return v, nil
 	case loadMsg:
 		if msg.loader != v.loader.ID() {
 			return v, nil
@@ -121,25 +128,25 @@ func (v *taskView) render(width, height int) string {
 	return v.vp.View()
 }
 
-func (v *taskView) status(status string, slot int) lipgloss.Style {
+func (v *taskView) status(status string, prefix string) lipgloss.Style {
 	style := v.env.Styles.StatusStyle(status)
 	if status == "doing" {
-		style = style.Foreground(v.env.Styles.Accent(slot).GetForeground())
+		style = style.Foreground(v.env.Styles.Accent(prefix).GetForeground())
 	}
 	return style
 }
 
 func (v *taskView) content() string {
 	s, r := v.env.Styles, v.data.res
-	t, slot := r.Task, v.env.slot(r.Task.Prefix())
+	t, prefix := r.Task, r.Task.Prefix()
 	var b strings.Builder
 	line := func(k, val string) {
 		if val != "" {
-			fmt.Fprintf(&b, "%s %s\n", s.Muted.Render(pad(k, 11)), val)
+			fmt.Fprintf(&b, "%s %s\n", s.Base.Render(pad(k, 11)), val)
 		}
 	}
-	fmt.Fprintf(&b, "%s %s\n", s.Accent(slot).Render(t.ID), s.Header.Render(t.Title))
-	line("status", v.status(t.Status, slot).Render(t.Status))
+	fmt.Fprintf(&b, "%s %s\n", s.Accent(prefix).Render(t.ID), v.status(t.Status, prefix).Bold(true).Render(t.Title))
+	line("status", v.status(t.Status, prefix).Render(t.Status))
 	line("priority", s.PriorityStyle(t.Priority).Render(fmt.Sprintf("P%d", t.Priority)))
 	line("size", deref(t.Size))
 	line("complexity", deref(t.Complexity))
@@ -159,22 +166,22 @@ func (v *taskView) content() string {
 		line("every", s.Periodic.Render(r.Periodic.Every+"  "+due))
 	}
 	if t.Spec != nil {
-		line("spec", *t.Spec+"  "+s.Muted.Render(deref(r.SpecPath)))
+		line("spec", *t.Spec+"  "+s.Base.Render(deref(r.SpecPath)))
 	}
 	if t.Plan != nil {
 		step := deref(t.Step)
 		if r.StepFound != nil && !*r.StepFound {
 			step += s.Error.Render("  (step not found)")
 		}
-		line("plan", *t.Plan+"  "+s.Muted.Render(deref(r.PlanPath))+"\n            "+step)
+		line("plan", *t.Plan+"  "+s.Base.Render(deref(r.PlanPath))+"\n            "+step)
 	}
-	line("checkout", s.Muted.Render(v.data.checkout.Dir))
+	line("checkout", s.Base.Render(v.data.checkout.Dir))
 	if c := r.Claim; c != nil {
-		state := s.Claim.Foreground(s.Accent(slot).GetForeground()).Render("live")
+		state := s.Claim.Foreground(s.Accent(prefix).GetForeground()).Render("live")
 		if !c.Live {
 			state = s.Stale.Render("stale")
 		}
-		line("claim", fmt.Sprintf("%s %s  %s  %s", state, c.Owner, c.Session, s.Muted.Render(c.Worktree)))
+		line("claim", fmt.Sprintf("%s %s  %s  %s", state, c.Owner, c.Session, s.Base.Render(c.Worktree)))
 	}
 	if p := r.Park; p != nil {
 		waiting := s.ParkAgent.Render("waiting on agent")
@@ -185,10 +192,10 @@ func (v *taskView) content() string {
 		if p.Reason != nil {
 			reason = "  " + *p.Reason
 		}
-		line("parked", waiting+reason+"  "+s.Muted.Render(p.Worktree)+"\n            → "+p.NextStep)
+		line("parked", waiting+reason+"  "+s.Base.Render(p.Worktree)+"\n            → "+p.NextStep)
 	}
 	if e := r.Escalation; e != nil {
-		line("escalated", s.Warning.Render(e.Level)+"  "+s.Muted.Render(e.At))
+		line("escalated", s.Warning.Render(e.Level)+"  "+s.Base.Render(e.At))
 	}
 	b.WriteString("\n")
 	if strings.TrimSpace(t.Body) != "" {
@@ -203,7 +210,7 @@ func (v *taskView) content() string {
 	if len(t.Notes) > 0 {
 		b.WriteString(s.Header.Render("notes") + "\n")
 		for _, n := range t.Notes {
-			fmt.Fprintf(&b, "%s %s\n", s.Muted.Render(n.At+" ("+n.By+")"), n.Text)
+			fmt.Fprintf(&b, "%s %s\n", s.Base.Render(n.At+" ("+n.By+")"), n.Text)
 		}
 		b.WriteString("\n")
 	}
@@ -213,8 +220,8 @@ func (v *taskView) content() string {
 		}
 		b.WriteString(s.Header.Render(title) + "\n")
 		for _, x := range rows {
-			xslot := v.env.slot(prefixOf(x.ID))
-			fmt.Fprintf(&b, "  %s %s %s\n", s.Accent(xslot).Render(x.ID), v.status(x.Status, xslot).Render(pad(x.Status, 7)), x.Title)
+			xprefix := prefixOf(x.ID)
+			fmt.Fprintf(&b, "  %s %s %s\n", s.Accent(xprefix).Render(x.ID), v.status(x.Status, xprefix).Render(pad(x.Status, 7)), x.Title)
 		}
 	}
 	if r.Parent != nil {
@@ -228,8 +235,8 @@ func (v *taskView) content() string {
 			if x.Resolved {
 				status, title = deref(x.Status), deref(x.Title)
 			}
-			xslot := v.env.slot(prefixOf(x.ID))
-			fmt.Fprintf(&b, "  %s %s %s\n", s.Accent(xslot).Render(x.ID), v.status(status, xslot).Render(pad(status, 10)), title)
+			xprefix := prefixOf(x.ID)
+			fmt.Fprintf(&b, "  %s %s %s\n", s.Accent(xprefix).Render(x.ID), v.status(status, xprefix).Render(pad(status, 10)), title)
 		}
 	}
 	return b.String()
@@ -240,7 +247,7 @@ func (v *taskView) markdown(src string) (string, error) {
 	if width <= 0 {
 		width = 80
 	}
-	r, err := glamour.NewTermRenderer(glamour.WithStandardStyle(v.env.Styles.GlamourStyle()), glamour.WithWordWrap(width-2))
+	r, err := glamour.NewTermRenderer(glamour.WithStyles(v.env.Styles.markdownStyle()), glamour.WithWordWrap(width-2))
 	if err != nil {
 		return "", err
 	}

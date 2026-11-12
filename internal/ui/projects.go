@@ -169,16 +169,24 @@ func count(s *Styles, n int, hot lipgloss.Style) cell {
 
 // unreachableLine is an unreachable project's row: the bar and prefix muted, then the indicator across
 // the rest of the row, so it survives the name column dropping.
-func (v *projectsView) unreachableLine(p tasksctl.Project, widths []int, tableW int, base lipgloss.Style) string {
+func (v *projectsView) unreachableLine(p tasksctl.Project, widths []int, tableW int, base lipgloss.Style, selected bool) string {
 	s := v.env.Styles
-	line := s.Muted.Inherit(base).Render("▌ " + pad(p.Prefix, widths[0]-2) + "  ✗ unreachable")
+	marker, cursor := "▌ ", s.Muted
+	if selected {
+		marker, cursor = "▸ ", s.Bold
+	}
+	line := cursor.Inherit(base).Render(marker) + s.Muted.Inherit(base).Render(pad(p.Prefix, widths[0]-2)+"  ✗ unreachable")
 	return fit(line, tableW, base)
 }
 
-func (v *projectsView) projectCells(p tasksctl.Project, now time.Time) []cell {
+func (v *projectsView) projectCells(p tasksctl.Project, now time.Time, selected bool) []cell {
 	s := v.env.Styles
-	acc := s.Accent(v.env.slot(p.Prefix))
-	project := cell{spans: []span{{"▌ ", acc}, {p.Prefix, s.Bold}}}
+	acc := s.Accent(p.Prefix)
+	marker := "▌ "
+	if selected {
+		marker = "▸ "
+	}
+	project := cell{spans: []span{{marker, acc}, {p.Prefix, acc.Bold(selected)}}}
 	if !p.Reachable || p.Counts == nil {
 		// Measured for the project column only; render draws the row through unreachableLine.
 		return []cell{{spans: []span{{"▌ ", s.Muted}, {p.Prefix, s.Muted}}}, text(s.Muted, ""), text(s.Muted, ""), text(s.Muted, ""), text(s.Muted, ""), text(s.Muted, ""), text(s.Muted, "")}
@@ -188,7 +196,7 @@ func (v *projectsView) projectCells(p tasksctl.Project, now time.Time) []cell {
 	if p.LastActivity != nil {
 		age = ago(*p.LastActivity, now)
 	}
-	return []cell{project, text(s.Muted, name(p.Root)), count(s, c.Doing, acc), count(s, c.Todo, s.Base), count(s, c.Idea, s.Base), count(s, c.Blocked, s.Error.UnsetBold()), text(s.ageStyle(age), age)}
+	return []cell{project, text(s.Base, name(p.Root)), count(s, c.Doing, acc), count(s, c.Todo, s.Base), count(s, c.Idea, s.Base), count(s, c.Blocked, s.Error.UnsetBold()), text(s.ageStyle(age), age)}
 }
 func (v *projectsView) update(raw tea.Msg) (view, tea.Cmd) {
 	switch msg := raw.(type) {
@@ -203,6 +211,7 @@ func (v *projectsView) update(raw tea.Msg) (view, tea.Cmd) {
 				return v, tea.Batch(next, notices(LevelError, msg.err.Error()))
 			}
 			v.data = msg.data.(projectsData)
+			v.env.SetProjects(v.data.projects.Projects)
 			v.sortAndFilter()
 			return v, tea.Batch(next, v.loadPane())
 		case v.pane.ID():
@@ -287,7 +296,7 @@ func (v *projectsView) render(width, height int) string {
 	s, now := v.env.Styles, time.Now()
 	cells := make([][]cell, len(v.rows))
 	for i, p := range v.rows {
-		cells[i] = v.projectCells(p, now)
+		cells[i] = v.projectCells(p, now, i == v.sel)
 	}
 	widths := projectsTable.widths(cells, width)
 	tableW := projectsTable.total(widths)
@@ -315,16 +324,16 @@ func (v *projectsView) render(width, height int) string {
 	for i := start; i < end; i++ {
 		base := lipgloss.NewStyle()
 		if i == v.sel {
-			base = s.Surface(v.env.slot(v.rows[i].Prefix))
+			base = s.Surface(v.rows[i].Prefix)
 		}
 		if p := v.rows[i]; !p.Reachable || p.Counts == nil {
-			lines = append(lines, v.unreachableLine(p, widths, tableW, base))
+			lines = append(lines, v.unreachableLine(p, widths, tableW, base, i == v.sel))
 			continue
 		}
 		lines = append(lines, fit(projectsTable.row(widths, cells[i], base), tableW, base))
 	}
 	if v.filtering || v.filter != "" {
-		lines = append(lines, lipgloss.NewStyle().MaxWidth(tableW).Render(s.Muted.Render("/"+v.filter)))
+		lines = append(lines, lipgloss.NewStyle().MaxWidth(tableW).Render(s.Base.Render("/"+v.filter)))
 	}
 	body := strings.Join(lines, "\n")
 	if showPane {
@@ -333,10 +342,10 @@ func (v *projectsView) render(width, height int) string {
 			pane = v.renderPane(paneW)
 		}
 		bodyH := max(1, height-1)
-		sep := strings.TrimSuffix(strings.Repeat(s.Muted.Render("│")+"\n", bodyH), "\n")
+		sep := strings.TrimSuffix(strings.Repeat(s.Base.Render("│")+"\n", bodyH), "\n")
 		body = lipgloss.JoinHorizontal(lipgloss.Top, lipgloss.NewStyle().Width(tableW).Render(body), sep, lipgloss.NewStyle().Width(paneW).Render(pane))
 	}
-	strip := lipgloss.NewStyle().MaxWidth(width).Render(s.Muted.Render(fmt.Sprintf("%d doing · %d parked across %d projects", v.data.doing, len(v.data.parked.Tasks), len(v.data.projects.Projects))))
+	strip := lipgloss.NewStyle().MaxWidth(width).Render(s.Base.Render(fmt.Sprintf("%d doing · %d parked across %d projects", v.data.doing, len(v.data.parked.Tasks), len(v.data.projects.Projects))))
 	return lipgloss.NewStyle().Height(max(0, height-1)).MaxHeight(max(0, height-1)).Render(body) + "\n" + strip
 }
 
@@ -344,27 +353,26 @@ const paneReadyCap = 8
 
 func (v *projectsView) paneRows() (rows []rowView, nextSteps map[int]string) {
 	rows = []rowView{}
-	slot := v.env.slot(v.primeFor)
 	nextSteps = map[int]string{}
 	for _, r := range v.prime.Doing {
-		rows = append(rows, fromRow(r, slot))
+		rows = append(rows, fromRow(r))
 	}
 	for _, r := range v.prime.Parked {
 		nextSteps[len(rows)] = r.Park.NextStep
-		rows = append(rows, fromParked(r, slot))
+		rows = append(rows, fromParked(r))
 	}
 	for i, r := range v.prime.Ready {
 		if i == paneReadyCap {
 			break
 		}
-		rows = append(rows, fromRow(r, slot))
+		rows = append(rows, fromRow(r))
 	}
 	return rows, nextSteps
 }
 
 func (v *projectsView) renderPane(width int) string {
 	s := v.env.Styles
-	slot := v.env.slot(v.primeFor)
+	prefix := v.primeFor
 	rows, nextSteps := v.paneRows()
 	if len(rows) == 0 {
 		return s.Muted.Render("nothing doing, parked, or ready")
@@ -374,7 +382,7 @@ func (v *projectsView) renderPane(width int) string {
 	var out []string
 	section := func(title string, n int) {
 		if n > 0 {
-			out = append(out, s.Accent(slot).Render(title))
+			out = append(out, s.Accent(prefix).Render(title))
 		}
 	}
 	i := 0
@@ -382,7 +390,7 @@ func (v *projectsView) renderPane(width int) string {
 		for end := i + n; i < end; i++ {
 			out = append(out, rt.line(i, false))
 			if step, ok := nextSteps[i]; ok {
-				out = append(out, lipgloss.NewStyle().MaxWidth(width).Render(indent+s.Muted.Render("→ "+step)))
+				out = append(out, lipgloss.NewStyle().MaxWidth(width).Render(indent+s.Base.Render("→ "+step)))
 			}
 		}
 	}
@@ -393,7 +401,7 @@ func (v *projectsView) renderPane(width int) string {
 	section("ready", len(v.prime.Ready))
 	emit(min(len(v.prime.Ready), paneReadyCap))
 	if n := len(v.prime.Ready); n > paneReadyCap {
-		out = append(out, s.Muted.Render(fmt.Sprintf("%s%d ready · %d shown", indent, n, paneReadyCap)))
+		out = append(out, s.Base.Render(fmt.Sprintf("%s%d ready · %d shown", indent, n, paneReadyCap)))
 	}
 	return strings.Join(out, "\n")
 }

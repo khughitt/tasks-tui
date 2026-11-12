@@ -17,7 +17,7 @@ func renderGroup(s *Styles, g legendGroup) string {
 	for _, b := range g.keys {
 		kw = max(kw, lipgloss.Width(b.Help().Key))
 	}
-	lines := []string{s.Muted.Render(g.title)}
+	lines := []string{s.Base.Render(g.title)}
 	for _, b := range g.keys {
 		h := b.Help()
 		lines = append(lines, s.Bold.Render(strings.Repeat(" ", kw-lipgloss.Width(h.Key))+h.Key)+"  "+h.Desc)

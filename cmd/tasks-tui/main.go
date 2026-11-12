@@ -6,13 +6,11 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/khughitt/tasks-tui/internal/config"
-	"github.com/khughitt/tasks-tui/internal/identity"
 	"github.com/khughitt/tasks-tui/internal/launch"
 	"github.com/khughitt/tasks-tui/internal/tasksctl"
 	"github.com/khughitt/tasks-tui/internal/ui"
@@ -60,48 +58,24 @@ func run() error {
 		return fmt.Errorf("%s projects: %w", cfg.Tasks, err)
 	}
 
-	familiar := filepath.Join(configHome(), "familiar")
-	pins, err := identity.LoadPins(filepath.Join(familiar, "identities.yaml"))
-	if err != nil {
-		return err
-	}
-	tone, err := identity.LoadTone(filepath.Join(familiar, "scheme.json"))
-	if err != nil {
-		return err
-	}
-	slots, err := resolveIdentity(projects.Projects, cfg.Identity, pins, identity.GitOriginURL)
-	if err != nil {
-		return err
-	}
 	env := &ui.Env{
 		Client:  client,
-		Styles:  ui.NewStyles(tone),
+		Styles:  ui.NewStyles(),
 		Config:  cfg,
-		Slots:   slots,
 		Roots:   map[string]string{},
 		Exists:  func(p string) bool { st, err := os.Stat(p); return err == nil && st.IsDir() },
 		Environ: os.Environ(),
 		Spawn:   launch.Spawn,
 		Timeout: 10 * time.Second,
 	}
-	for _, p := range projects.Projects {
-		env.Roots[p.Prefix] = p.Root
-	}
+	env.SetProjects(projects.Projects)
 
 	cwd, _ := os.Getwd()
 	stack, err := resolveStart(ctx, env, fs.Arg(0), *all, cwd)
 	if err != nil {
 		return err
 	}
-	app := ui.New(env, ui.Options{Refresh: time.Duration(cfg.RefreshSeconds) * time.Second, Stack: stack})
+	app := ui.New(env, ui.Options{ColorQueryTimeout: time.Second, Refresh: time.Duration(cfg.RefreshSeconds) * time.Second, Stack: stack})
 	_, err = tea.NewProgram(app).Run()
 	return err
-}
-
-func configHome() string {
-	if x := os.Getenv("XDG_CONFIG_HOME"); x != "" {
-		return x
-	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".config")
 }

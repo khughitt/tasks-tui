@@ -18,8 +18,9 @@ import (
 )
 
 type Options struct {
-	Refresh time.Duration
-	Stack   []view
+	Refresh           time.Duration
+	ColorQueryTimeout time.Duration
+	Stack             []view
 }
 
 const chordTimeout = 900 * time.Millisecond
@@ -31,17 +32,19 @@ type chordState struct {
 type chordExpireMsg struct{ deadline time.Time }
 
 type App struct {
-	env                   *Env
-	opts                  Options
-	stack                 []view
-	overlay               overlay
-	log                   Log
-	legend, showLog       bool
-	logOff, width, height int
-	spinner               spinner.Model
-	legendVP              viewport.Model
-	spinning              bool
-	chord                 chordState
+	env                        *Env
+	opts                       Options
+	stack                      []view
+	overlay                    overlay
+	log                        Log
+	legend, showLog            bool
+	logOff, width, height      int
+	spinner                    spinner.Model
+	legendVP                   viewport.Model
+	spinning                   bool
+	colorsQueried, colorNotice bool
+	colorGeneration            uint64
+	chord                      chordState
 }
 
 func New(env *Env, opts Options) *App {
@@ -86,6 +89,9 @@ func (a *App) Update(raw tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (a *App) update(raw tea.Msg) (tea.Model, tea.Cmd) {
+	if cmd, handled := a.updateTheme(raw); handled {
+		return a, cmd
+	}
 	switch msg := raw.(type) {
 	case tea.WindowSizeMsg:
 		a.width, a.height = msg.Width, msg.Height
@@ -271,9 +277,9 @@ func (a *App) render() string {
 	status := a.statusLine()
 	bottom := status
 	if a.overlay != nil {
-		rule := a.env.Styles.Muted
+		rule := a.env.Styles.Base
 		if p := a.top().project(); p != "" {
-			rule = a.env.Styles.Rule(a.env.slot(p))
+			rule = a.env.Styles.Rule(p)
 		}
 		bottom = rule.Render(strings.Repeat("─", a.width)) + "\n" + a.overlay.render(a.width) + "\n" + status
 	}
@@ -310,11 +316,11 @@ func (a *App) renderLegend(width, height int) string {
 		const more = " ↓ more "
 		bottom = "╰" + strings.Repeat("─", max(0, w-2-lipgloss.Width(more))) + more + "╯"
 	}
-	return body + "\n" + s.Muted.Render(bottom)
+	return body + "\n" + s.Base.Render(bottom)
 }
 func (a *App) statusLine() string {
 	s := a.env.Styles
-	hint := s.Muted.Render("? keys")
+	hint := s.Base.Render("? keys")
 	if a.chord.prefix != "" {
 		hint = s.Bold.Render(a.chord.prefix + " …")
 	}
@@ -336,9 +342,9 @@ func (a *App) statusLine() string {
 		for i, v := range a.stack {
 			crumbs[i] = v.title()
 		}
-		left = s.Muted.Render(strings.Join(crumbs, " › "))
+		left = s.Base.Render(strings.Join(crumbs, " › "))
 		if a.spinning {
-			left = s.Accent(a.env.slot(a.top().project())).Render(a.spinner.View()) + " " + left
+			left = s.Accent(a.top().project()).Render(a.spinner.View()) + " " + left
 		}
 	}
 	maxLeft := a.width - hintWidth - 1
@@ -380,7 +386,7 @@ func (a *App) consoleWarnings() []string {
 func (a *App) renderLog(height int) string {
 	s := a.env.Styles
 	lines := a.consoleWarnings()
-	lines = append(lines, s.Header.Render("messages")+s.Muted.Render("  (newest last; j/k scroll; esc close)"))
+	lines = append(lines, s.Header.Render("messages")+s.Base.Render("  (newest last; j/k scroll; esc close)"))
 	if a.logOff > len(a.log.Entries) {
 		a.logOff = len(a.log.Entries)
 	}

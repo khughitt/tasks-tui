@@ -3,12 +3,9 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"strings"
 	"testing"
 
-	"github.com/khughitt/tasks-tui/internal/config"
-	"github.com/khughitt/tasks-tui/internal/identity"
 	"github.com/khughitt/tasks-tui/internal/tasksctl"
 	"github.com/khughitt/tasks-tui/internal/ui"
 )
@@ -31,7 +28,7 @@ func (r *replyRunner) Run(_ context.Context, dir string, args ...string) ([]byte
 }
 
 func env(r *replyRunner) *ui.Env {
-	return &ui.Env{Client: &tasksctl.Client{R: r}, Roots: map[string]string{"tui": "/r/tui"}, Slots: map[string]int{"tui": 0},
+	return &ui.Env{Client: &tasksctl.Client{R: r}, Roots: map[string]string{"tui": "/r/tui"}, Styles: ui.NewStyles(),
 		Exists: func(p string) bool { return p == "/wt/x" || p == "/r/tui" }}
 }
 
@@ -78,17 +75,5 @@ func TestResolveStartPrefixCwdAndAll(t *testing.T) {
 	}
 	if s, _ := resolveStart(context.Background(), env(r), "", false, "/x"); len(s) != 1 {
 		t.Fatalf("outside every root: %d views", len(s))
-	}
-}
-
-func TestResolveIdentitySkipsGitForUnreachableProject(t *testing.T) {
-	projects := []tasksctl.Project{{Prefix: "gone", Root: "/gone", Reachable: false}}
-	called := false
-	slots, err := resolveIdentity(projects, config.Identity{Slot: map[string]int{}}, identity.Pins{}, func(string) (string, error) {
-		called = true
-		return "", errors.New("must not run")
-	})
-	if err != nil || called || slots["gone"] != identity.AutoSlot("/gone") {
-		t.Fatalf("slots=%v called=%v err=%v", slots, called, err)
 	}
 }

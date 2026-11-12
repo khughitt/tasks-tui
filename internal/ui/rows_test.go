@@ -24,12 +24,12 @@ func TestAgo(t *testing.T) {
 }
 
 func TestRowMarksSitInFixedCellsAndDetailsTrail(t *testing.T) {
-	s := NewStyles(darkTone)
+	s := coloredStyles()
 	now := time.Date(2026, 9, 14, 12, 0, 0, 0, time.UTC)
 	size := "m"
 	full := fromRow(tasksctl.Row{ID: "tui-1", Title: "Do it", Status: "doing", Priority: 1, Size: &size, Updated: "2026-09-14T10:00:00Z", Tags: []string{"ui"}, OpenDescendantCount: 2,
-		Claim: &tasksctl.ClaimInfo{Owner: "feat/x", Live: true}, Park: &tasksctl.ParkInfo{WaitingOn: "user"}, Periodic: &tasksctl.Periodic{Every: "30d"}}, 2)
-	periodicOnly := fromRow(tasksctl.Row{ID: "tui-2", Title: "Sweep", Status: "todo", Priority: 3, Updated: "2026-09-10T10:00:00Z", Periodic: &tasksctl.Periodic{Every: "7d"}}, 2)
+		Claim: &tasksctl.ClaimInfo{Owner: "feat/x", Live: true}, Park: &tasksctl.ParkInfo{WaitingOn: "user"}, Periodic: &tasksctl.Periodic{Every: "30d"}})
+	periodicOnly := fromRow(tasksctl.Row{ID: "tui-2", Title: "Sweep", Status: "todo", Priority: 3, Updated: "2026-09-10T10:00:00Z", Periodic: &tasksctl.Periodic{Every: "7d"}})
 	rt := s.layoutRows([]rowView{full, periodicOnly}, 120, now)
 	l0, l1 := ansi.Strip(rt.line(0, false)), ansi.Strip(rt.line(1, false))
 	marks := taskTable.offset(rt.widths, "marks")
@@ -54,7 +54,7 @@ func TestRowMarksSitInFixedCellsAndDetailsTrail(t *testing.T) {
 		t.Fatalf("age: %s", l1)
 	}
 	styled := rt.line(0, false)
-	doing := strings.TrimSuffix(s.Accent(2).Bold(true).Render("doing"), "\x1b[m")
+	doing := strings.TrimSuffix(s.Accent("tui").Bold(true).Render("doing"), "\x1b[m")
 	if !strings.Contains(styled, doing) {
 		t.Errorf("doing lacks slot accent: %q", styled)
 	}
@@ -66,8 +66,8 @@ func TestRowMarksSitInFixedCellsAndDetailsTrail(t *testing.T) {
 }
 
 func TestSelectedRowCarriesSurfaceAndGutter(t *testing.T) {
-	s := NewStyles(darkTone)
-	rt := s.layoutRows([]rowView{fromRow(row("tui-1", "todo", 2), 2)}, 60, time.Now())
+	s := coloredStyles()
+	rt := s.layoutRows([]rowView{fromRow(row("tui-1", "todo", 2))}, 60, time.Now())
 	sel, plain := rt.line(0, true), rt.line(0, false)
 	if !strings.Contains(sel, "48;2;") || strings.Contains(plain, "48;2;") {
 		t.Fatalf("surface only on the selected row:\n%q\n%q", sel, plain)
@@ -81,11 +81,11 @@ func TestSelectedRowCarriesSurfaceAndGutter(t *testing.T) {
 }
 
 func TestStaleClaimAndUnresolvedRows(t *testing.T) {
-	s := NewStyles(darkTone)
-	r := fromRow(row("tui-1", "todo", 2), 2)
+	s := coloredStyles()
+	r := fromRow(row("tui-1", "todo", 2))
 	r.Claim = &tasksctl.ClaimInfo{Owner: "feat/x", Live: false}
 	p := tasksctl.ParkedRow{ID: "tui-2", Title: "Parked only", Park: &tasksctl.ParkInfo{WaitingOn: "agent", NextStep: "resume"}}
-	parked := fromParked(p, 2)
+	parked := fromParked(p)
 	rt := s.layoutRows([]rowView{r, parked}, 120, time.Now())
 	l0, l1 := ansi.Strip(rt.line(0, false)), ansi.Strip(rt.line(1, false))
 	if !strings.Contains(l0, "◇") || strings.Contains(l0, "◆") || !strings.Contains(l0, "feat/x") {

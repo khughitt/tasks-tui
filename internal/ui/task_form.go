@@ -49,7 +49,7 @@ type taskFormView struct {
 func newTaskFormView(env *Env, tgt target) *taskFormView {
 	title := textinput.New()
 	title.Prompt = ""
-	titleStyles := textinput.DefaultStyles(env.Styles.Tone.Dark)
+	titleStyles := env.Styles.inputStyles()
 	titleStyles.Cursor.Blink = false
 	title.SetStyles(titleStyles)
 
@@ -57,13 +57,13 @@ func newTaskFormView(env *Env, tgt target) *taskFormView {
 	body.Prompt = ""
 	body.ShowLineNumbers = false
 	body.SetHeight(6)
-	bodyStyles := textarea.DefaultStyles(env.Styles.Tone.Dark)
+	bodyStyles := env.Styles.textareaStyles()
 	bodyStyles.Cursor.Blink = false
 	body.SetStyles(bodyStyles)
 
 	tags := textinput.New()
 	tags.Prompt = ""
-	tagsStyles := textinput.DefaultStyles(env.Styles.Tone.Dark)
+	tagsStyles := env.Styles.inputStyles()
 	tagsStyles.Cursor.Blink = false
 	tags.SetStyles(tagsStyles)
 	tags.ShowSuggestions = true
@@ -155,6 +155,11 @@ func (v *taskFormView) focusField(field int) {
 
 func (v *taskFormView) update(msg tea.Msg) (view, tea.Cmd) {
 	switch msg := msg.(type) {
+	case stylesChangedMsg:
+		v.titleInput.SetStyles(v.env.Styles.inputStyles())
+		v.body.SetStyles(v.env.Styles.textareaStyles())
+		v.tags.SetStyles(v.env.Styles.inputStyles())
+		return v, nil
 	case loadMsg:
 		if msg.loader != v.loader.ID() {
 			return v, nil
@@ -273,10 +278,10 @@ func (v *taskFormView) render(width, height int) string {
 	v.body.SetWidth(formWidth)
 	v.tags.SetWidth(formWidth)
 	s := v.env.Styles
-	content := s.Header.Render(v.titleText()) + s.Muted.Render("   ctrl+s save · esc cancel · tab next") +
-		"\n\n" + s.Muted.Render("title") + "\n" + v.titleInput.View() +
-		"\n\n" + s.Muted.Render("body") + "\n" + v.body.View() +
-		"\n\n" + s.Muted.Render("tags") + "\n" + v.tags.View()
+	content := s.Header.Render(v.titleText()) + s.Base.Render("   ctrl+s save · esc cancel · tab next") +
+		"\n\n" + s.Base.Render("title") + "\n" + v.titleInput.View() +
+		"\n\n" + s.Base.Render("body") + "\n" + v.body.View() +
+		"\n\n" + s.Base.Render("tags") + "\n" + v.tags.View()
 	if v.problem != "" {
 		content += "\n\n" + s.Error.Render(v.problem)
 	}

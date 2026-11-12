@@ -40,10 +40,10 @@ func TestLaunchSpawnsInTheParkedWorktreeWithoutChangingStatus(t *testing.T) {
 }
 
 func TestPickerHighlightsOnSurface(t *testing.T) {
-	s := NewStyles(darkTone)
-	o := &pickerOverlay{styles: s, slot: 2, title: "launch", items: []string{"claude", "codex"}}
+	s := coloredStyles()
+	o := &pickerOverlay{styles: s, prefix: "tui", title: "launch", items: []string{"claude", "codex"}}
 	out := o.render(80)
-	if !strings.Contains(out, s.Gutter(2).Render(" 1 claude ")) {
+	if !strings.Contains(out, s.ActiveLabel("tui", "1 claude")) {
 		t.Fatalf("selected item on the slot surface: %q", out)
 	}
 }

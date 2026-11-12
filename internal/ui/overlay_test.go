@@ -15,7 +15,7 @@ func TestTestPromptsDoNotScheduleCursorBlinks(t *testing.T) {
 }
 
 func TestPromptsBlinkByDefault(t *testing.T) {
-	p := newPrompt(NewStyles(testEnv(newFake()).Styles.Tone), "prompt", "")
+	p := newPrompt(NewStyles(), "prompt", "")
 	_, cmd := p.update(tea.KeyPressMsg{Code: 'x', Text: "x"})
 	if cmd == nil {
 		t.Fatal("production prompt did not schedule a cursor blink")

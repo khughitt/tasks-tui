@@ -13,9 +13,6 @@ it is in [the guide](guide.md); installing and configuring are in the
 - **The `tasks` CLI** ([tasks](https://github.com/khughitt/tasks)), the only reader
   and writer of task data. tasks-tui never opens task files, the registry or the
   claim store: every read and write is one `tasks` subprocess whose JSON it decodes.
-- **git**, asked read-only at startup for each reachable project's origin URL
-  (`git -C <root> config --get remote.origin.url`, 2 s limit) to choose its colour.
-  A failure other than "no origin" is fatal (see [Failures](#failures)).
 - **A terminal and a harness**, started for a launch (kitty and claude, codex,
   crush or opencode by default). tasks-tui hands them an argv, a directory and an
   environment, and never talks to them again.
@@ -50,14 +47,14 @@ the app's process.
    home directory) or the `--config` path. Absent means defaults.
 3. The probe, `tasks projects`. Its rows give every prefix's registered root, used
    for checkouts and to match the current directory.
-4. familiar's `identities.yaml` (pins) and `scheme.json` (tone) from
-   `$XDG_CONFIG_HOME/familiar/` (same default). Absent means no pins and a dark tone.
-5. A colour slot per project: the config's `identity.slot`, else familiar's rules
-   over `git -C <root> config --get remote.origin.url` (2 s limit; skipped for an
-   unreachable project).
-6. The opening views. A prefix, or the deepest registered root holding the current
-   directory, opens that project; `--all` opens Projects; a task id is resolved as in
-   [Checkout selection](#checkout-selection).
+4. Seed the roots and project-color map from that response, before resolving
+   direct Project/Task entry. No familiar files or project git remotes are read.
+5. Resolve opening views: a prefix or deepest registered root opens that project;
+   `--all` opens Projects; a task id uses the selection below.
+6. Bubble Tea reports the terminal profile. TrueColor uses project RGB, ANSI256
+   the supplied index, other profiles neutral. Only ANSI256/TrueColor requests
+   foreground/background; startup explicitly sets the one-second color-query
+   timeout. These requests have no second terminal reader or theme-file access.
 
 Warnings in the probe's and the lookups' responses are dropped: the views they open
 make the same calls on their first load and report them.
@@ -89,7 +86,7 @@ the id is there, it takes the title, park and claim from that row. Otherwise it 
 
 | Call | Issued by | Fields used |
 | --- | --- | --- |
-| `projects` | startup; Projects load | `projects[]`: `prefix`, `root`, `reachable`, `counts.{doing,todo,idea,blocked}`, `last_activity` |
+| `projects` | startup; Projects load | `projects[]`: `prefix`, `root`, `color`, `color_256`, `reachable`, `counts.{doing,todo,idea,blocked}`, `last_activity` |
 | `list --all-projects --parked` | Projects load | the number of `tasks[]` |
 | `prime --project <p>` | Projects pane; every Project load | `doing[]` and `ready[]` list rows, `parked[]` parked rows (pane); `counts` (Project header) |
 | `ready --project <p>` | Ready tab | `tasks[]` list rows |
@@ -218,9 +215,8 @@ what the harness does afterwards is not observed.
 - **Fatal at startup**, printed as `tasks-tui: <message>` to stderr with exit 1
   before the screen opens: a bad flag or more than one argument; a config that is
   malformed, has an unknown key, or has an empty `tasks`, negative `refresh_seconds`,
-  empty `launch.terminal`, empty harness command or out-of-range `identity.slot`;
-  `projects` failing for any reason above; a malformed `identities.yaml` or
-  `scheme.json`; a `git` remote lookup that fails or times out; an argument that is
+  empty `launch.terminal` or empty harness command;
+  `projects` failing for any reason above; an argument that is
   neither a registered prefix nor a task id, or whose prefix is unregistered; and a
   failed lookup for `tasks-tui <id>`. Nothing is logged to a file.
 

@@ -1,98 +1,114 @@
 package ui
 
 import (
-	"charm.land/lipgloss/v2"
+	"image/color"
+	"math"
 
-	"github.com/khughitt/tasks-tui/internal/identity"
+	"charm.land/bubbles/v2/textarea"
+	"charm.land/bubbles/v2/textinput"
+	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/colorprofile"
+	"github.com/khughitt/tasks-tui/internal/tasksctl"
 )
 
-// Styles holds the semantic colours (colours, docs/guide.md) — the only hard-coded
-// colours — and the per-slot accent styles derived from identity.
+// Styles owns terminal roles and authored project colors; unknown colors stay unset.
 type Styles struct {
-	Tone        identity.Tone
-	Base        lipgloss.Style
-	Muted       lipgloss.Style
-	Bold        lipgloss.Style
-	Recent      lipgloss.Style
-	Frame       lipgloss.Style
-	Header      lipgloss.Style
-	Error       lipgloss.Style
-	Warning     lipgloss.Style
-	Info        lipgloss.Style
-	ParkUser    lipgloss.Style
-	ParkAgent   lipgloss.Style
-	Claim       lipgloss.Style
-	Stale       lipgloss.Style
-	Periodic    lipgloss.Style
-	Tag         lipgloss.Style
-	cursorBlink bool
-	priority    [5]lipgloss.Style
-	status      map[string]lipgloss.Style
-	accent      [identity.SlotCount]lipgloss.Style
-	dim         [identity.SlotCount]lipgloss.Style
-	surface     [identity.SlotCount]lipgloss.Style
-	gutter      [identity.SlotCount]lipgloss.Style
-	pill        [identity.SlotCount]lipgloss.Style
+	Base, Muted, Bold, Recent, Frame, Header  lipgloss.Style
+	Error, Warning, Info, ParkUser, ParkAgent lipgloss.Style
+	Claim, Stale, Periodic, Tag               lipgloss.Style
+	cursorBlink                               bool
+	priority                                  [5]lipgloss.Style
+	status                                    map[string]lipgloss.Style
+	profile                                   colorprofile.Profile
+	background, foreground                    color.Color
+	projects                                  map[string]tasksctl.Project
 }
 
-func NewStyles(t identity.Tone) *Styles {
-	ld := lipgloss.LightDark(t.Dark)
-	red := ld(lipgloss.Color("124"), lipgloss.Color("203"))
-	orange := ld(lipgloss.Color("166"), lipgloss.Color("215"))
-	yellow := ld(lipgloss.Color("136"), lipgloss.Color("221"))
-	teal := ld(lipgloss.Color("30"), lipgloss.Color("80"))
-	dim := ld(lipgloss.Color("245"), lipgloss.Color("243"))
-
-	s := &Styles{Tone: t, cursorBlink: true}
-	s.Base = lipgloss.NewStyle()
-	s.Muted = lipgloss.NewStyle().Foreground(dim)
-	s.Bold = lipgloss.NewStyle().Bold(true)
-	s.Recent = lipgloss.NewStyle()
-	s.Frame = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(dim).Padding(1, 2)
-	pillText := ld(lipgloss.Color("#fafafa"), lipgloss.Color("#101010"))
-	s.Header = lipgloss.NewStyle().Bold(true)
-	s.Error = lipgloss.NewStyle().Foreground(red).Bold(true)
-	s.Warning = lipgloss.NewStyle().Foreground(yellow)
-	s.Info = s.Muted
-	s.ParkUser = lipgloss.NewStyle().Foreground(yellow)
-	s.ParkAgent = s.Muted
-	s.Periodic = lipgloss.NewStyle().Foreground(teal)
-	s.Stale = s.Muted
-	s.priority = [5]lipgloss.Style{
-		lipgloss.NewStyle().Foreground(red).Bold(true),
-		lipgloss.NewStyle().Foreground(orange),
-		lipgloss.NewStyle().Foreground(yellow),
-		lipgloss.NewStyle(),
-		s.Muted,
-	}
-	s.status = map[string]lipgloss.Style{
-		"todo":    lipgloss.NewStyle(),
-		"doing":   lipgloss.NewStyle().Bold(true),
-		"blocked": lipgloss.NewStyle().Foreground(red),
-		"idea":    lipgloss.NewStyle().Foreground(dim).Italic(true),
-		"shelved": lipgloss.NewStyle().Foreground(dim).Italic(true),
-		"done":    lipgloss.NewStyle().Foreground(dim).Strikethrough(true),
-		"dropped": lipgloss.NewStyle().Foreground(dim).Strikethrough(true),
-	}
-	for slot := 0; slot < identity.SlotCount; slot++ {
-		accent, surface := identity.Accent(slot, t), identity.Surface(slot, t)
-		s.accent[slot] = lipgloss.NewStyle().Foreground(accent)
-		s.dim[slot] = lipgloss.NewStyle().Foreground(identity.Dim(slot, t))
-		s.surface[slot] = lipgloss.NewStyle().Background(surface)
-		s.gutter[slot] = lipgloss.NewStyle().Foreground(accent).Background(surface)
-		s.pill[slot] = lipgloss.NewStyle().Background(accent).Foreground(pillText).Bold(true)
-	}
-	s.Claim = s.Bold
-	s.Tag = s.Muted
+func NewStyles() *Styles {
+	s := &Styles{projects: map[string]tasksctl.Project{}, cursorBlink: true}
+	s.setProfile(colorprofile.Unknown)
 	return s
 }
 
-func (s *Styles) Accent(slot int) lipgloss.Style  { return s.accent[slot] }
-func (s *Styles) Dim(slot int) lipgloss.Style     { return s.dim[slot] }
-func (s *Styles) Surface(slot int) lipgloss.Style { return s.surface[slot] }
-func (s *Styles) Gutter(slot int) lipgloss.Style  { return s.gutter[slot] }
-func (s *Styles) Pill(slot int) lipgloss.Style    { return s.pill[slot] }
-func (s *Styles) Rule(slot int) lipgloss.Style    { return s.accent[slot] }
+func (s *Styles) setProfile(p colorprofile.Profile) {
+	s.profile = p
+	s.Base = lipgloss.NewStyle()
+	s.Bold = s.Base.Bold(true)
+	s.Muted = s.Base.Faint(true).Bold(false)
+	s.Recent, s.Header = s.Base, s.Bold
+	s.Frame = s.Base.Border(lipgloss.RoundedBorder()).Padding(1, 2)
+	s.Error, s.Warning, s.Periodic = s.Bold, s.Base, s.Base
+	if p >= colorprofile.ANSI {
+		s.Error = s.Error.Foreground(lipgloss.Red)
+		s.Warning = s.Warning.Foreground(lipgloss.Yellow)
+		s.Periodic = s.Periodic.Foreground(lipgloss.Cyan)
+	}
+	s.Info, s.ParkUser, s.ParkAgent = s.Base, s.Warning, s.Base
+	s.Claim, s.Stale, s.Tag = s.Bold, s.Muted, s.Base
+	s.priority = [5]lipgloss.Style{s.Error, s.Warning.Bold(true), s.Warning, s.Base, s.Muted}
+	s.status = map[string]lipgloss.Style{
+		"todo": s.Base, "doing": s.Bold, "blocked": s.Error.UnsetBold(),
+		"idea": s.Base.Italic(true), "shelved": s.Muted.Italic(true),
+		"done": s.Muted.Strikethrough(true), "dropped": s.Muted.Strikethrough(true),
+	}
+}
+
+func (s *Styles) projectColor(prefix string) color.Color {
+	p, ok := s.projects[prefix]
+	if !ok || p.Color == nil {
+		return nil
+	}
+	switch s.profile {
+	case colorprofile.TrueColor:
+		return lipgloss.Color(*p.Color)
+	case colorprofile.ANSI256:
+		if p.Color256 != nil {
+			return lipgloss.ANSIColor(*p.Color256)
+		}
+	}
+	return nil
+}
+
+func (s *Styles) Accent(prefix string) lipgloss.Style {
+	if c := s.projectColor(prefix); c != nil {
+		return s.Base.Foreground(c)
+	}
+	return s.Base
+}
+
+func blendRGB(a, b color.Color, fraction float64) color.Color {
+	ar, ag, ab, _ := a.RGBA()
+	br, bg, bb, _ := b.RGBA()
+	mix := func(x, y uint32) uint8 { return uint8(math.Round((1-fraction)*float64(x>>8) + fraction*float64(y>>8))) }
+	return color.RGBA{R: mix(ar, br), G: mix(ag, bg), B: mix(ab, bb), A: 255}
+}
+
+func (s *Styles) rowBackground(prefix string, selected bool) color.Color {
+	if selected && s.profile == colorprofile.TrueColor && s.background != nil {
+		if c := s.projectColor(prefix); c != nil {
+			return blendRGB(s.background, c, 0.12)
+		}
+	}
+	return s.background
+}
+
+func (s *Styles) Surface(prefix string) lipgloss.Style {
+	if s.profile == colorprofile.TrueColor && s.background != nil && s.projectColor(prefix) != nil {
+		return s.Bold.Background(s.rowBackground(prefix, true))
+	}
+	return s.Bold
+}
+
+func (s *Styles) Gutter(prefix string) lipgloss.Style {
+	return s.Accent(prefix).Inherit(s.Surface(prefix))
+}
+func (s *Styles) Rule(prefix string) lipgloss.Style { return s.Accent(prefix) }
+func (s *Styles) ActiveLabel(prefix, label string) string {
+	if s.projectColor(prefix) == nil {
+		label = "[" + label + "]"
+	}
+	return s.Accent(prefix).Bold(true).Underline(true).Render(label)
+}
 
 func (s *Styles) PriorityStyle(p int) lipgloss.Style {
 	if p < 0 || p > 4 {
@@ -100,7 +116,6 @@ func (s *Styles) PriorityStyle(p int) lipgloss.Style {
 	}
 	return s.priority[p]
 }
-
 func (s *Styles) StatusStyle(status string) lipgloss.Style {
 	if st, ok := s.status[status]; ok {
 		return st
@@ -108,10 +123,13 @@ func (s *Styles) StatusStyle(status string) lipgloss.Style {
 	return s.Base
 }
 
-// GlamourStyle is the standard style matching the tone.
-func (s *Styles) GlamourStyle() string {
-	if s.Tone.Dark {
-		return "dark"
-	}
-	return "light"
+func (s *Styles) inputStyles() textinput.Styles {
+	state := textinput.StyleState{Text: s.Base, Prompt: s.Base, Suggestion: s.Base, Placeholder: s.Muted}
+	return textinput.Styles{Focused: state, Blurred: state}
+}
+func (s *Styles) textareaStyles() textarea.Styles {
+	state := textarea.StyleState{Base: s.Base, Text: s.Base, Prompt: s.Base, CursorLine: s.Base,
+		LineNumber: s.Base, CursorLineNumber: s.Bold, Placeholder: s.Muted, EndOfBuffer: s.Muted,
+		Selection: s.Bold.Underline(true)}
+	return textarea.Styles{Focused: state, Blurred: state}
 }

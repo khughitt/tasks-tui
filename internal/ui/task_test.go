@@ -97,8 +97,8 @@ func TestTaskViewUsesSlotAccentForDoingAndLiveClaim(t *testing.T) {
 		Task:  tasksctl.Task{ID: "tui-aaa111", Title: "T", Status: "doing", Priority: 1, Depends: []string{}, Tags: []string{}, Notes: []tasksctl.Note{}},
 		Claim: &tasksctl.ClaimInfo{Owner: "feat/a", Live: true},
 	}}
-	wantDoing := strings.TrimSuffix(env.Styles.Accent(2).Bold(true).Render("doing"), "\x1b[m")
-	wantClaim := strings.TrimSuffix(env.Styles.Accent(2).Bold(true).Render("live"), "\x1b[m")
+	wantDoing := strings.TrimSuffix(env.Styles.Accent("tui").Bold(true).Render("doing"), "\x1b[m")
+	wantClaim := strings.TrimSuffix(env.Styles.Accent("tui").Bold(true).Render("live"), "\x1b[m")
 	content := tv.content()
 	if !strings.Contains(content, wantDoing) || !strings.Contains(content, wantClaim) {
 		t.Fatalf("doing and live claim must use slot accent:\n%s", content)

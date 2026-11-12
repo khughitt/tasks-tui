@@ -7,9 +7,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/khughitt/tasks-tui/internal/config"
-	"github.com/khughitt/tasks-tui/internal/identity"
-	"github.com/khughitt/tasks-tui/internal/tasksctl"
 	"github.com/khughitt/tasks-tui/internal/ui"
 )
 
@@ -61,26 +58,6 @@ func resolveStart(ctx context.Context, env *ui.Env, arg string, all bool, cwd st
 		tgt.Title, tgt.Park, tgt.Claim = res.Task.Title, res.Park, res.Claim
 	}
 	return []ui.View{projects, ui.NewProjectView(env, prefix), ui.NewTaskView(env, tgt)}, nil
-}
-
-func resolveIdentity(projects []tasksctl.Project, cfg config.Identity, pins identity.Pins, git identity.GitRemote) (map[string]int, error) {
-	slots := make(map[string]int, len(projects))
-	for _, project := range projects {
-		if slot, ok := cfg.Slot[project.Prefix]; ok {
-			slots[project.Prefix] = slot
-			continue
-		}
-		remote := git
-		if !project.Reachable {
-			remote = func(string) (string, error) { return "", nil }
-		}
-		slot, err := identity.SlotFor(project.Root, pins, remote)
-		if err != nil {
-			return nil, fmt.Errorf("identity for %s: %w", project.Prefix, err)
-		}
-		slots[project.Prefix] = slot
-	}
-	return slots, nil
 }
 
 func prefixOfCwd(roots map[string]string, cwd string) string {

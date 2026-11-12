@@ -12,7 +12,7 @@ import (
 
 type rowView struct {
 	ID, Prefix, Title, Status, Size, Complexity, Process, Updated string
-	Slot, Open                                                    int
+	Open                                                          int
 	Priority                                                      *int
 	Tags                                                          []string
 	Claim                                                         *tasksctl.ClaimInfo
@@ -27,12 +27,12 @@ func deref(p *string) string {
 	}
 	return *p
 }
-func fromRow(r tasksctl.Row, slot int) rowView {
+func fromRow(r tasksctl.Row) rowView {
 	p := r.Priority
-	return rowView{ID: r.ID, Prefix: r.Prefix(), Slot: slot, Title: r.Title, Status: r.Status, Priority: &p, Size: deref(r.Size), Complexity: deref(r.Complexity), Process: deref(r.Process), Updated: r.Updated, Tags: r.Tags, Open: r.OpenDescendantCount, Claim: r.Claim, Park: r.Park, Periodic: r.Periodic}
+	return rowView{ID: r.ID, Prefix: r.Prefix(), Title: r.Title, Status: r.Status, Priority: &p, Size: deref(r.Size), Complexity: deref(r.Complexity), Process: deref(r.Process), Updated: r.Updated, Tags: r.Tags, Open: r.OpenDescendantCount, Claim: r.Claim, Park: r.Park, Periodic: r.Periodic}
 }
-func fromParked(r tasksctl.ParkedRow, slot int) rowView {
-	v := rowView{ID: r.ID, Prefix: r.Prefix(), Slot: slot, Title: r.Title, Status: deref(r.Status), Priority: r.Priority, Size: deref(r.Size), Complexity: deref(r.Complexity), Process: deref(r.Process), Updated: deref(r.Updated), Tags: r.Tags, Claim: r.Claim, Park: r.Park, Unresolved: r.Unresolved()}
+func fromParked(r tasksctl.ParkedRow) rowView {
+	v := rowView{ID: r.ID, Prefix: r.Prefix(), Title: r.Title, Status: deref(r.Status), Priority: r.Priority, Size: deref(r.Size), Complexity: deref(r.Complexity), Process: deref(r.Process), Updated: deref(r.Updated), Tags: r.Tags, Claim: r.Claim, Park: r.Park, Unresolved: r.Unresolved()}
 	if r.OpenDescendantCount != nil {
 		v.Open = *r.OpenDescendantCount
 	}
@@ -89,7 +89,7 @@ func (s *Styles) ageStyle(age string) lipgloss.Style {
 }
 
 func (s *Styles) taskCells(r rowView, now time.Time) []cell {
-	accent := s.Accent(r.Slot)
+	accent := s.Accent(r.Prefix)
 	prio, prioStyle := "", s.Muted
 	if r.Priority != nil {
 		prio, prioStyle = "P"+strconv.Itoa(*r.Priority), s.PriorityStyle(*r.Priority)
@@ -129,16 +129,16 @@ func (s *Styles) taskCells(r rowView, now time.Time) []cell {
 		tail = append(tail, span{r.Periodic.Every, s.Periodic})
 	}
 	if r.Open > 0 {
-		marks[3] = span{"▸", s.Muted}
-		tail = append(tail, span{fmt.Sprintf("%d open", r.Open), s.Muted})
+		marks[3] = span{"▸", s.Base}
+		tail = append(tail, span{fmt.Sprintf("%d open", r.Open), s.Base})
 	}
 	return []cell{
 		text(s.Base, "  "),
 		text(accent, r.ID),
 		text(prioStyle, prio),
-		text(s.Muted, r.Size),
-		text(s.Muted, r.Complexity),
-		text(s.Muted, r.Process),
+		text(s.Base, r.Size),
+		text(s.Base, r.Complexity),
+		text(s.Base, r.Process),
 		text(statusStyle, status),
 		text(s.ageStyle(age), age),
 		{spans: marks},
@@ -154,7 +154,7 @@ type rowTable struct {
 	width     int
 	labels    map[string]string
 	candidate string
-	slot      int
+	prefix    string
 }
 
 func (s *Styles) layoutRows(rows []rowView, width int, now time.Time) rowTable {
@@ -172,15 +172,15 @@ func (s *Styles) layoutRowsWithLabels(rows []rowView, width int, now time.Time, 
 }
 
 func (rt rowTable) header() string {
-	return fit(taskTable.headerWithCandidate(rt.widths, rt.s, rt.labels, rt.candidate, rt.slot), rt.width, lipgloss.NewStyle())
+	return fit(taskTable.headerWithCandidate(rt.widths, rt.s, rt.labels, rt.candidate, rt.prefix), rt.width, lipgloss.NewStyle())
 }
 
 func (rt rowTable) line(i int, selected bool) string {
 	cells, base := rt.cells[i], lipgloss.NewStyle()
 	if selected {
-		slot := rt.rows[i].Slot
-		cells = append([]cell{text(rt.s.Gutter(slot), "▌ ")}, cells[1:]...)
-		base = rt.s.Surface(slot)
+		prefix := rt.rows[i].Prefix
+		cells = append([]cell{text(rt.s.Gutter(prefix), "▌ ")}, cells[1:]...)
+		base = rt.s.Surface(prefix)
 	}
 	return fit(taskTable.row(rt.widths, cells, base), rt.width, base)
 }

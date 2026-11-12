@@ -180,29 +180,34 @@ screen opens; the conditions are listed under [Failures](tasks-contract.md#failu
 
 ## Colours
 
-Each project has one of twelve colour slots, chosen as familiar
-(https://github.com/khughitt/familiar) chooses them, so a project looks the same
-here as on its pet. `identity.slot` in the config pins a slot by prefix and wins over
-everything. Otherwise familiar's pins in `identities.yaml` under `$XDG_CONFIG_HOME/familiar/` (else
-`~/.config/familiar/`)
-apply, matched by git remote, then path, then the root's directory name; unpinned, the
-slot is a hash of the normalized `origin` remote, or of the root when there is none.
-The slot's accent marks the bars, ids, doing counts, the active tab, the spinner and
-panel rules; the highlighted row's tint is the same hue at half saturation and low
-lightness (high on a light tone). familiar's `scheme.json` beside it sets light or
-dark and a saturation scale; without it the tone is dark at full saturation.
+Project colors come only from `tasks projects`: exact authored RGB in TrueColor,
+the supplied `color_256` in indexed terminals, neutral in basic/no-color terminals.
+Startup seeds the project map for direct-entry views; an accepted Projects reload
+refreshes it. Uncolored projects remain neutral. Remove any old `[identity]`
+config table when upgrading; familiar pins, scheme files and remote hashing are gone.
 
-Other colours mean the same in every project, as light and dark pairs from the
-terminal's 256-colour range:
+Ordinary labels, metadata, status/help text, form inputs and notices inherit the
+terminal foreground. Inactive tabs, zero/absent values, stale claims and closed/
+shelved work use terminal dim, with bold explicitly disabled. Doing status/title
+is bold project accent; ideas are italic normal foreground. P0/errors/blocked use
+ANSI red, P1/P2/warnings/user waits yellow (P1 bold), and recurrence cyan.
 
-| Meaning | Colour |
-| --- | --- |
-| priority | P0 red bold, P1 orange, P2 yellow, P3 default, P4 dim |
-| status | todo default, doing bold in the accent, blocked red, idea and shelved dim italic, done and dropped dim struck through |
-| park | waiting on the user yellow, on an agent dim |
-| claim | live bold in the accent, stale dim |
-| recurrence | teal |
-| messages | errors red, warnings yellow, results dim |
+Task rows keep their selected gutter; Projects uses `▸ ` on the selected row and
+`▌ ` otherwise. Active tabs and picker items use bold underlined project text;
+uncolored active labels also have brackets. These indicators survive without a
+background tint. TrueColor selection adds a faint mix of 12% project RGB into
+the reported terminal background. Indexed/basic selections use no synthetic tint.
+
+The app starts with an unknown profile and never assumes a dark theme. Only an
+ANSI256/TrueColor profile requests foreground/background through Bubble Tea's
+normal input loop; basic/no-color modes make no such queries. Late replies are
+accepted, and a missing reply after one second yields at most one information
+notice. Profile downgrades suppress stale notices. Until replies arrive,
+background-dependent styles remain neutral.
+
+Markdown uses normal foreground with bold/italic/underline emphasis, preserving
+layout and wrapping without theme-specific syntax colors. Capable terminals do
+not display literal inline Markdown delimiters; no-color modes retain them.
 
 ## Not built yet
 
@@ -213,4 +218,3 @@ Recorded direction, not current capability:
 - Notes, block and unblock, shelve and unshelve from the TUI.
 - Tree and dependency graph views.
 - Showing lanes and needs from the tasks JSON.
-- Colouring projects from tasks' own project colour instead of familiar's slots.

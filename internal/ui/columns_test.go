@@ -62,7 +62,7 @@ func TestRowAlignsPadsAndOmitsDroppedColumns(t *testing.T) {
 	rows := testRows()
 	w := testTable.widths(rows, 60)
 	base := lipgloss.NewStyle()
-	head := ansi.Strip(testTable.header(w, NewStyles(darkTone)))
+	head := ansi.Strip(testTable.header(w, coloredStyles()))
 	r0 := ansi.Strip(testTable.row(w, rows[0], base))
 	r1 := ansi.Strip(testTable.row(w, rows[1], base))
 	if !strings.HasPrefix(head, "  "+"  "+"id"+strings.Repeat(" ", 8)+"  "+"  n") {

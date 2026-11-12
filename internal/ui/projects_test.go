@@ -202,7 +202,7 @@ func TestProjectsCountsRightAlignUnderHeadersWhateverThePrefixLength(t *testing.
 	d := driveWide(t, New(env, Options{Stack: []view{newProjectsView(env)}}))
 	screen := d.Screen()
 	head := lineWith(t, screen, "blocked")
-	ai := lineWith(t, screen, "▌ ai ")
+	ai := lineWith(t, screen, "▸ ai ")
 	ns := lineWith(t, screen, "naturalsystemsv2xx")
 	// Cell offsets, not byte offsets: the rows start with a multi-byte accent bar and the header does not.
 	doingEnd := col(t, head, "doing") + len("doing")
@@ -228,7 +228,7 @@ func TestProjectsZeroCountsAreMutedAndBlockedIsRed(t *testing.T) {
 	d := drive(t, New(env, Options{Stack: []view{pv}}))
 	_ = d
 	s := env.Styles
-	cells := pv.projectCells(pv.rows[1], time.Now())
+	cells := pv.projectCells(pv.rows[1], time.Now(), false)
 	if got := cells[2].spans[0]; got.text != "0" || got.style.Render("0") != s.Muted.Render("0") {
 		t.Fatalf("zero doing muted: %+v", got)
 	}

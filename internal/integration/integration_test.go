@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/khughitt/tasks-tui/internal/config"
-	"github.com/khughitt/tasks-tui/internal/identity"
 	"github.com/khughitt/tasks-tui/internal/launch"
 	"github.com/khughitt/tasks-tui/internal/tasksctl"
 	"github.com/khughitt/tasks-tui/internal/ui"
@@ -24,20 +23,13 @@ func TestProjectViewAgainstRealBinary(t *testing.T) {
 	if err != nil {
 		t.Skip("tasks not on PATH")
 	}
-	// Isolate everything the binary writes outside the repo: the registry
-	// (XDG_CONFIG_HOME) and the claim/park store (XDG_STATE_HOME). Drop every TASKS_*
-	// variable the invoking shell may carry rather than blanking it: the CLI rejects an
-	// empty TASKS_FORMAT.
-	xdgConfig, xdgState := t.TempDir(), t.TempDir()
+	// Every subprocess gets an owned home, isolated registry/store and explicit Git config.
+	xdgConfig, xdgState, home := t.TempDir(), t.TempDir(), t.TempDir()
 	repo := t.TempDir()
-	var environ []string
-	for _, kv := range os.Environ() {
-		if strings.HasPrefix(kv, "TASKS_") || strings.HasPrefix(kv, "XDG_CONFIG_HOME=") || strings.HasPrefix(kv, "XDG_STATE_HOME=") {
-			continue
-		}
-		environ = append(environ, kv)
-	}
-	environ = append(environ, "XDG_CONFIG_HOME="+xdgConfig, "XDG_STATE_HOME="+xdgState)
+	environ := []string{"PATH=" + os.Getenv("PATH"), "HOME=" + home, "XDG_CONFIG_HOME=" + xdgConfig,
+		"XDG_STATE_HOME=" + xdgState, "USER=fixture", "LANG=C.UTF-8", "GIT_CONFIG_GLOBAL=/dev/null",
+		"GIT_CONFIG_NOSYSTEM=1", "GIT_AUTHOR_NAME=Fixture", "GIT_AUTHOR_EMAIL=fixture@example.invalid",
+		"GIT_COMMITTER_NAME=Fixture", "GIT_COMMITTER_EMAIL=fixture@example.invalid"}
 	sh := func(args ...string) {
 		t.Helper()
 		cmd := exec.Command(args[0], args[1:]...)
@@ -48,6 +40,26 @@ func TestProjectViewAgainstRealBinary(t *testing.T) {
 		}
 	}
 	sh("git", "init", "-q")
+	realRepo, err := filepath.EvalSymlinks(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, query := range []string{"--show-toplevel", "--absolute-git-dir"} {
+		cmd := exec.Command("git", "rev-parse", query)
+		cmd.Dir = repo
+		cmd.Env = environ
+		out, err := cmd.Output()
+		if err != nil {
+			t.Fatal(err)
+		}
+		actual, err := filepath.EvalSymlinks(strings.TrimSpace(string(out)))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if query == "--show-toplevel" && actual != realRepo || query == "--absolute-git-dir" && !strings.HasPrefix(actual, realRepo+string(os.PathSeparator)) {
+			t.Fatalf("Git escaped fixture: %s %s", query, actual)
+		}
+	}
 	sh(bin, "init", "--prefix", "zz")
 	sh(bin, "add", "first task", "-p", "1", "--tag", "it")
 	sh(bin, "add", "second task", "-p", "2")
@@ -68,11 +80,12 @@ func TestProjectViewAgainstRealBinary(t *testing.T) {
 	if root == "" {
 		t.Fatalf("scratch project not registered: %+v", projects.Projects)
 	}
-	env := &ui.Env{Client: client, Styles: ui.NewStyles(identity.Tone{Dark: true, SatScale: 1}), Config: config.Default(),
-		Slots: map[string]int{"zz": 0}, Roots: map[string]string{"zz": root},
+	env := &ui.Env{Client: client, Styles: ui.NewStyles(), Config: config.Default(),
+		Roots:   map[string]string{"zz": root},
 		Exists:  func(p string) bool { st, err := os.Stat(p); return err == nil && st.IsDir() },
 		Environ: environ, Spawn: func(launch.Plan) error { return nil }, Timeout: 10 * time.Second}
 
+	env.SetProjects(projects.Projects)
 	app := ui.New(env, ui.Options{Stack: []ui.View{ui.NewProjectView(env, "zz")}})
 	d := uitest.New(t, app, 120, 40)
 	logged := func(text string) bool {
