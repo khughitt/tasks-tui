@@ -49,15 +49,17 @@ KEYS = {
     "id": "id", "parent": "id", "depends": "id", "children": "id",
     "prefix": "prefix", "projects": "prefix",
     "root": "path", "worktree": "path", "plan_path": "path", "spec_path": "path",
+    "records": "path", "checkout": "path", "successor": "prefix",
+    "name": "title", "purpose": "title",
     "owner": "branch", "by": "branch",
     "session": "session", "harness_session": "session",
     "source": "source", "host": "host", "tags": "tags", "step": "step",
     "title": "title", "body": "sentence", "text": "sentence", "next_step": "sentence",
     "warnings": "layout", "detail": "layout",
     **dict.fromkeys(["status", "size", "complexity", "process", "reason", "needs", "waiting_on", "phase",
-                     "agent", "model", "every", "kind", "harness_session_source", "plan", "spec"], "keep"),
+                     "agent", "model", "every", "kind", "harness_session_source", "plan", "spec", "color"], "keep"),
     **dict.fromkeys(["at", "created", "updated", "started", "completed", "seen", "last_activity",
-                     "last_done", "next_due", "defer"], "time"),
+                     "last_done", "next_due", "defer", "date"], "time"),
 }
 REPORTED = {"keep", "layout"}
 
@@ -65,12 +67,14 @@ REPORTED = {"keep", "layout"}
 class Layout:
     """What this machine looks like: the strings that must not reach a tracked file."""
 
-    def __init__(self, projects, host, home, work_root=None):
+    def __init__(self, projects, host, home, work_root=None, aliases=None):
         private = sorted(p for p in projects if p not in PUBLIC)
-        if len(private) > len(NATO):
-            raise SystemExit(f"scrub-fixtures: {len(private)} private prefixes, only {len(NATO)} names")
-        self.prefix = {p: p for p in PUBLIC} | dict(zip(private, NATO))
+        self.prefix = {p: p for p in PUBLIC} | {
+            p: NATO[i] if i < len(NATO) else f"p{i:07x}" for i, p in enumerate(private)
+        }
         roots = {p: [r.rstrip("/")] for p, r in projects.items()}
+        for p, paths in (aliases or {}).items():
+            roots[p].extend(path.rstrip("/") for path in paths)
         if work_root:  # worktrees live under $WORK_ROOT at the checkout's path below the sync root
             common = os.path.commonpath(list(projects.values()))
             for p, r in projects.items():
@@ -82,15 +86,18 @@ class Layout:
         self.home = home
         self.id_re = re.compile(
             r"\b(" + "|".join(sorted(self.prefix, key=len, reverse=True)) + r")-([0-9a-f]{6})\b")
-        parents = {os.path.dirname(r.rstrip("/")) for r in projects.values()}
+        all_roots = {r for rs in roots.values() for r in rs}
+        parents = {os.path.dirname(r) for r in all_roots}
         self.forbidden = sorted(
-            {*projects.values(), *parents, work_root or "", home, host} - {"", "/"}, key=len, reverse=True)
+            {*all_roots, *parents, work_root or "", home, host} - {"", "/"}, key=len, reverse=True)
 
     @classmethod
     def from_machine(cls):
         out = subprocess.run(["tasks", "projects"], check=True, capture_output=True, text=True).stdout
-        projects = {p["prefix"]: p["root"] for p in json.loads(out)["projects"]}
-        return cls(projects, socket.gethostname(), os.path.expanduser("~"), os.environ.get("WORK_ROOT"))
+        rows = json.loads(out)["projects"]
+        projects = {p["prefix"]: p["root"] for p in rows}
+        aliases = {p["prefix"]: [p[k] for k in ("records", "checkout") if isinstance(p.get(k), str)] for p in rows}
+        return cls(projects, socket.gethostname(), os.path.expanduser("~"), os.environ.get("WORK_ROOT"), aliases)
 
     def generic(self, prefix):
         return self.prefix.get(prefix, prefix)
@@ -190,7 +197,8 @@ def rewrite(v, kind, key, layout, ident):
 def walk(v, layout, seen, key=None, ident=""):
     if isinstance(v, dict):
         seed = v["id"] if isinstance(v.get("id"), str) else ident
-        return {k: walk(x, layout, seen, k, seed) for k, x in v.items()}
+        return {k: ("Project retired." if key == "retired" and k == "reason" and isinstance(x, str) and x
+                    else walk(x, layout, seen, k, seed)) for k, x in v.items()}
     if isinstance(v, list):
         return [walk(x, layout, seen, key, ident + str(i)) for i, x in enumerate(v)]
     if not isinstance(v, str):

@@ -2,6 +2,7 @@ package tasksctl
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -10,6 +11,60 @@ import (
 	"strings"
 	"testing"
 )
+
+func TestProjectColorContract(t *testing.T) {
+	for _, tc := range []struct {
+		name, fields string
+		color        any
+		index        any
+		invalid      bool
+	}{
+		{name: "missing"},
+		{name: "null", fields: `,"color":null,"color_256":null`},
+		{name: "mixed hex", fields: `,"color":"#123AbC","color_256":42`, color: "#123AbC", index: float64(42)},
+		{name: "rgb only", fields: `,"color":"#abcdef"`, color: "#abcdef"},
+		{name: "low index", fields: `,"color":"#abcdef","color_256":16`, color: "#abcdef", index: float64(16)},
+		{name: "high index", fields: `,"color":"#abcdef","color_256":255`, color: "#abcdef", index: float64(255)},
+		{name: "unrelated field", fields: `,"unknown":"fine"`},
+		{name: "orphan", fields: `,"color_256":42`, invalid: true},
+		{name: "null rgb with index", fields: `,"color":null,"color_256":42`, invalid: true},
+		{name: "empty", fields: `,"color":""`, invalid: true},
+		{name: "short", fields: `,"color":"#abc"`, invalid: true},
+		{name: "nonhex", fields: `,"color":"#12ggff"`, invalid: true},
+		{name: "rgb type", fields: `,"color":42`, invalid: true},
+		{name: "index type", fields: `,"color":"#abcdef","color_256":"42"`, invalid: true},
+		{name: "fraction", fields: `,"color":"#abcdef","color_256":42.5`, invalid: true},
+		{name: "index too low", fields: `,"color":"#abcdef","color_256":15`, invalid: true},
+		{name: "index too high", fields: `,"color":"#abcdef","color_256":256`, invalid: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			raw := `{"prefix":"tui","root":"/r/tui","reachable":true,"counts":null,"total":null,"last_activity":null` + tc.fields + `}`
+			var p Project
+			err := json.Unmarshal([]byte(raw), &p)
+			if tc.invalid {
+				var typed *Error
+				if !errors.As(err, &typed) || typed.Kind != "decode" {
+					t.Fatalf("expected typed decode error, got %v", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			encoded, err := json.Marshal(p)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var fields map[string]any
+			if err := json.Unmarshal(encoded, &fields); err != nil {
+				t.Fatal(err)
+			}
+			if fields["color"] != tc.color || fields["color_256"] != tc.index {
+				t.Fatalf("color metadata lost: %s", encoded)
+			}
+		})
+	}
+}
 
 type recorder struct {
 	fixture string
@@ -38,6 +93,12 @@ func TestProjects(t *testing.T) {
 	if res.Warnings == nil {
 		t.Fatal("warnings must decode to a non-nil slice")
 	}
+	for _, p := range res.Projects {
+		if p.Color != nil && p.Color256 != nil {
+			return
+		}
+	}
+	t.Fatal("captured projects must exercise authored color and its stand-in")
 }
 
 func TestPrimeSplitsRowShapes(t *testing.T) {

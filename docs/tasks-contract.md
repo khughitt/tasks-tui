@@ -102,6 +102,12 @@ Every response's `warnings[]` is shown (see the guide's
 [Messages and warnings](guide.md#messages-and-warnings)), except the startup and
 form-tag lookups'.
 
+Project rows also decode optional `color` (exactly `#` plus six hexadecimal
+digits) and `color_256` (an integer in 16..255, supplied by tasks). Null or absent
+color metadata is accepted. RGB without an index is valid; an index without RGB,
+an invalid RGB or index, or a wrong JSON type is a typed decode error. The TUI
+does not derive a replacement project index. These fields come only from the CLI.
+
 A **list row** gives `id`, `title`, `status`, `priority`, `size`, `complexity`,
 `process`, `updated`, `tags`, `open_descendant_count`, `periodic.every`, `claim`
 (`owner`, `worktree`, `live`) and `park` (`next_step`, `waiting_on`, `worktree`). A

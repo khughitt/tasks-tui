@@ -105,6 +105,8 @@ type Counts struct {
 }
 type Project struct {
 	Prefix       string  `json:"prefix"`
+	Color        *string `json:"color,omitempty"`
+	Color256     *int    `json:"color_256,omitempty"`
 	Root         string  `json:"root"`
 	Reachable    bool    `json:"reachable"`
 	Counts       *Counts `json:"counts"`

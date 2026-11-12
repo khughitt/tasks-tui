@@ -2,6 +2,7 @@ package tasksctl
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -84,7 +85,22 @@ func (p *ParkInfo) UnmarshalJSON(raw []byte) error {
 }
 func (p *Project) UnmarshalJSON(raw []byte) error {
 	type plain Project
-	return decodeInto(raw, (*plain)(p), projKeys...)
+	if err := decodeInto(raw, (*plain)(p), projKeys...); err != nil {
+		return err
+	}
+	if p.Color != nil {
+		value := *p.Color
+		if len(value) != 7 || value[0] != '#' {
+			return &Error{Kind: "decode", Detail: "project color must be #RRGGBB"}
+		}
+		if _, err := hex.DecodeString(value[1:]); err != nil {
+			return &Error{Kind: "decode", Detail: "project color must be #RRGGBB"}
+		}
+	}
+	if p.Color256 != nil && (p.Color == nil || *p.Color256 < 16 || *p.Color256 > 255) {
+		return &Error{Kind: "decode", Detail: "project color_256 requires color and an index in 16..255"}
+	}
+	return nil
 }
 func (c *Counts) UnmarshalJSON(raw []byte) error {
 	type plain Counts
