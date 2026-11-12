@@ -37,6 +37,7 @@ type projectsView struct {
 	env        *Env
 	main, pane *Loader
 	data       projectsData
+	maxima     tasksctl.Counts
 	prime      *tasksctl.PrimeResult
 	primeFor   string
 	rows       []tasksctl.Project
@@ -151,7 +152,6 @@ func projectLess(column string, a, b tasksctl.Project) bool {
 // projectsTable is the Projects view's columns. No flexible column and no gutter: the accent bar is the row's identity.
 var projectsTable = table{gap: 2, cols: []column{
 	{key: "project", label: "project", min: 7},
-	{key: "name", label: "name", min: 4, drop: 1},
 	{key: "doing", label: "doing", align: alignRight, min: 5},
 	{key: "todo", label: "todo", align: alignRight, min: 4},
 	{key: "idea", label: "idea", align: alignRight, min: 4},
@@ -189,14 +189,21 @@ func (v *projectsView) projectCells(p tasksctl.Project, now time.Time, selected 
 	project := cell{spans: []span{{marker, acc}, {p.Prefix, acc.Bold(selected)}}}
 	if !p.Reachable || p.Counts == nil {
 		// Measured for the project column only; render draws the row through unreachableLine.
-		return []cell{{spans: []span{{"▌ ", s.Muted}, {p.Prefix, s.Muted}}}, text(s.Muted, ""), text(s.Muted, ""), text(s.Muted, ""), text(s.Muted, ""), text(s.Muted, ""), text(s.Muted, "")}
+		return []cell{{spans: []span{{"▌ ", s.Muted}, {p.Prefix, s.Muted}}}, text(s.Muted, ""), text(s.Muted, ""), text(s.Muted, ""), text(s.Muted, ""), text(s.Muted, "")}
 	}
 	c := *p.Counts
 	age := ""
 	if p.LastActivity != nil {
 		age = ago(*p.LastActivity, now)
 	}
-	return []cell{project, text(s.Base, name(p.Root)), count(s, c.Doing, acc), count(s, c.Todo, s.Base), count(s, c.Idea, s.Base), count(s, c.Blocked, s.Error.UnsetBold()), text(s.ageStyle(age), age)}
+	background := s.rowBackground(p.Prefix, selected)
+	ageStyle := s.Base
+	if p.LastActivity != nil {
+		ageStyle = s.ageStyle(*p.LastActivity, now, background)
+	}
+	return []cell{project, count(s, c.Doing, s.countStyle(c.Doing, v.maxima.Doing, background)),
+		count(s, c.Todo, s.countStyle(c.Todo, v.maxima.Todo, background)), count(s, c.Idea, s.countStyle(c.Idea, v.maxima.Idea, background)),
+		count(s, c.Blocked, s.Error.UnsetBold()), text(ageStyle, age)}
 }
 func (v *projectsView) update(raw tea.Msg) (view, tea.Cmd) {
 	switch msg := raw.(type) {
@@ -212,6 +219,15 @@ func (v *projectsView) update(raw tea.Msg) (view, tea.Cmd) {
 			}
 			v.data = msg.data.(projectsData)
 			v.env.SetProjects(v.data.projects.Projects)
+			v.maxima = tasksctl.Counts{}
+			for _, p := range v.data.projects.Projects {
+				if !p.Reachable || p.Counts == nil {
+					continue
+				}
+				v.maxima.Doing = max(v.maxima.Doing, p.Counts.Doing)
+				v.maxima.Todo = max(v.maxima.Todo, p.Counts.Todo)
+				v.maxima.Idea = max(v.maxima.Idea, p.Counts.Idea)
+			}
 			v.sortAndFilter()
 			return v, tea.Batch(next, v.loadPane())
 		case v.pane.ID():
@@ -293,7 +309,11 @@ func (v *projectsView) warnings() []string {
 	return ws
 }
 func (v *projectsView) render(width, height int) string {
-	s, now := v.env.Styles, time.Now()
+	return v.renderAt(width, height, time.Now())
+}
+
+func (v *projectsView) renderAt(width, height int, now time.Time) string {
+	s := v.env.Styles
 	cells := make([][]cell, len(v.rows))
 	for i, p := range v.rows {
 		cells[i] = v.projectCells(p, now, i == v.sel)
@@ -306,7 +326,7 @@ func (v *projectsView) render(width, height int) string {
 	}
 	paneCells := make([][]cell, len(paneRows))
 	for i, r := range paneRows {
-		paneCells[i] = s.taskCells(r, now)
+		paneCells[i] = s.taskCells(r, now, false)
 	}
 	paneW := width - tableW - 1
 	showPane := paneW >= taskTable.minWidth(paneCells)

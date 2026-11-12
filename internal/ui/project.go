@@ -351,6 +351,10 @@ func (v *projectView) chip(n int, label string, hot lipgloss.Style) string {
 }
 
 func (v *projectView) render(width, height int) string {
+	return v.renderAt(width, height, time.Now())
+}
+
+func (v *projectView) renderAt(width, height int, now time.Time) string {
 	s, root, prefix := v.env.Styles, v.env.Roots[v.prefix], v.prefix
 	c := v.counts
 	head := s.Accent(prefix).Render("▌ ") + s.Accent(prefix).Bold(true).Render(v.prefix) + "  " + s.Base.Render(name(root)+"  "+root) + "   " + strings.Join([]string{v.chip(c.Doing, "doing", s.Accent(prefix)), v.chip(c.Todo, "todo", s.Base), v.chip(c.Idea, "idea", s.Base), v.chip(c.Blocked, "blocked", s.Error.UnsetBold())}, "  ")
@@ -366,7 +370,7 @@ func (v *projectView) render(width, height int) string {
 		}
 		tabs[i] = s.ActiveLabel(prefix, " "+label+" ")
 	}
-	rt := s.layoutRowsWithLabels(v.rows, width, time.Now(), v.headerLabels())
+	rt := s.layoutRowsWithLabels(v.rows, width, now, v.headerLabels())
 	clipped := lipgloss.NewStyle().MaxWidth(width)
 	lines := []string{clipped.Render(head), clipped.Render(strings.Join(tabs, " ")), rt.header()}
 	filtering := v.filtering || v.filter != ""

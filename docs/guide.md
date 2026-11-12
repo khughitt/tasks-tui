@@ -16,9 +16,11 @@ deepest root wins), over Projects; elsewhere, or with `--all`, it opens Projects
 `tasks-tui <prefix>` opens that project and `tasks-tui <id>` opens that task over it.
 
 **Projects** is a table with one row per registered project: an accent bar and the
-prefix, the name (the root's last path component), the doing, todo, idea and blocked
-counts, and the age of the last activity. Zero counts are dimmed, doing is in the
-project's accent and blocked in red. A project the registry cannot reach reads
+prefix, the doing, todo, idea and blocked counts, and the age of the last
+activity. The Name column is hidden; names still match the filter and appear in
+Project details. Zero counts are dimmed, blocked stays red, and doing/todo/idea
+use independent logarithmic blue–cyan–gold scales. A project the registry
+cannot reach reads
 `✗ unreachable` and does not open; a row reported without counts reads the same,
 though it still opens. Rows start sorted by activity, newest first; `s p`/`S p` sort
 by prefix and `s a`/`S a` by activity, ascending and descending. `/` filters on a
@@ -52,10 +54,11 @@ rows without the value sort last, and the order survives reloads and tab switche
 A row shows the id in the project's accent, `P<n>`, size, complexity, process,
 status, the age of the last update, a marker column, and the title followed by its
 tags in brackets and the markers' words. Ages read `now`, then minutes (`m`), hours
-(`h`), days (`d`) under two weeks and weeks (`w`); days and weeks are dimmed. On a
+(`h`), days (`d`) under two weeks and weeks (`w`); every valid age uses the
+cyan-to-foreground recency scale. On a
 narrow terminal the process column goes first, then complexity, size and age; the
-title keeps at least 24 columns. The highlighted row carries an accent bar on a faint
-wash of the project's hue.
+title keeps at least 24 columns. The highlighted row carries an accent bar and bold text, with a faint
+project tint only when TrueColor and a reported background are available.
 
 | Marker | Meaning |
 | --- | --- |
@@ -162,7 +165,7 @@ switch starts at the top. A spinner in the status line shows while the view load
 ## Messages and warnings
 
 The status line's left side shows the latest message until the next key press: `✗`
-errors in red, `⚠` warnings in yellow, `·` results dimmed. A less severe message
+errors in red, `⚠` warnings in yellow, `·` results in normal foreground. A less severe message
 does not replace a more severe one still showing; with none, the breadcrumb shows.
 Messages are outcomes: a write's result, each warning its response carried
 (prefixed with the command and id), a failed load, write or launch, the
@@ -208,6 +211,25 @@ background-dependent styles remain neutral.
 Markdown uses normal foreground with bold/italic/underline emphasis, preserving
 layout and wrapping without theme-specific syntax colors. Capable terminals do
 not display literal inline Markdown delimiters; no-color modes retain them.
+
+
+Counts share a blue–cyan–gold palette but normalize independently per column:
+`log1p(n) / log1p(max(columnMaximum, 4))`. Maxima include all reachable projects
+with counts before filtering, so scrolling/filtering cannot change a value's
+color. A lone one stays moderate rather than maximum heat. A reload may change
+normalization as the data changes. Exact counts remain visible.
+
+Activity and task-table ages use a separate cyan-to-foreground recency fade:
+`1 - log1p(ageMinutes) / log1p(43200)`, clamped from now to 30 days. Future dates
+clamp to now; old dates stay at the normal foreground, missing activity is empty,
+and invalid timestamps read `?`. The preview pane uses the same date scale.
+
+Generated count colors meet 4.5:1 contrast against the actual row background;
+date colors use the smaller of 4.5:1 and the terminal foreground's own contrast.
+Authored project RGB and the terminal foreground remain exact. Indexed terminals
+may quantize the generated data colors, so their final contrast depends on the
+terminal palette. With only a background reply, counts can shade while dates
+wait for the foreground; basic/no-color terminals show ordinary numeric text.
 
 ## Not built yet
 

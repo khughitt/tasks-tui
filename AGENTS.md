@@ -56,7 +56,7 @@ committed.
 - The legend is generated from the keymap: `legendGroups` in internal/ui/keys.go renders each binding's help text, so a
   grouped binding without help text fails `TestEveryGroupedBindingHasHelp`.
 - Column widths (internal/ui/columns.go and the tables in rows.go and projects.go), the Projects pane's ready cap
-  (`paneReadyCap`) and the age at which an age dims (`ageStyle`) are fixed in code, not configurable; a request to make
+  (`paneReadyCap`) and the numeric/recency scales (`color_scale.go`) are fixed in code, not configurable; a request to make
   one configurable is filed as an idea.
 - A missing required field is a decode error. Sparse task optional fields and empty collections may be omitted. Fail early with a typed error; no silent fallbacks.
 - No `--agent` on `add`: a person files from the TUI, and an agent stamp would misattribute it.

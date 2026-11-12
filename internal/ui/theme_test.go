@@ -32,7 +32,17 @@ func coloredStyles() *Styles {
 
 func sgr(s string, code string) bool {
 	for _, match := range regexp.MustCompile(`\x1b\[([0-9;]*)m`).FindAllStringSubmatch(s, -1) {
-		for _, item := range strings.Split(match[1], ";") {
+		fields := strings.Split(match[1], ";")
+		for i := 0; i < len(fields); i++ {
+			item := fields[i]
+			if (item == "38" || item == "48" || item == "58") && i+1 < len(fields) {
+				if fields[i+1] == "2" {
+					i += 4
+				} else if fields[i+1] == "5" {
+					i += 2
+				}
+				continue
+			}
 			if item == code {
 				return true
 			}

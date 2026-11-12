@@ -229,10 +229,10 @@ func TestProjectsZeroCountsAreMutedAndBlockedIsRed(t *testing.T) {
 	_ = d
 	s := env.Styles
 	cells := pv.projectCells(pv.rows[1], time.Now(), false)
-	if got := cells[2].spans[0]; got.text != "0" || got.style.Render("0") != s.Muted.Render("0") {
+	if got := cells[1].spans[0]; got.text != "0" || got.style.Render("0") != s.Muted.Render("0") {
 		t.Fatalf("zero doing muted: %+v", got)
 	}
-	if got := cells[5].spans[0]; got.text != "2" || got.style.Render("2") != s.Error.UnsetBold().Render("2") {
+	if got := cells[4].spans[0]; got.text != "2" || got.style.Render("2") != s.Error.UnsetBold().Render("2") {
 		t.Fatalf("non-zero blocked red: %+v", got)
 	}
 }

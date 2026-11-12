@@ -13,7 +13,7 @@ import (
 
 // Styles owns terminal roles and authored project colors; unknown colors stay unset.
 type Styles struct {
-	Base, Muted, Bold, Recent, Frame, Header  lipgloss.Style
+	Base, Muted, Bold, Frame, Header          lipgloss.Style
 	Error, Warning, Info, ParkUser, ParkAgent lipgloss.Style
 	Claim, Stale, Periodic, Tag               lipgloss.Style
 	cursorBlink                               bool
@@ -35,7 +35,7 @@ func (s *Styles) setProfile(p colorprofile.Profile) {
 	s.Base = lipgloss.NewStyle()
 	s.Bold = s.Base.Bold(true)
 	s.Muted = s.Base.Faint(true).Bold(false)
-	s.Recent, s.Header = s.Base, s.Bold
+	s.Header = s.Bold
 	s.Frame = s.Base.Border(lipgloss.RoundedBorder()).Padding(1, 2)
 	s.Error, s.Warning, s.Periodic = s.Bold, s.Base, s.Base
 	if p >= colorprofile.ANSI {

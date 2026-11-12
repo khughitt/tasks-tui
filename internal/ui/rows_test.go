@@ -58,10 +58,8 @@ func TestRowMarksSitInFixedCellsAndDetailsTrail(t *testing.T) {
 	if !strings.Contains(styled, doing) {
 		t.Errorf("doing lacks slot accent: %q", styled)
 	}
-	recent := strings.TrimSuffix(s.Recent.Render("2h"), "\x1b[m")
-	old := strings.TrimSuffix(s.Muted.Render("4d"), "\x1b[m")
-	if !strings.Contains(styled, recent) || !strings.Contains(rt.line(1, false), old) {
-		t.Errorf("age fade: recent %q old %q", styled, rt.line(1, false))
+	if out := rt.cells[1][7].spans[0].style.Render("4d"); sgr(out, "2") {
+		t.Errorf("day-old task age must retain the recency palette rather than dim abruptly: %q", out)
 	}
 }
 

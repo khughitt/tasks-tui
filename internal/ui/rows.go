@@ -81,14 +81,7 @@ var taskTable = table{gap: 2, flexMin: 24, cols: []column{
 	{key: "title", label: "title", min: 5, flex: true},
 }}
 
-func (s *Styles) ageStyle(age string) lipgloss.Style {
-	if strings.HasSuffix(age, "d") || strings.HasSuffix(age, "w") || age == "?" {
-		return s.Muted
-	}
-	return s.Recent
-}
-
-func (s *Styles) taskCells(r rowView, now time.Time) []cell {
+func (s *Styles) taskCells(r rowView, now time.Time, selected bool) []cell {
 	accent := s.Accent(r.Prefix)
 	prio, prioStyle := "", s.Muted
 	if r.Priority != nil {
@@ -140,7 +133,7 @@ func (s *Styles) taskCells(r rowView, now time.Time) []cell {
 		text(s.Base, r.Complexity),
 		text(s.Base, r.Process),
 		text(statusStyle, status),
-		text(s.ageStyle(age), age),
+		text(s.ageStyle(r.Updated, now, s.rowBackground(r.Prefix, selected)), age),
 		{spans: marks},
 		{spans: []span{{r.Title, statusStyle}}, tail: tail},
 	}
@@ -155,6 +148,7 @@ type rowTable struct {
 	labels    map[string]string
 	candidate string
 	prefix    string
+	now       time.Time
 }
 
 func (s *Styles) layoutRows(rows []rowView, width int, now time.Time) rowTable {
@@ -162,9 +156,9 @@ func (s *Styles) layoutRows(rows []rowView, width int, now time.Time) rowTable {
 }
 
 func (s *Styles) layoutRowsWithLabels(rows []rowView, width int, now time.Time, labels map[string]string) rowTable {
-	rt := rowTable{s: s, rows: rows, width: width, cells: make([][]cell, len(rows))}
+	rt := rowTable{s: s, rows: rows, width: width, now: now, cells: make([][]cell, len(rows))}
 	for i, r := range rows {
-		rt.cells[i] = s.taskCells(r, now)
+		rt.cells[i] = s.taskCells(r, now, false)
 	}
 	rt.widths = taskTable.widthsWithLabels(rt.cells, width, labels)
 	rt.labels = labels
@@ -179,7 +173,7 @@ func (rt rowTable) line(i int, selected bool) string {
 	cells, base := rt.cells[i], lipgloss.NewStyle()
 	if selected {
 		prefix := rt.rows[i].Prefix
-		cells = append([]cell{text(rt.s.Gutter(prefix), "▌ ")}, cells[1:]...)
+		cells = append([]cell{text(rt.s.Gutter(prefix), "▌ ")}, rt.s.taskCells(rt.rows[i], rt.now, true)[1:]...)
 		base = rt.s.Surface(prefix)
 	}
 	return fit(taskTable.row(rt.widths, cells, base), rt.width, base)

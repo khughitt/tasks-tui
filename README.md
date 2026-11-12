@@ -104,7 +104,9 @@ Project labels and task IDs use the authored `color` returned by `tasks projects
 256-color terminals use its supplied `color_256` index. Basic-color terminals keep
 project labels neutral. Ordinary text follows the terminal foreground; semantic
 red/yellow/cyan roles and inactive dim text follow its ANSI theme. The
-[guide](docs/guide.md#colours) describes selection and terminal queries.
+[guide](docs/guide.md#colours) describes selection, logarithmic blue–cyan–gold
+count shading, the separate cyan recency fade and terminal queries. The home
+table omits Name; names remain searchable and visible in Project details.
 
 Upgrading from the familiar-based version: remove the old `[identity]` table
 from your config. It is no longer supported and is reported as an unknown key.
