@@ -168,14 +168,16 @@ func (t table) headerWithLabels(widths []int, s *Styles, labels map[string]strin
 	return t.headerWithCandidate(widths, s, labels, "", "")
 }
 
+// headerWithCandidate renders the header row. labels replace the labels of the sorted
+// column (its label and arrow), which renders bold; the candidate column takes the
+// project's surface.
 func (t table) headerWithCandidate(widths []int, s *Styles, labels map[string]string, candidate string, prefix string) string {
 	cells := make([]cell, len(t.cols))
 	for i, c := range t.cols {
-		label := c.label
+		label, style := c.label, s.Base
 		if labels[c.key] != "" {
-			label = labels[c.key]
+			label, style = labels[c.key], s.Bold
 		}
-		style := s.Base
 		if c.key == candidate {
 			style = s.Surface(prefix)
 		}

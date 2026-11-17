@@ -308,6 +308,22 @@ func (v *projectsView) warnings() []string {
 	}
 	return ws
 }
+
+// headerLabels marks the column the rows are sorted by, the default order included.
+func (v *projectsView) headerLabels() map[string]string {
+	key := map[string]string{"prefix": "project", "activity": "activity"}[v.order.column]
+	arrow := "↑"
+	if v.order.desc {
+		arrow = "↓"
+	}
+	for _, c := range projectsTable.cols {
+		if c.key == key {
+			return map[string]string{key: c.label + arrow}
+		}
+	}
+	panic("projects sort column " + v.order.column + " has no header")
+}
+
 func (v *projectsView) render(width, height int) string {
 	return v.renderAt(width, height, time.Now())
 }
@@ -318,7 +334,8 @@ func (v *projectsView) renderAt(width, height int, now time.Time) string {
 	for i, p := range v.rows {
 		cells[i] = v.projectCells(p, now, i == v.sel)
 	}
-	widths := projectsTable.widths(cells, width)
+	labels := v.headerLabels()
+	widths := projectsTable.widthsWithLabels(cells, width, labels)
 	tableW := projectsTable.total(widths)
 	var paneRows []rowView
 	if v.prime != nil && v.primeFor == v.project() {
@@ -333,7 +350,7 @@ func (v *projectsView) renderAt(width, height int, now time.Time) string {
 	if !showPane {
 		tableW = width
 	}
-	lines := []string{fit(projectsTable.header(widths, s), tableW, lipgloss.NewStyle())}
+	lines := []string{fit(projectsTable.headerWithLabels(widths, s, labels), tableW, lipgloss.NewStyle())}
 	visible := height - 2
 	if v.filtering || v.filter != "" {
 		visible--

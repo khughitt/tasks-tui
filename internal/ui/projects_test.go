@@ -10,6 +10,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/khughitt/tasks-tui/internal/tasksctl"
 	"github.com/khughitt/tasks-tui/internal/uitest"
@@ -316,4 +317,29 @@ func TestProjectsSortChordsUseColumnAndDirection(t *testing.T) {
 	first("abc", "s a")
 	chord(t, d, app, "S", "a")
 	first("zed", "S a")
+}
+
+func TestProjectsHeaderMarksTheSortedColumn(t *testing.T) {
+	v, now := quantitativeView(t)
+	s := v.env.Styles
+	header := strings.Split(v.renderAt(160, 10, now), "\n")[0]
+	if !strings.Contains(header, s.Bold.Render("activity↓")) || strings.Contains(ansi.Strip(header), "project↑") {
+		t.Fatalf("the default order marks activity descending: %q", ansi.Strip(header))
+	}
+	v.update(tea.KeyPressMsg{Text: "s p"})
+	header = strings.Split(v.renderAt(160, 10, now), "\n")[0]
+	if !strings.Contains(header, s.Bold.Render("project↑")) || strings.Contains(ansi.Strip(header), "activity↓") {
+		t.Fatalf("s p marks project ascending: %q", ansi.Strip(header))
+	}
+}
+
+func TestProjectHeaderBoldsTheSortedColumn(t *testing.T) {
+	env := testEnv(projectFake())
+	env.Styles = coloredStyles()
+	pv := newProjectView(env, "tui")
+	drive(t, New(env, Options{Stack: []view{pv}}))
+	pv.update(tea.KeyPressMsg{Text: "s t"})
+	if header := strings.Split(pv.render(160, 10), "\n")[2]; !strings.Contains(header, env.Styles.Bold.Render("title↑")) {
+		t.Fatalf("sorted title header is bold: %q", header)
+	}
 }

@@ -23,7 +23,9 @@ use independent logarithmic blue–cyan–gold scales. A project the registry
 cannot reach reads
 `✗ unreachable` and does not open; a row reported without counts reads the same,
 though it still opens. Rows start sorted by activity, newest first; `s p`/`S p` sort
-by prefix and `s a`/`S a` by activity, ascending and descending. `/` filters on a
+by prefix and `s a`/`S a` by activity, ascending and descending. The sorted column's
+header (`project` or `activity`) is bold and carries `↑` or `↓`, the starting order
+included. `/` filters on a
 case-sensitive substring of the prefix or the name; `enter` or `esc` stops typing and
 the filter stays applied until erased.
 
@@ -50,8 +52,9 @@ rows leave at once and `loading <tab> …` stands in until the new tab loads, so
 action reaches the tab you left. `j`/`k`,
 `g g`/Home and `G`/End move. `/` filters case-insensitively on id, title and tags,
 showing `/<text> · <shown> of <all>`. `s p`, `s a` and `s t` sort by priority, age
-(newest first) and title; `S` reverses. The sorted column's header carries `↑` or `↓`,
-rows without the value sort last, and the order survives reloads and tab switches.
+(newest first) and title; `S` reverses. The sorted column's header is bold and carries
+`↑` or `↓`, rows without the value sort last, and the order survives reloads and tab
+switches.
 
 A row shows the id in the project's accent, `P<n>`, size, complexity, process,
 status, the age of the last update, a marker column, and the title followed by its
