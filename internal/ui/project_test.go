@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/khughitt/tasks-tui/internal/tasksctl"
 )
@@ -345,4 +346,27 @@ func TestOpenShowsShelfAndStartRefusalPreservesReviewRoute(t *testing.T) {
 	d.Key("4")
 	d.Expect("tui-eee555")
 	d.ExpectNot("tui-abc999")
+}
+
+func TestProjectViewTabSwitchShowsLoadingNotPreviousRows(t *testing.T) {
+	env := testEnv(projectFake())
+	pv := newProjectView(env, "tui")
+	d := drive(t, New(env, Options{Stack: []view{pv}}))
+	d.Expect("tui-aaa111")
+	_, load := pv.update(tea.KeyPressMsg{Code: tea.KeyTab})
+	if load == nil {
+		t.Fatal("a tab switch loads the new tab")
+	}
+	screen := ansi.Strip(pv.render(120, 20))
+	if strings.Contains(screen, "tui-aaa111") || !strings.Contains(screen, "loading Doing …") {
+		t.Fatalf("the previous tab's rows stay until the new tab loads:\n%s", screen)
+	}
+	if pv.current() != nil {
+		t.Fatalf("row actions target the previous tab while the new one loads: %+v", pv.current())
+	}
+	d.Run(load)
+	d.Expect("tui-bbb222")
+	d.ExpectNot("loading")
+	d.Key("1")
+	d.Expect("tui-aaa111")
 }

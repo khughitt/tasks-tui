@@ -156,7 +156,7 @@ func (v *projectView) applyFilter() {
 	if v.sortKey != "" {
 		sort.SliceStable(v.rows, func(i, j int) bool { return v.less(v.rows[i], v.rows[j]) })
 	}
-	if v.hasData {
+	if v.hasData && v.loadedTab == v.tab {
 		v.shown[v.loadedTab], v.hasCount[v.loadedTab] = len(v.rows), true
 	}
 	if len(v.rows) == 0 {
@@ -256,7 +256,16 @@ func rank(value string, ranks map[string]int) string {
 	return fmt.Sprintf("%d", n)
 }
 
-func (v *projectView) setTab(t tab) tea.Cmd { v.tab, v.sel, v.offset = t, 0, 0; return v.reload() }
+// setTab switches tabs and loads the new one. A different tab drops the previous tab's
+// rows at once, so the view shows the tab loading rather than rows the row actions
+// would wrongly target.
+func (v *projectView) setTab(t tab) tea.Cmd {
+	if t != v.tab {
+		v.all, v.rows = nil, nil
+	}
+	v.tab, v.sel, v.offset = t, 0, 0
+	return v.reload()
+}
 
 func (v *projectView) update(msg tea.Msg) (view, tea.Cmd) {
 	switch msg := msg.(type) {
@@ -387,6 +396,9 @@ func (v *projectView) renderAt(width, height int, now time.Time) string {
 	}
 	for i := v.offset; i < len(v.rows) && i < v.offset+avail; i++ {
 		lines = append(lines, rt.line(i, i == v.sel))
+	}
+	if (!v.hasData || v.loadedTab != v.tab) && v.loading() {
+		lines = append(lines, "  "+s.Muted.Render("loading "+tabNames[v.tab]+" …"))
 	}
 	if len(v.rows) == 0 && v.hasData && v.loadedTab == v.tab {
 		if v.filter != "" {

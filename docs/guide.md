@@ -45,7 +45,9 @@ idea and blocked counts) over five tabs. The active tab shows how many rows it l
 | 4 Ideas | tasks with status idea |
 | 5 Done | tasks with status done, most recently updated first |
 
-`1`–`5`, `tab`/`shift+tab` and `h`/`l` (or Left/Right) switch tabs; `j`/`k`,
+`1`–`5`, `tab`/`shift+tab` and `h`/`l` (or Left/Right) switch tabs: the previous tab's
+rows leave at once and `loading <tab> …` stands in until the new tab loads, so no row
+action reaches the tab you left. `j`/`k`,
 `g g`/Home and `G`/End move. `/` filters case-insensitively on id, title and tags,
 showing `/<text> · <shown> of <all>`. `s p`, `s a` and `s t` sort by priority, age
 (newest first) and title; `S` reverses. The sorted column's header carries `↑` or `↓`,
@@ -179,7 +181,9 @@ messages: a reload replaces them. When the top view has any, `⚠ N` sits left o
 `?` or `q` close). `?` opens the key legend; a box below its groups lists the sort
 keys of the Projects and Project views. While a sort prefix (`s` or `S`) waits for its
 second key, the `? keys` hint becomes that prefix, its direction (`↑` or `↓`) and the top
-view's keys, e.g. `s … sort ↑  p priority  a age  t title`.
+view's keys, e.g. `s … sort ↑  p priority  a age  t title`. While `c` waits, it lists
+the launch keys of the configured harnesses and `c pick`, e.g.
+`c … launch  l claude  o codex  r crush  O opencode  c pick`.
 
 A failure at startup prints `tasks-tui: <message>` to stderr and exits 1 before the
 screen opens; the conditions are listed under [Failures](tasks-contract.md#failures).
