@@ -13,6 +13,7 @@ type legendGroup struct {
 	keys  []key.Binding
 }
 
+// renderGroup left-aligns the group's keys under its title, descriptions in a column after them.
 func renderGroup(s *Styles, g legendGroup) string {
 	kw := 0
 	for _, b := range g.keys {
@@ -21,43 +22,55 @@ func renderGroup(s *Styles, g legendGroup) string {
 	lines := []string{s.Base.Render(g.title)}
 	for _, b := range g.keys {
 		h := b.Help()
-		lines = append(lines, s.Bold.Render(strings.Repeat(" ", kw-lipgloss.Width(h.Key))+h.Key)+"  "+h.Desc)
+		lines = append(lines, s.Bold.Render(h.Key)+strings.Repeat(" ", kw-lipgloss.Width(h.Key))+"  "+h.Desc)
 	}
 	return strings.Join(lines, "\n")
 }
 
-// renderSortBox lists the sort chords: one row per second key, one column per view, blank
-// where a view has no column under that key.
+// renderSortBox lays the sort chords out like a group: the title over the key column, one
+// row per ascending chord with a column per view (blank where a view has no column under
+// that key), then the descending prefix.
 func renderSortBox(s *Styles) string {
-	var letters []string
+	var seqs []string
 	cols := make([]map[string]string, len(legendSortTables))
 	widths := make([]int, len(legendSortTables))
 	for i, t := range legendSortTables {
 		cols[i] = map[string]string{}
 		widths[i] = lipgloss.Width(t.view)
 		for _, c := range sortChoices(t.table) {
-			if !slices.Contains(letters, c.key) {
-				letters = append(letters, c.key)
+			seq := "s " + c.key
+			if !slices.Contains(seqs, seq) {
+				seqs = append(seqs, seq)
 			}
-			cols[i][c.key] = c.column
+			cols[i][seq] = c.column
 			widths[i] = max(widths[i], lipgloss.Width(c.column))
 		}
 	}
-	row := func(lead string, cells func(i int) string) string {
-		parts := []string{lead}
-		for i := range legendSortTables {
-			cell := cells(i)
-			parts = append(parts, cell+strings.Repeat(" ", widths[i]-lipgloss.Width(cell)))
+	const title, desc = "sort", "S …"
+	kw := lipgloss.Width(title)
+	for _, seq := range append([]string{desc}, seqs...) {
+		kw = max(kw, lipgloss.Width(seq))
+	}
+	row := func(lead string, cells []string) string {
+		parts := []string{lead + strings.Repeat(" ", kw-lipgloss.Width(lead))}
+		for i, cell := range cells {
+			parts = append(parts, cell+strings.Repeat(" ", max(0, widths[i]-lipgloss.Width(cell))))
 		}
 		return strings.TrimRight(strings.Join(parts, "  "), " ")
 	}
-	lines := []string{
-		s.Base.Render("sort") + "  " + s.Bold.Render("s") + " ascending · " + s.Bold.Render("S") + " descending, then",
-		row(" ", func(i int) string { return s.Base.Render(legendSortTables[i].view) }),
+	views := make([]string, len(legendSortTables))
+	for i, t := range legendSortTables {
+		views[i] = s.Base.Render(t.view)
 	}
-	for _, l := range letters {
-		lines = append(lines, row(s.Bold.Render(l), func(i int) string { return cols[i][l] }))
+	lines := []string{row(s.Base.Render(title), views)}
+	for _, seq := range seqs {
+		cells := make([]string, len(legendSortTables))
+		for i := range legendSortTables {
+			cells[i] = cols[i][seq]
+		}
+		lines = append(lines, row(s.Bold.Render(seq), cells))
 	}
+	lines = append(lines, row(s.Bold.Render(desc), []string{"descending"}))
 	return strings.Join(lines, "\n")
 }
 

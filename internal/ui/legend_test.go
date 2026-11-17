@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -43,21 +44,24 @@ func TestLegendGroupsReflowFourAcrossTwoByTwoThenStacked(t *testing.T) {
 }
 
 func TestLegendSortBoxListsEachViewsColumns(t *testing.T) {
-	box := ansi.Strip(legendContent(coloredStyles(), 200))
-	for _, want := range []string{"s ascending", "S descending", "projects", "tasks", "prefix", "activity", "priority", "age", "title"} {
-		if !strings.Contains(box, want) {
-			t.Errorf("sort box lacks %q:\n%s", want, box)
-		}
+	box := ansi.Strip(renderSortBox(coloredStyles()))
+	want := []string{
+		"sort  projects  tasks",
+		"s p   prefix    priority",
+		"s a   activity  age",
+		"s t             title",
+		"S …   descending",
 	}
-	rows := map[string]string{}
-	for _, line := range strings.Split(box, "\n") {
-		if f := strings.Fields(line); len(f) >= 2 && len(f[0]) == 1 {
-			rows[f[0]] = strings.Join(f[1:], " ")
-		}
+	if got := strings.Split(box, "\n"); !slices.Equal(got, want) {
+		t.Fatalf("sort box:\n%s\nwant:\n%s", box, strings.Join(want, "\n"))
 	}
-	for letter, want := range map[string]string{"p": "prefix priority", "a": "activity age", "t": "title"} {
-		if rows[letter] != want {
-			t.Errorf("sort row %s = %q, want %q:\n%s", letter, rows[letter], want, box)
+}
+
+func TestLegendGroupTitlesAlignWithTheirKeys(t *testing.T) {
+	lines := strings.Split(ansi.Strip(legendGroupsContent(coloredStyles(), 200)), "\n")
+	for title, first := range map[string]string{"move ": "j/k ", "open ": "enter/i ", "task ": "a ", "app ": "?  keys"} {
+		if a, b := strings.Index(lines[0], title), strings.Index(lines[1], first); a < 0 || a != b {
+			t.Errorf("%q at %d, its first key %q at %d:\n%s", title, a, first, b, strings.Join(lines[:2], "\n"))
 		}
 	}
 }
