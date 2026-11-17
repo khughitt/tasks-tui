@@ -345,3 +345,15 @@ func TestPendingSortChordHintsTheTopViewsColumns(t *testing.T) {
 		t.Errorf("a view without sorting keeps the bare prefix hint: %q", got)
 	}
 }
+
+func TestPendingLaunchChordHintsConfiguredHarnesses(t *testing.T) {
+	env := testEnv(newFake())
+	delete(env.Config.Launch.Harness, "crush")
+	app := New(env, Options{Stack: []view{newProjectView(env, "tui")}})
+	app.width = 120
+	app.Update(tea.KeyPressMsg{Code: 'c', Text: "c"})
+	want := "c … launch  l claude  o codex  O opencode  c pick"
+	if got := ansi.Strip(app.statusLine()); !strings.HasSuffix(got, want) {
+		t.Errorf("c pending: %q, want suffix %q", got, want)
+	}
+}

@@ -356,10 +356,23 @@ func (a *App) statusLine() string {
 }
 
 // chordHint is the status line's hint while a chord prefix is pending: the prefix, and
-// for a sort prefix the top view's second keys and the direction they sort.
+// for a launch prefix the configured harnesses' second keys, for a sort prefix the top
+// view's second keys and the direction they sort.
 func (a *App) chordHint() string {
 	s := a.env.Styles
 	hint := s.Bold.Render(a.chord.prefix + " …")
+	choice := func(key, label string) string { return "  " + s.Bold.Render(key) + s.Base.Render(" "+label) }
+	if a.chord.prefix == "c" {
+		hint += s.Base.Render(" launch")
+		for _, b := range launchKeys {
+			if b.harness == "" {
+				hint += choice(strings.TrimPrefix(b.seq, "c "), "pick")
+			} else if _, ok := a.env.Config.Launch.Harness[b.harness]; ok {
+				hint += choice(strings.TrimPrefix(b.seq, "c "), b.harness)
+			}
+		}
+		return hint
+	}
 	var table []sortBinding
 	switch a.top().(type) {
 	case *projectsView:
@@ -376,7 +389,7 @@ func (a *App) chordHint() string {
 	}
 	hint += s.Base.Render(" sort " + arrow)
 	for _, c := range sortChoices(table) {
-		hint += "  " + s.Bold.Render(c.key) + s.Base.Render(" "+c.column)
+		hint += choice(c.key, c.column)
 	}
 	return hint
 }

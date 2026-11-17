@@ -44,7 +44,8 @@ A project opens on five tabs: Ready, Doing, Open, Ideas, Done.
 
 `?` shows the legend in the app, with a sort box listing each view's sort keys. Chords
 (`c …`, `s …`, `S …`, `g g`) wait up to 900 ms for their second key; while `s` or `S`
-waits, the status line lists the view's sort keys and the direction they sort.
+waits, the status line lists the view's sort keys and the direction they sort, and while
+`c` waits, the configured harnesses' launch keys.
 
 | | |
 |---|---|
