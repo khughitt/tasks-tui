@@ -176,7 +176,10 @@ A load's warnings describe what the view shows, so they are the view's data, not
 messages: a reload replaces them. When the top view has any, `⚠ N` sits left of the
 `? keys` hint. `W` opens the console: the top view's warnings under `warnings —
 <view>`, then every message of the session, newest last (`j`/`k` scroll; `esc`, `W`,
-`?` or `q` close). `?` opens the key legend.
+`?` or `q` close). `?` opens the key legend; a box below its groups lists the sort
+keys of the Projects and Project views. While a sort prefix (`s` or `S`) waits for its
+second key, the `? keys` hint becomes that prefix, its direction (`↑` or `↓`) and the top
+view's keys, e.g. `s … sort ↑  p priority  a age  t title`.
 
 A failure at startup prints `tasks-tui: <message>` to stderr and exits 1 before the
 screen opens; the conditions are listed under [Failures](tasks-contract.md#failures).

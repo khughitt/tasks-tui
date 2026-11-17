@@ -322,7 +322,7 @@ func (a *App) statusLine() string {
 	s := a.env.Styles
 	hint := s.Base.Render("? keys")
 	if a.chord.prefix != "" {
-		hint = s.Bold.Render(a.chord.prefix + " …")
+		hint = a.chordHint()
 	}
 	if a.width <= 0 {
 		return ""
@@ -354,6 +354,33 @@ func (a *App) statusLine() string {
 	gap := a.width - lipgloss.Width(left) - hintWidth
 	return left + strings.Repeat(" ", gap) + hint
 }
+
+// chordHint is the status line's hint while a chord prefix is pending: the prefix, and
+// for a sort prefix the top view's second keys and the direction they sort.
+func (a *App) chordHint() string {
+	s := a.env.Styles
+	hint := s.Bold.Render(a.chord.prefix + " …")
+	var table []sortBinding
+	switch a.top().(type) {
+	case *projectsView:
+		table = projectsSort
+	case *projectView:
+		table = tasksSort
+	}
+	if table == nil || (a.chord.prefix != "s" && a.chord.prefix != "S") {
+		return hint
+	}
+	arrow := "↑"
+	if a.chord.prefix == "S" {
+		arrow = "↓"
+	}
+	hint += s.Base.Render(" sort " + arrow)
+	for _, c := range sortChoices(table) {
+		hint += "  " + s.Bold.Render(c.key) + s.Base.Render(" "+c.column)
+	}
+	return hint
+}
+
 func noticeText(s *Styles, m Message) string {
 	switch m.Level {
 	case LevelError:

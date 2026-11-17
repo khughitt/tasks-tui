@@ -1,6 +1,10 @@
 package ui
 
-import "charm.land/bubbles/v2/key"
+import (
+	"strings"
+
+	"charm.land/bubbles/v2/key"
+)
 
 // chordPrefixes are the first keys of two-key sequences. App.key holds one pending
 // prefix and delivers the completed chord to the normal dispatch as a key press whose
@@ -31,6 +35,22 @@ func findSort(table []sortBinding, seq string) (sortBinding, bool) {
 	}
 	return sortBinding{}, false
 }
+
+// sortChoice is a sort table's second key and the column it sorts by.
+type sortChoice struct{ key, column string }
+
+// sortChoices reads a table's second keys from its ascending rows, in table order; the
+// descending rows repeat them under S.
+func sortChoices(table []sortBinding) []sortChoice {
+	var out []sortChoice
+	for _, b := range table {
+		if second, ok := strings.CutPrefix(b.seq, "s "); ok {
+			out = append(out, sortChoice{second, b.column})
+		}
+	}
+	return out
+}
+
 func launchSeqs() []string {
 	out := make([]string, len(launchKeys))
 	for i, b := range launchKeys {
@@ -112,10 +132,17 @@ var keys = keymap{
 }
 
 // legendGroups is the key legend's content: the panel renders these bindings' Help(); a grouped
-// binding without help text fails TestEveryGroupedBindingHasHelp.
+// binding without help text fails TestEveryGroupedBindingHasHelp. The sort chords have their
+// own box below, read from legendSortTables.
 var legendGroups = []legendGroup{
 	{"move", []key.Binding{keys.Down, keys.Next, keys.Top, keys.PageDown, keys.Tab, keys.Digits}},
-	{"open", []key.Binding{keys.Enter, keys.Back, keys.Filter, keys.Sort, keys.Reload}},
+	{"open", []key.Binding{keys.Enter, keys.Back, keys.Filter, keys.Reload}},
 	{"task", []key.Binding{keys.Add, keys.Edit, keys.Launch, keys.Start, keys.Park, keys.Done, keys.Drop, keys.Copy}},
 	{"app", []key.Binding{keys.Help, keys.Log, keys.Quit}},
 }
+
+// legendSortTables are the views whose sort chords the legend's sort box lists, one column each.
+var legendSortTables = []struct {
+	view  string
+	table []sortBinding
+}{{"projects", projectsSort}, {"tasks", tasksSort}}

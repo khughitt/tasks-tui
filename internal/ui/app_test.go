@@ -9,6 +9,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/charmbracelet/x/ansi"
 
 	"github.com/khughitt/tasks-tui/internal/uitest"
 )
@@ -317,4 +318,30 @@ func TestChordPrefixWaitsThenDeliversOrExpires(t *testing.T) {
 		t.Fatal("the matching expiry clears the prefix")
 	}
 	d.Expect("? keys")
+}
+
+func TestPendingSortChordHintsTheTopViewsColumns(t *testing.T) {
+	env := testEnv(newFake())
+	for _, c := range []struct {
+		v      view
+		prefix string
+		want   string
+	}{
+		{newProjectsView(env), "s", "s … sort ↑  p prefix  a activity"},
+		{newProjectsView(env), "S", "S … sort ↓  p prefix  a activity"},
+		{newProjectView(env, "tui"), "s", "s … sort ↑  p priority  a age  t title"},
+	} {
+		app := New(env, Options{Stack: []view{c.v}})
+		app.width = 120
+		app.Update(tea.KeyPressMsg{Code: []rune(c.prefix)[0], Text: c.prefix})
+		if got := ansi.Strip(app.statusLine()); !strings.HasSuffix(got, c.want) {
+			t.Errorf("%s pending on %s: %q, want suffix %q", c.prefix, c.v.title(), got, c.want)
+		}
+	}
+	app := testApp(&stubView{name: "root"})
+	app.width = 40
+	app.Update(tea.KeyPressMsg{Code: 's', Text: "s"})
+	if got := ansi.Strip(app.statusLine()); !strings.HasSuffix(got, "s …") {
+		t.Errorf("a view without sorting keeps the bare prefix hint: %q", got)
+	}
 }
