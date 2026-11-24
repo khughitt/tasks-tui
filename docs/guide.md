@@ -8,11 +8,14 @@ harness is in [the tasks contract](tasks-contract.md).
 
 ## Views
 
-Three views stack: Projects, Project and Task. `enter` or `i` opens the next one,
+Three views stack: Projects, Project and Task, plus a Pending decisions queue (`--pending`).
+`enter` or `i` opens the next one,
 `esc` or `backspace` goes back, `q` quits, and the status line shows the stack as a
 breadcrumb (`projects › <prefix> › <id>`). With no argument, tasks-tui opens the
 Project view of the registered project whose root holds the current directory (the
 deepest root wins), over Projects; elsewhere, or with `--all`, it opens Projects.
+`tasks-tui --pending` opens the pending human-decisions queue across all projects (or
+for `<prefix>` when given a project prefix).
 `tasks-tui <prefix>` opens that project and `tasks-tui <id>` opens that task over it.
 
 **Projects** is a table with one row per registered project: an accent bar and the
@@ -37,7 +40,7 @@ projects: `3 doing · 2 parked across 19 projects`. The doing total sums the cou
 returned by `projects`; projects without counts do not contribute to it.
 
 **Project** opens with a header (accent bar, prefix, name, root, and doing, todo,
-idea and blocked counts) over five tabs. The active tab shows how many rows it lists.
+idea and blocked counts) over six tabs. The active tab shows how many rows it lists.
 
 | Tab | Lists |
 | --- | --- |
@@ -46,6 +49,7 @@ idea and blocked counts) over five tabs. The active tab shows how many rows it l
 | 3 Open | the CLI's default `list`: open tasks, by priority |
 | 4 Ideas | tasks with status idea |
 | 5 Done | tasks with status done, most recently updated first |
+| Pending | open named human decisions and legacy waits from `list --project <p> --pending` (reached via `tab`/`shift+tab` or `h`/`l`) |
 
 `1`–`5`, `tab`/`shift+tab` and `h`/`l` (or Left/Right) switch tabs: the previous tab's
 rows leave at once and `loading <tab> …` stands in until the new tab loads, so no row
@@ -82,8 +86,12 @@ size, complexity, process, owner, created, started, updated, completed, tags and
 source; the cadence and next due date of a recurring task; spec and plan with the
 paths they resolve to and the plan step, flagged when the step is not found; the
 checkout its commands run in; a claim (live or stale, owner, session, worktree); a
-park (waiting on whom, reason, worktree, next step); and an escalation's level and
-time. The body follows as rendered Markdown, then the notes in the order the CLI
+park (waiting on whom, reason, worktree, next step); an escalation's level and
+time; and any named `decisions` (status, kind, UUID, scope/pin state, open dependents,
+and resolution). When open decisions are present, `enter` opens the decision answer/withdraw
+overlay (showing the exact effect before sending, passing `seen_scope` for drops, and
+refreshing without auto-retry on `stale_scope`). The body follows as rendered Markdown,
+then the notes in the order the CLI
 gives them, then parent, children and dependencies with id, status and title; a
 dependency that does not resolve from here reads `unresolved`. `j`/`k`,
 `pgup`/`pgdn` and `g g`/Home scroll, and `y` copies the id through the terminal's
@@ -103,6 +111,9 @@ view, or shows the CLI's error.
 - `p` **park** asks for the one concrete next step, which is required. `ctrl+u`
   toggles waiting on an agent (the default) or the user; `ctrl+r` cycles the reason
   through none, review, decision, approval, environment, dependency and session.
+  When parking on the user with reason `review`, `decision` or `approval`, tasks-tui
+  checks for matching open decisions to link or opens an inline decision prompt
+  (requiring an artifact pin for `approval` and preserving the generated UUID across retries).
   `capability` and `quiet` are not offered: they carry further arguments meant for
   agents (`--complexity`, and the `--minutes` that `quiet` requires), so park from
   the CLI for them.

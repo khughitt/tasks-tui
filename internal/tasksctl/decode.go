@@ -180,3 +180,33 @@ func (d *LogicalDecision) UnmarshalJSON(raw []byte) error {
 	type plain LogicalDecision
 	return decodeInto(raw, (*plain)(d), "!id", "!type", "!at", "!by", "!subject", "!data", "!state", "!open_dependents")
 }
+
+func (r *PendingTaskRef) UnmarshalJSON(raw []byte) error {
+	type plain PendingTaskRef
+	return decodeInto(raw, (*plain)(r), "!id", "!title", "!status", "!project")
+}
+
+func (c *PendingCoverage) UnmarshalJSON(raw []byte) error {
+	type plain PendingCoverage
+	return decodeInto(raw, (*plain)(c), "!complete", "!unavailable_projects")
+}
+
+func (i *PendingItem) UnmarshalJSON(raw []byte) error {
+	type plain PendingItem
+	if err := decodeInto(raw, (*plain)(i), "!type", "!task", "opened_at", "age_seconds"); err != nil {
+		return err
+	}
+	switch i.Type {
+	case "decision":
+		return requireKeys(raw, "!decision")
+	case "legacy_wait":
+		return requireKeys(raw, "!source")
+	default:
+		return &Error{Kind: "decode", Detail: fmt.Sprintf("unknown pending item type %q", i.Type)}
+	}
+}
+
+func (o *DecisionOut) UnmarshalJSON(raw []byte) error {
+	type plain DecisionOut
+	return decodeInto(raw, (*plain)(o), "!id", "!action", "!replayed", "!decision", "!warnings")
+}

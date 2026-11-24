@@ -21,35 +21,44 @@ const (
 	tabOpen
 	tabIdeas
 	tabDone
+	tabPending
 )
 
-var tabNames = [...]string{"Ready", "Doing", "Open", "Ideas", "Done"}
+var tabNames = [...]string{"Ready", "Doing", "Open", "Ideas", "Done", "Pending"}
 
 type projectData struct {
-	tab      tab
-	rows     []rowView
-	counts   tasksctl.Counts
-	warnings []string
+	tab           tab
+	rows          []rowView
+	pending       *tasksctl.PendingResult
+	pendingParks  map[string]*tasksctl.ParkInfo
+	pendingClaims map[string]*tasksctl.ClaimInfo
+	counts        tasksctl.Counts
+	warnings      []string
 }
 
 type projectView struct {
-	env        *Env
-	prefix     string
-	loader     *Loader
-	tab        tab
-	all, rows  []rowView
-	counts     tasksctl.Counts
-	sel        int
-	filter     string
-	filtering  bool
-	offset     int
-	loadedTab  tab
-	hasData    bool
-	sortKey    string
-	descending bool
-	shown      [len(tabNames)]int
-	hasCount   [len(tabNames)]bool
-	warns      []string
+	env           *Env
+	prefix        string
+	loader        *Loader
+	tab           tab
+	all, rows     []rowView
+	pendingAll    []tasksctl.PendingItem
+	pending       []tasksctl.PendingItem
+	pendingCov    *tasksctl.PendingCoverage
+	pendingParks  map[string]*tasksctl.ParkInfo
+	pendingClaims map[string]*tasksctl.ClaimInfo
+	counts        tasksctl.Counts
+	sel           int
+	filter        string
+	filtering     bool
+	offset        int
+	loadedTab     tab
+	hasData       bool
+	sortKey       string
+	descending    bool
+	shown         [len(tabNames)]int
+	hasCount      [len(tabNames)]bool
+	warns         []string
 }
 
 func newProjectView(env *Env, prefix string) *projectView {
@@ -60,7 +69,23 @@ func (v *projectView) project() string    { return v.prefix }
 func (v *projectView) capturing() bool    { return v.filtering }
 func (v *projectView) loading() bool      { return v.loader.InFlight() }
 func (v *projectView) warnings() []string { return v.warns }
+func (v *projectView) pendingTarget(item tasksctl.PendingItem) target {
+	return target{
+		ID:     item.Task.ID,
+		Title:  item.Task.Title,
+		Prefix: item.Task.Project,
+		Park:   v.pendingParks[item.Task.ID],
+		Claim:  v.pendingClaims[item.Task.ID],
+	}
+}
 func (v *projectView) current() *target {
+	if v.tab == tabPending {
+		if v.sel < 0 || v.sel >= len(v.pending) {
+			return nil
+		}
+		t := v.pendingTarget(v.pending[v.sel])
+		return &t
+	}
 	if v.sel < 0 || v.sel >= len(v.rows) || v.rows[v.sel].Unresolved {
 		return nil
 	}
@@ -135,6 +160,44 @@ func (v *projectView) reload() tea.Cmd {
 				if err := add(command, res, err); err != nil {
 					return nil, err
 				}
+			case tabPending:
+				res, err := c.Pending(ctx, prefix)
+				if err != nil {
+					return nil, err
+				}
+				d.pending = &res
+				d.pendingParks = make(map[string]*tasksctl.ParkInfo, len(prime.Parked))
+				d.pendingClaims = make(map[string]*tasksctl.ClaimInfo, len(prime.Parked)+len(prime.Doing))
+				if parked, perr := c.Parked(ctx, prefix); perr == nil {
+					for _, p := range parked.Tasks {
+						if p.Park != nil {
+							d.pendingParks[p.ID] = p.Park
+						}
+						if cl := p.LiveClaim(); cl != nil {
+							d.pendingClaims[p.ID] = cl
+						}
+					}
+				}
+				for _, p := range prime.Parked {
+					if p.Park != nil && d.pendingParks[p.ID] == nil {
+						d.pendingParks[p.ID] = p.Park
+					}
+					if cl := p.LiveClaim(); cl != nil && d.pendingClaims[p.ID] == nil {
+						d.pendingClaims[p.ID] = cl
+					}
+				}
+				for _, r := range prime.Doing {
+					if r.Park != nil && d.pendingParks[r.ID] == nil {
+						d.pendingParks[r.ID] = r.Park
+					}
+					if cl := r.LiveClaim(); cl != nil && d.pendingClaims[r.ID] == nil {
+						d.pendingClaims[r.ID] = cl
+					}
+				}
+				d.warnings = append(d.warnings, prefixed("list --project "+prefix+" --pending", res.Warnings)...)
+				if !res.Coverage.Complete {
+					d.warnings = append(d.warnings, "list --project "+prefix+" --pending: incomplete coverage ("+strings.Join(res.Coverage.UnavailableProjects, ", ")+")")
+				}
 			}
 			return d, nil
 		})
@@ -142,6 +205,31 @@ func (v *projectView) reload() tea.Cmd {
 }
 
 func (v *projectView) applyFilter() {
+	if v.tab == tabPending {
+		oldPos := v.sel
+		v.pending = v.pending[:0]
+		needle := strings.ToLower(v.filter)
+		for _, item := range v.pendingAll {
+			text := ""
+			if item.Decision != nil {
+				text = item.Decision.Data.Text + " " + item.Decision.Data.Kind + " " + item.Decision.ID
+			} else if item.Text != nil {
+				text = *item.Text
+			}
+			if needle == "" || strings.Contains(strings.ToLower(item.Task.ID), needle) || strings.Contains(strings.ToLower(item.Task.Title), needle) || strings.Contains(strings.ToLower(text), needle) {
+				v.pending = append(v.pending, item)
+			}
+		}
+		if v.hasData && v.loadedTab == tabPending {
+			v.shown[tabPending], v.hasCount[tabPending] = len(v.pending), true
+		}
+		if len(v.pending) == 0 {
+			v.sel = 0
+			return
+		}
+		v.sel = min(oldPos, len(v.pending)-1)
+		return
+	}
 	oldPos, selected := v.sel, ""
 	if oldPos >= 0 && oldPos < len(v.rows) {
 		selected = v.rows[oldPos].ID
@@ -262,9 +350,18 @@ func rank(value string, ranks map[string]int) string {
 func (v *projectView) setTab(t tab) tea.Cmd {
 	if t != v.tab {
 		v.all, v.rows = nil, nil
+		v.pendingAll, v.pending, v.pendingCov = nil, nil, nil
+		v.pendingParks, v.pendingClaims = nil, nil
 	}
 	v.tab, v.sel, v.offset = t, 0, 0
 	return v.reload()
+}
+
+func (v *projectView) rowCount() int {
+	if v.tab == tabPending {
+		return len(v.pending)
+	}
+	return len(v.rows)
 }
 
 func (v *projectView) update(msg tea.Msg) (view, tea.Cmd) {
@@ -283,9 +380,19 @@ func (v *projectView) update(msg tea.Msg) (view, tea.Cmd) {
 		d := msg.data.(projectData)
 		if d.tab == v.tab {
 			if v.loadedTab != d.tab {
-				v.rows, v.sel = nil, 0
+				v.rows, v.pending, v.sel = nil, nil, 0
 			}
 			v.all, v.counts = d.rows, d.counts
+			if d.pending != nil {
+				v.pendingAll = d.pending.Items
+				cov := d.pending.Coverage
+				v.pendingCov = &cov
+				v.pendingParks = d.pendingParks
+				v.pendingClaims = d.pendingClaims
+			} else {
+				v.pendingAll, v.pending, v.pendingCov = nil, nil, nil
+				v.pendingParks, v.pendingClaims = nil, nil
+			}
 			v.loadedTab, v.hasData = d.tab, true
 			v.warns = d.warnings
 			v.applyFilter()
@@ -311,13 +418,13 @@ func (v *projectView) update(msg tea.Msg) (view, tea.Cmd) {
 		}
 		switch {
 		case key.Matches(msg, keys.Down):
-			v.sel = min(v.sel+1, max(0, len(v.rows)-1))
+			v.sel = min(v.sel+1, max(0, v.rowCount()-1))
 		case key.Matches(msg, keys.Up):
 			v.sel = max(0, v.sel-1)
 		case key.Matches(msg, keys.Top):
 			v.sel = 0
 		case key.Matches(msg, keys.Bottom):
-			v.sel = max(0, len(v.rows)-1)
+			v.sel = max(0, v.rowCount()-1)
 		case key.Matches(msg, keys.Tab, keys.Next):
 			return v, v.setTab((v.tab + 1) % tab(len(tabNames)))
 		case key.Matches(msg, keys.ShiftTab, keys.Prev):
@@ -325,6 +432,18 @@ func (v *projectView) update(msg tea.Msg) (view, tea.Cmd) {
 		case key.Matches(msg, keys.Filter):
 			v.filtering = true
 		case key.Matches(msg, keys.Enter):
+			if v.tab == tabPending {
+				if v.sel >= 0 && v.sel < len(v.pending) {
+					item := v.pending[v.sel]
+					tgt := v.pendingTarget(item)
+					if item.Type == "decision" && item.Decision != nil {
+						dec := *item.Decision
+						return v, func() tea.Msg { return openDecisionMsg{tgt: tgt, decisions: []tasksctl.LogicalDecision{dec}} }
+					}
+					return v, func() tea.Msg { return pushMsg{v: newTaskView(v.env, tgt)} }
+				}
+				return v, nil
+			}
 			if t := v.current(); t != nil {
 				return v, func() tea.Msg { return pushMsg{v: newTaskView(v.env, *t)} }
 			}
@@ -344,11 +463,12 @@ func (v *projectView) update(msg tea.Msg) (view, tea.Cmd) {
 }
 
 var emptyText = map[tab]string{
-	tabReady: "nothing ready — a adds a task",
-	tabDoing: "nothing doing",
-	tabOpen:  "no open tasks",
-	tabIdeas: "no ideas — a then ? files one",
-	tabDone:  "nothing done yet",
+	tabReady:   "nothing ready — a adds a task",
+	tabDoing:   "nothing doing",
+	tabOpen:    "no open tasks",
+	tabIdeas:   "no ideas — a then ? files one",
+	tabDone:    "nothing done yet",
+	tabPending: "no pending human decisions",
 }
 
 func (v *projectView) chip(n int, label string, hot lipgloss.Style) string {
@@ -369,7 +489,10 @@ func (v *projectView) renderAt(width, height int, now time.Time) string {
 	head := s.Accent(prefix).Render("▌ ") + s.Accent(prefix).Bold(true).Render(v.prefix) + "  " + s.Base.Render(name(root)+"  "+root) + "   " + strings.Join([]string{v.chip(c.Doing, "doing", s.Accent(prefix)), v.chip(c.Todo, "todo", s.Base), v.chip(c.Idea, "idea", s.Base), v.chip(c.Blocked, "blocked", s.Error.UnsetBold())}, "  ")
 	tabs := make([]string, len(tabNames))
 	for i, n := range tabNames {
-		label := fmt.Sprintf("%d %s", i+1, n)
+		label := n
+		if i < 5 {
+			label = fmt.Sprintf("%d %s", i+1, n)
+		}
 		if tab(i) != v.tab {
 			tabs[i] = s.Muted.Render(" " + label + " ")
 			continue
@@ -379,8 +502,40 @@ func (v *projectView) renderAt(width, height int, now time.Time) string {
 		}
 		tabs[i] = s.ActiveLabel(prefix, " "+label+" ")
 	}
-	rt := s.layoutRowsWithLabels(v.rows, width, now, v.headerLabels())
 	clipped := lipgloss.NewStyle().MaxWidth(width)
+	if v.tab == tabPending {
+		pHead := s.Header.Render("pending decisions")
+		if v.pendingCov != nil && !v.pendingCov.Complete {
+			pHead += "  " + s.Warning.Render("incomplete coverage: "+strings.Join(v.pendingCov.UnavailableProjects, ", "))
+		}
+		lines := []string{clipped.Render(head), clipped.Render(strings.Join(tabs, " ")), clipped.Render(pHead)}
+		filtering := v.filtering || v.filter != ""
+		avail := max(1, height-len(lines)-boolInt(filtering))
+		if v.sel < v.offset {
+			v.offset = v.sel
+		}
+		if v.sel >= v.offset+avail {
+			v.offset = v.sel - avail + 1
+		}
+		for i := v.offset; i < len(v.pending) && i < v.offset+avail; i++ {
+			lines = append(lines, clipped.Render(formatPendingRow(s, v.pending[i], i == v.sel)))
+		}
+		if (!v.hasData || v.loadedTab != tabPending) && v.loading() {
+			lines = append(lines, "  "+s.Muted.Render("loading Pending …"))
+		}
+		if len(v.pending) == 0 && v.hasData && v.loadedTab == tabPending {
+			if v.filter != "" {
+				lines = append(lines, "  "+s.Muted.Render("no rows match /"+v.filter))
+			} else {
+				lines = append(lines, "  "+s.Muted.Render(emptyText[tabPending]))
+			}
+		}
+		if filtering {
+			lines = append(lines, s.Base.Render(fmt.Sprintf("/%s · %d of %d", v.filter, len(v.pending), len(v.pendingAll))))
+		}
+		return lipgloss.NewStyle().MaxHeight(height).Render(strings.Join(lines, "\n"))
+	}
+	rt := s.layoutRowsWithLabels(v.rows, width, now, v.headerLabels())
 	lines := []string{clipped.Render(head), clipped.Render(strings.Join(tabs, " ")), rt.header()}
 	filtering := v.filtering || v.filter != ""
 	avail := height - len(lines)

@@ -104,6 +104,17 @@ type parkShowMsg struct {
 	res  tasksctl.ShowResult
 	err  error
 }
+type openDecisionMsg struct {
+	tgt       target
+	decisions []tasksctl.LogicalDecision
+}
+type decisionWriteMsg struct {
+	action     string
+	tgt        target
+	decisionID string
+	res        tasksctl.DecisionOut
+	err        error
+}
 type launchMsg struct {
 	harness, id, dir string
 	prompt           string

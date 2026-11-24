@@ -41,7 +41,7 @@ the app's process.
 
 ## Startup
 
-1. Flags: `--all`, `--config <path>`, `--version`, and at most one argument, a
+1. Flags: `--all`, `--pending`, `--config <path>`, `--version`, and at most one argument, a
    prefix or a task id.
 2. The config, `$XDG_CONFIG_HOME/tasks-tui/config.toml` (else `.config/` under the
    home directory) or the `--config` path. Absent means defaults.
@@ -92,6 +92,7 @@ the id is there, it takes the title, park and claim from that row. Otherwise it 
 | `ready --project <p>` | Ready tab | `tasks[]` list rows |
 | `list --project <p> [--status doing\|idea\|done] [--sort updated]` | Doing, Open, Ideas, Done tabs | `tasks[]` list rows |
 | `list --project <p> --parked` | Doing tab; `tasks-tui <id>` | `tasks[]` parked rows |
+| `list --all-projects --pending` / `list --project <p> --pending` | Pending queue view | `observed_at`, `coverage.{complete,unavailable_projects}`, `items[]` (`decision` and `legacy_wait` items with nullable `opened_at`/`age_seconds`), `warnings` |
 | `show <id>` | Task view; edit form; `tasks-tui <id>`; human-request park | `task.{id,title,status,priority,size,complexity,process,owner,created,started,updated,completed,tags,source,spec,plan,step,body,notes[]}`, `spec_path`, `plan_path`, `step_found`, `parent`, `children[]`, `depends_on[]`, `claim`, `park` (with optional `decision_id`), `escalation`, `periodic.{every,due}`, optional `decisions[]` |
 | `tags --project <p>` | task form | `tags[].tag`, for completion |
 
@@ -165,6 +166,8 @@ decode error.
 | park | `-C <checkout> park <id> <next step> [--waiting-on user] [--reason <r>] [--decision <uuid>] [--decision-kind <k> --decision-origin <o> --decision-text <t> [--artifact-repo <r> --artifact-path <p> --artifact-commit <c> \| --artifact-path <p> --artifact-sha256 <s>]]` | `id`, `warnings` |
 | done | `-C <checkout> done <id> [<message>]` | `id`, `warnings` |
 | drop | `-C <checkout> drop <id> [<message>]` | `id`, `warnings` |
+| decision answer | `-C <checkout> decision answer <id> <uuid> --accept\|--decline\|--reply <text> [--seen-scope <token>]` | `id`, `action`, `replayed`, `decision`, `resolution`, `warnings` |
+| decision withdraw | `-C <checkout> decision withdraw <id> <uuid> --reason <text>` | `id`, `action`, `replayed`, `decision`, `resolution`, `warnings` |
 
 `--project` is always passed on `add`, so the app's working directory never decides
 where a task lands. `add` passes no `--agent`, no `--status` and no other field: a
@@ -213,9 +216,10 @@ what the harness does afterwards is not observed.
 - **`decode`.** Exit 0 with a response that is not an object, lacks a required key,
   holds null in one, or has a mistyped value: detail `response missing <keys>; null
   <keys>` or the JSON error.
-- **`claimed`** is the only kind the app branches on: refused on `start`, it offers
-  `start --force`. Every other refusal (a `done` with open descendants, for one) is
-  shown as is; nothing is retried, defaulted or forced.
+- **`claimed`** on `start` offers `start --force`. **`stale_scope`** on `decision answer`
+  logs a warning and reloads the view so the person sees the updated scope before making a
+  fresh explicit answer; it never retries automatically. Every other refusal (a `done` with
+  open descendants, for one) is shown as is; nothing is retried, defaulted or forced.
 - **Where they show.** A failed load is an error in the status line and the view
   keeps its previous data; a failed write reads `<action> <id>: <kind>: <detail>`; a
   failed form load or save is shown inside the form.

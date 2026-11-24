@@ -413,3 +413,116 @@ func TestParkStageBArgvAndShowDecisionsDecode(t *testing.T) {
 		t.Fatalf("decisions not decoded: %+v", showRes.Decisions)
 	}
 }
+
+func TestPendingDecodeAndDecisionAnswerWithdrawArgv(t *testing.T) {
+	ctx := context.Background()
+	// Real golden output shape captured from Stage B `tasks list --pending --all-projects`:
+	// includes two decisions on one task, changed scope, incomplete coverage, and null legacy age.
+	goldenPending := `{
+		"observed_at":"2026-11-24T17:07:06Z",
+		"coverage":{"complete":false,"unavailable_projects":["beta"]},
+		"items":[
+			{
+				"type":"legacy_wait",
+				"task":{"id":"alpha-000003","title":"Old unlinked review","status":"todo","project":"alpha"},
+				"opened_at":"2026-10-05T00:00:00Z","age_seconds":4381626,
+				"source":"park","host":"testhost","reason":"review","text":"Check legacy review"
+			},
+			{
+				"type":"decision",
+				"task":{"id":"alpha-61cb39","title":"Dual decision task (edited)","status":"todo","project":"alpha"},
+				"opened_at":"2026-11-24T17:07:05Z","age_seconds":1,
+				"decision":{
+					"id":"1b4e28ba-2fa1-4d2f-9c83-2d3f9c0a1b2c","type":"decision","at":"2026-11-24T17:07:05Z","by":"keith",
+					"subject":{"repo":"records","path":"tasks/docs/plans/p.md","commit":"0123456789abcdef0123456789abcdef01234567"},
+					"data":{"kind":"approval","origin":"workflow","text":"Approve rev 1?","source":"direct"},
+					"state":"open","resolution":null,"seen_scope":null,"scope_changed_since_open":null,
+					"open_dependents":{"tasks":[],"complete":false,"unavailable_projects":["beta"],"observed_at":"2026-11-24T17:07:06Z"}
+				}
+			},
+			{
+				"type":"decision",
+				"task":{"id":"alpha-61cb39","title":"Dual decision task (edited)","status":"todo","project":"alpha"},
+				"opened_at":"2026-11-24T17:07:05Z","age_seconds":1,
+				"decision":{
+					"id":"6f76bdab-e417-4ae7-81ce-09fc70d6487a","type":"decision","at":"2026-11-24T17:07:05Z","by":"keith",
+					"subject":{"scope":"9dffaa855b7cc25be8ee58ebe0a7e86fa076f63a7daa7c11e4fd91df190658b8"},
+					"data":{"kind":"drop","origin":"scope","text":"Drop redundant task?","source":"direct"},
+					"state":"open","resolution":null,"seen_scope":"36ac255782a1ea3ca1796748e63071703ddd9b98dc740b8bd02ebaf8b3cfc444","scope_changed_since_open":true,
+					"open_dependents":{"tasks":[{"id":"beta-73fff4","title":"Downstream"}],"complete":false,"unavailable_projects":["beta"],"observed_at":"2026-11-24T17:07:06Z"}
+				}
+			},
+			{
+				"type":"legacy_wait",
+				"task":{"id":"alpha-000002","title":"Legacy idea","status":"idea","project":"alpha"},
+				"opened_at":null,"age_seconds":null,
+				"source":"awaiting_user","host":null,"reason":null,"text":"Keep legacy mode?"
+			}
+		],
+		"warnings":["project beta is unreachable"]
+	}`
+	cap := &captureRunner{reply: goldenPending}
+	cli := &Client{R: cap}
+
+	res, err := cli.Pending(ctx, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(cap.calls[0], []string{"list", "--all-projects", "--pending"}) {
+		t.Fatalf("argv = %v", cap.calls[0])
+	}
+	if res.Coverage.Complete || !slices.Equal(res.Coverage.UnavailableProjects, []string{"beta"}) {
+		t.Fatalf("coverage = %+v", res.Coverage)
+	}
+	if len(res.Items) != 4 {
+		t.Fatalf("expected 4 items, got %d", len(res.Items))
+	}
+	if res.Items[2].Decision == nil || res.Items[2].Decision.ScopeChangedSinceOpen == nil || !*res.Items[2].Decision.ScopeChangedSinceOpen {
+		t.Fatalf("drop scope change not decoded: %+v", res.Items[2].Decision)
+	}
+	if res.Items[3].OpenedAt != nil || res.Items[3].AgeSeconds != nil || res.Items[3].Source != "awaiting_user" {
+		t.Fatalf("null legacy age not decoded: %+v", res.Items[3])
+	}
+
+	if _, err := cli.Pending(ctx, "alpha"); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(cap.calls[1], []string{"list", "--project", "alpha", "--pending"}) {
+		t.Fatalf("project pending argv = %v", cap.calls[1])
+	}
+
+	// DecisionAnswer and DecisionWithdraw argv + response decode.
+	decReply := `{
+		"id":"alpha-61cb39","action":"answered","replayed":false,
+		"decision":{
+			"id":"6f76bdab-e417-4ae7-81ce-09fc70d6487a","type":"decision","at":"2026-11-24T17:07:05Z","by":"keith",
+			"subject":{"scope":"9dffaa855b7cc25be8ee58ebe0a7e86fa076f63a7daa7c11e4fd91df190658b8"},
+			"data":{"kind":"drop","origin":"scope","text":"Drop?","source":"direct"},
+			"state":"resolved","resolution":null,"seen_scope":null,"scope_changed_since_open":null,
+			"open_dependents":{"tasks":[],"complete":true,"unavailable_projects":[],"observed_at":"2026-11-24T17:07:06Z"}
+		},
+		"resolution":null,"warnings":[]
+	}`
+	capAns := &captureRunner{reply: decReply}
+	cliAns := &Client{R: capAns}
+	const tok = "36ac255782a1ea3ca1796748e63071703ddd9b98dc740b8bd02ebaf8b3cfc444"
+	const d1 = "6f76bdab-e417-4ae7-81ce-09fc70d6487a"
+	if _, err := cliAns.DecisionAnswer(ctx, "/r/alpha", "alpha-61cb39", d1, DecisionAnswerSpec{Outcome: "accept", Text: "Drop it", SeenScope: tok}); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(capAns.calls[0], []string{"decision", "answer", "alpha-61cb39", d1, "--accept", "Drop it", "--seen-scope", tok}) {
+		t.Fatalf("drop accept argv = %v", capAns.calls[0])
+	}
+	if _, err := cliAns.DecisionAnswer(ctx, "/r/alpha", "alpha-61cb39", d1, DecisionAnswerSpec{Outcome: "reply", Text: "Use v2"}); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(capAns.calls[1], []string{"decision", "answer", "alpha-61cb39", d1, "--reply", "Use v2"}) {
+		t.Fatalf("reply argv = %v", capAns.calls[1])
+	}
+	if _, err := cliAns.DecisionWithdraw(ctx, "/r/alpha", "alpha-61cb39", d1, "No longer needed"); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(capAns.calls[2], []string{"decision", "withdraw", "alpha-61cb39", d1, "--reason", "No longer needed"}) {
+		t.Fatalf("withdraw argv = %v", capAns.calls[2])
+	}
+}

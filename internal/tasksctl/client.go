@@ -57,6 +57,46 @@ func (c *Client) Parked(ctx context.Context, prefix string) (res ParkedResult, e
 	}
 	return res, decodeInto(raw, &res, "!tasks", "!warnings")
 }
+func (c *Client) Pending(ctx context.Context, prefix string) (res PendingResult, err error) {
+	args := []string{"list", "--all-projects", "--pending"}
+	if prefix != "" {
+		args = []string{"list", "--project", prefix, "--pending"}
+	}
+	raw, err := c.R.Run(ctx, "", args...)
+	if err != nil {
+		return res, err
+	}
+	return res, decodeInto(raw, &res, "!observed_at", "!coverage", "!items", "!warnings")
+}
+func (c *Client) DecisionAnswer(ctx context.Context, dir, taskID, decisionID string, spec DecisionAnswerSpec) (res DecisionOut, err error) {
+	var flag string
+	switch spec.Outcome {
+	case "accept":
+		flag = "--accept"
+	case "decline":
+		flag = "--decline"
+	case "reply":
+		flag = "--reply"
+	default:
+		return res, &Error{Kind: "validation", Detail: "invalid decision answer outcome: " + spec.Outcome}
+	}
+	args := []string{"decision", "answer", taskID, decisionID, flag, spec.Text}
+	if spec.SeenScope != "" {
+		args = append(args, "--seen-scope", spec.SeenScope)
+	}
+	raw, err := c.R.Run(ctx, dir, args...)
+	if err != nil {
+		return res, err
+	}
+	return res, decodeInto(raw, &res, "!id", "!action", "!replayed", "!decision", "!warnings")
+}
+func (c *Client) DecisionWithdraw(ctx context.Context, dir, taskID, decisionID, reason string) (res DecisionOut, err error) {
+	raw, err := c.R.Run(ctx, dir, "decision", "withdraw", taskID, decisionID, "--reason", reason)
+	if err != nil {
+		return res, err
+	}
+	return res, decodeInto(raw, &res, "!id", "!action", "!replayed", "!decision", "!warnings")
+}
 func (c *Client) Show(ctx context.Context, dir, id string) (res ShowResult, err error) {
 	raw, err := c.R.Run(ctx, dir, "show", id)
 	if err != nil {

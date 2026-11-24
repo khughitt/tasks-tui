@@ -108,6 +108,14 @@ func (v *taskView) update(msg tea.Msg) (view, tea.Cmd) {
 			v.vp.GotoTop()
 		case key.Matches(msg, keys.Copy):
 			return v, tea.SetClipboard(v.tgt.ID)
+		case key.Matches(msg, keys.Enter):
+			if v.data != nil {
+				open := openDecisions(v.data.res.Decisions)
+				if len(open) > 0 {
+					tgt := *v.current()
+					return v, func() tea.Msg { return openDecisionMsg{tgt: tgt, decisions: open} }
+				}
+			}
 		}
 	}
 	return v, nil
@@ -198,6 +206,9 @@ func (v *taskView) content() string {
 		line("escalated", s.Warning.Render(e.Level)+"  "+s.Base.Render(e.At))
 	}
 	b.WriteString("\n")
+	if len(r.Decisions) > 0 {
+		renderDecisionsSection(&b, s, r.Decisions)
+	}
 	if len(r.Actions) > 0 {
 		b.WriteString(s.Header.Render("actions") + "\n")
 		for _, action := range r.Actions {

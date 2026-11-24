@@ -28,10 +28,11 @@ func main() {
 func run() error {
 	fs := flag.NewFlagSet("tasks-tui", flag.ContinueOnError)
 	all := fs.Bool("all", false, "open the Projects view even inside a registered project")
+	pending := fs.Bool("pending", false, "open the Pending decisions view (all projects or given prefix)")
 	cfgPath := fs.String("config", "", "config file (default ~/.config/tasks-tui/config.toml)")
 	showVersion := fs.Bool("version", false, "print the version")
 	fs.Usage = func() {
-		fmt.Fprintln(os.Stderr, "usage: tasks-tui [--all] [--config path] [<prefix> | <task-id>]")
+		fmt.Fprintln(os.Stderr, "usage: tasks-tui [--all] [--pending] [--config path] [<prefix> | <task-id>]")
 		fs.PrintDefaults()
 	}
 	if err := fs.Parse(os.Args[1:]); err != nil {
@@ -71,9 +72,20 @@ func run() error {
 	env.SetProjects(projects.Projects)
 
 	cwd, _ := os.Getwd()
-	stack, err := resolveStart(ctx, env, fs.Arg(0), *all, cwd)
-	if err != nil {
-		return err
+	var stack []ui.View
+	if *pending {
+		prefix := fs.Arg(0)
+		if prefix != "" {
+			if _, ok := env.Roots[prefix]; !ok {
+				return fmt.Errorf("unknown project prefix %q", prefix)
+			}
+		}
+		stack = []ui.View{ui.NewPendingView(env, prefix)}
+	} else {
+		stack, err = resolveStart(ctx, env, fs.Arg(0), *all, cwd)
+		if err != nil {
+			return err
+		}
 	}
 	app := ui.New(env, ui.Options{ColorQueryTimeout: time.Second, Refresh: time.Duration(cfg.RefreshSeconds) * time.Second, Stack: stack})
 	_, err = tea.NewProgram(app).Run()

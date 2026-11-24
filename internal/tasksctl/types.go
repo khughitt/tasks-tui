@@ -312,6 +312,52 @@ type WriteResult struct {
 	ID       string   `json:"id"`
 	Warnings []string `json:"warnings"`
 }
+
+type PendingTaskRef struct {
+	ID      string `json:"id"`
+	Title   string `json:"title"`
+	Status  string `json:"status"`
+	Project string `json:"project"`
+}
+
+type PendingCoverage struct {
+	Complete            bool     `json:"complete"`
+	UnavailableProjects []string `json:"unavailable_projects"`
+}
+
+type PendingItem struct {
+	Type       string           `json:"type"`
+	Task       PendingTaskRef   `json:"task"`
+	OpenedAt   *string          `json:"opened_at"`
+	AgeSeconds *int64           `json:"age_seconds"`
+	Decision   *LogicalDecision `json:"decision,omitempty"`
+	Source     string           `json:"source,omitempty"`
+	Host       *string          `json:"host,omitempty"`
+	Reason     *string          `json:"reason,omitempty"`
+	Text       *string          `json:"text,omitempty"`
+}
+
+type PendingResult struct {
+	ObservedAt string          `json:"observed_at"`
+	Coverage   PendingCoverage `json:"coverage"`
+	Items      []PendingItem   `json:"items"`
+	Warnings   []string        `json:"warnings"`
+}
+
+type DecisionAnswerSpec struct {
+	Outcome   string // "accept", "decline", "reply"
+	Text      string
+	SeenScope string
+}
+
+type DecisionOut struct {
+	ID         string             `json:"id"`
+	Action     string             `json:"action"`
+	Replayed   bool               `json:"replayed"`
+	Decision   LogicalDecision    `json:"decision"`
+	Resolution *LogicalResolution `json:"resolution"`
+	Warnings   []string           `json:"warnings"`
+}
 type ListOpts struct {
 	Status      []string
 	SortUpdated bool

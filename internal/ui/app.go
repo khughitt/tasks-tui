@@ -123,9 +123,14 @@ func (a *App) update(raw tea.Msg) (tea.Model, tea.Cmd) {
 		return a, a.afterWrite(msg)
 	case parkShowMsg:
 		return a, a.afterParkShow(msg)
+	case openDecisionMsg:
+		a.overlay = a.decisionSelectorOverlay(msg.tgt, msg.decisions)
+		return a, nil
 	case setOverlayMsg:
 		a.overlay = msg.o
 		return a, nil
+	case decisionWriteMsg:
+		return a, a.afterDecisionWrite(msg)
 	case formSubmitMsg:
 		if a.top() != msg.form {
 			return a, nil
