@@ -92,7 +92,7 @@ the id is there, it takes the title, park and claim from that row. Otherwise it 
 | `ready --project <p>` | Ready tab | `tasks[]` list rows |
 | `list --project <p> [--status doing\|idea\|done] [--sort updated]` | Doing, Open, Ideas, Done tabs | `tasks[]` list rows |
 | `list --project <p> --parked` | Doing tab; `tasks-tui <id>` | `tasks[]` parked rows |
-| `show <id>` | Task view; edit form; `tasks-tui <id>` | `task.{id,title,status,priority,size,complexity,process,owner,created,started,updated,completed,tags,source,spec,plan,step,body,notes[]}`, `spec_path`, `plan_path`, `step_found`, `parent`, `children[]`, `depends_on[]`, `claim`, `park`, `escalation`, `periodic.{every,due}` |
+| `show <id>` | Task view; edit form; `tasks-tui <id>`; human-request park | `task.{id,title,status,priority,size,complexity,process,owner,created,started,updated,completed,tags,source,spec,plan,step,body,notes[]}`, `spec_path`, `plan_path`, `step_found`, `parent`, `children[]`, `depends_on[]`, `claim`, `park` (with optional `decision_id`), `escalation`, `periodic.{every,due}`, optional `decisions[]` |
 | `tags --project <p>` | task form | `tags[].tag`, for completion |
 
 The task view reads optional `show.actions[]` from the same detail call. It
@@ -162,7 +162,7 @@ decode error.
 | add | `add <title> --project <p> [-b <body>] [--tag <t>]…` | `id`, `action`, `warnings` |
 | edit | `-C <checkout> edit <id> --title <title> -b <body> --no-tags [--tag <t>]…` | `id`, `warnings` |
 | start | `-C <checkout> start [--force] <id>` | `id`, `warnings` |
-| park | `-C <checkout> park <id> <next step> [--waiting-on user] [--reason <r>]` | `id`, `warnings` |
+| park | `-C <checkout> park <id> <next step> [--waiting-on user] [--reason <r>] [--decision <uuid>] [--decision-kind <k> --decision-origin <o> --decision-text <t> [--artifact-repo <r> --artifact-path <p> --artifact-commit <c> \| --artifact-path <p> --artifact-sha256 <s>]]` | `id`, `warnings` |
 | done | `-C <checkout> done <id> [<message>]` | `id`, `warnings` |
 | drop | `-C <checkout> drop <id> [<message>]` | `id`, `warnings` |
 

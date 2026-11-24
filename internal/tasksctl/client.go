@@ -117,6 +117,30 @@ func (c *Client) Park(ctx context.Context, dir, id string, p ParkSpec) (WriteRes
 	if p.Reason != "" {
 		args = append(args, "--reason", p.Reason)
 	}
+	if p.DecisionID != "" {
+		args = append(args, "--decision", p.DecisionID)
+	}
+	if p.DecisionKind != "" {
+		args = append(args, "--decision-kind", p.DecisionKind)
+	}
+	if p.DecisionOrigin != "" {
+		args = append(args, "--decision-origin", p.DecisionOrigin)
+	}
+	if p.DecisionText != "" {
+		args = append(args, "--decision-text", p.DecisionText)
+	}
+	if p.ArtifactRepo != "" {
+		args = append(args, "--artifact-repo", p.ArtifactRepo)
+	}
+	if p.ArtifactPath != "" {
+		args = append(args, "--artifact-path", p.ArtifactPath)
+	}
+	if p.ArtifactCommit != "" {
+		args = append(args, "--artifact-commit", p.ArtifactCommit)
+	}
+	if p.ArtifactSHA256 != "" {
+		args = append(args, "--artifact-sha256", p.ArtifactSHA256)
+	}
 	return c.write(ctx, dir, args...)
 }
 

@@ -69,6 +69,7 @@ type overlay interface {
 
 type tickMsg struct{}
 type noticesMsg []Message
+type setOverlayMsg struct{ o overlay }
 
 func notices(level Level, texts ...string) tea.Cmd {
 	if len(texts) == 0 {
@@ -90,11 +91,18 @@ func prefixed(cmd string, warnings []string) []string {
 }
 
 type writeMsg struct {
-	action string
-	tgt    target
-	force  bool
-	res    tasksctl.WriteResult
-	err    error
+	action   string
+	tgt      target
+	force    bool
+	parkSpec *tasksctl.ParkSpec
+	res      tasksctl.WriteResult
+	err      error
+}
+type parkShowMsg struct {
+	tgt  target
+	spec tasksctl.ParkSpec
+	res  tasksctl.ShowResult
+	err  error
 }
 type launchMsg struct {
 	harness, id, dir string

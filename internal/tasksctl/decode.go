@@ -150,3 +150,33 @@ func (e *ActionEvidence) UnmarshalJSON(raw []byte) error {
 	type plain ActionEvidence
 	return decodeInto(raw, (*plain)(e), "!code", "!evidence")
 }
+
+func (d *DecisionData) UnmarshalJSON(raw []byte) error {
+	type plain DecisionData
+	return decodeInto(raw, (*plain)(d), "!kind", "!origin", "!text")
+}
+
+func (r *ResolutionData) UnmarshalJSON(raw []byte) error {
+	type plain ResolutionData
+	return decodeInto(raw, (*plain)(r), "!outcome", "!text", "!source")
+}
+
+func (r *LogicalResolution) UnmarshalJSON(raw []byte) error {
+	type plain LogicalResolution
+	return decodeInto(raw, (*plain)(r), "!id", "!type", "!at", "!by", "!subject", "!data")
+}
+
+func (r *OpenDependentRow) UnmarshalJSON(raw []byte) error {
+	type plain OpenDependentRow
+	return decodeInto(raw, (*plain)(r), "!id", "!title")
+}
+
+func (o *OpenDependents) UnmarshalJSON(raw []byte) error {
+	type plain OpenDependents
+	return decodeInto(raw, (*plain)(o), "!tasks", "!complete", "!unavailable_projects", "!observed_at")
+}
+
+func (d *LogicalDecision) UnmarshalJSON(raw []byte) error {
+	type plain LogicalDecision
+	return decodeInto(raw, (*plain)(d), "!id", "!type", "!at", "!by", "!subject", "!data", "!state", "!open_dependents")
+}

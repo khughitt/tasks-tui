@@ -121,6 +121,11 @@ func (a *App) update(raw tea.Msg) (tea.Model, tea.Cmd) {
 		return a, nil
 	case writeMsg:
 		return a, a.afterWrite(msg)
+	case parkShowMsg:
+		return a, a.afterParkShow(msg)
+	case setOverlayMsg:
+		a.overlay = msg.o
+		return a, nil
 	case formSubmitMsg:
 		if a.top() != msg.form {
 			return a, nil
@@ -260,6 +265,9 @@ func (a *App) afterWrite(msg writeMsg) tea.Cmd {
 		var taskErr *tasksctl.Error
 		if errors.As(msg.err, &taskErr) && taskErr.Kind == "claimed" && msg.action == "start" && !msg.force {
 			return a.openForce(msg.tgt, taskErr.Detail)
+		}
+		if msg.action == "park" && msg.parkSpec != nil && msg.parkSpec.DecisionID != "" {
+			return a.openParkRetry(msg.tgt, *msg.parkSpec, msg.err.Error())
 		}
 		a.log.Add(LevelError, msg.action+" "+msg.tgt.ID+": "+msg.err.Error())
 		return nil

@@ -73,24 +73,147 @@ func TestStartOtherErrorIsShownNotForced(t *testing.T) {
 
 func TestParkPromptTogglesAndRunsInParkedWorktree(t *testing.T) {
 	f := projectFake()
-	f.on("/wt/c", "park tui-ccc333 write the tests --waiting-on user --reason review", `{"id":"tui-ccc333","warnings":[]}`)
+	// Non-request user park (environment) keeps the exact pre-Stage-B argv.
+	f.on("/wt/c", "park tui-ccc333 fix the env --waiting-on user --reason environment", `{"id":"tui-ccc333","warnings":[]}`)
 	d, app := transitions(t, f)
 	d.Key("2")
 	d.Expect("tui-ccc333")
 	d.Key("j")
 	d.Key("p")
 	d.Expect("park tui-ccc333 — next step", "waiting on: agent", "reason: none")
-	d.Type("write the tests")
+	d.Type("fix the env")
 	d.Key("ctrl+u")
 	d.Expect("waiting on: user")
-	d.Key("ctrl+r")
-	d.Expect("reason: review")
+	for range 4 {
+		d.Key("ctrl+r")
+	}
+	d.Expect("reason: environment")
 	d.Key("enter")
 	if !logged(app, LevelInfo, "park tui-ccc333") {
 		t.Fatalf("park notice missing: %+v", app.Messages())
 	}
-	if !f.called("@/wt/c park tui-ccc333 write the tests --waiting-on user --reason review") {
+	if !f.called("@/wt/c park tui-ccc333 fix the env --waiting-on user --reason environment") {
 		t.Fatalf("park argv/dir wrong: %v", f.writes())
+	}
+}
+
+func TestParkHumanRequestLinksExistingOpenDecision(t *testing.T) {
+	const d1 = "6f76bdab-e417-4ae7-81ce-09fc70d6487a"
+	f := projectFake()
+	f.on("/wt/c", "show tui-ccc333", `{
+		"task":{"id":"tui-ccc333","title":"C","status":"doing","priority":2,"parallel":false,"created":"2026-11-24T00:00:00Z","updated":"2026-11-24T00:00:00Z","body":""},
+		"decisions":[{
+			"id":"6f76bdab-e417-4ae7-81ce-09fc70d6487a","type":"decision","at":"2026-11-24T00:00:00Z","by":"keith",
+			"subject":{"scope":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+			"data":{"kind":"question","origin":"scope","text":"Review round 2?"},
+			"state":"open","resolution":null,"seen_scope":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","scope_changed_since_open":false,
+			"open_dependents":{"tasks":[],"complete":true,"unavailable_projects":[],"observed_at":"2026-11-24T00:00:00Z"}
+		}],
+		"warnings":[]
+	}`)
+	f.on("/wt/c", "park tui-ccc333 open sheet --waiting-on user --reason review --decision "+d1, `{"id":"tui-ccc333","warnings":[]}`)
+	d, app := transitions(t, f)
+	d.Key("2")
+	d.Expect("tui-ccc333")
+	d.Key("j")
+	d.Key("p")
+	d.Type("open sheet")
+	d.Key("ctrl+u")
+	d.Key("ctrl+r")
+	d.Expect("reason: review")
+	d.Key("enter")
+	d.Expect("link open decision", "question 6f76bdab: Review round 2?")
+	d.Key("1")
+	if !logged(app, LevelInfo, "park tui-ccc333") {
+		t.Fatalf("park notice missing: %+v", app.Messages())
+	}
+	if !f.called("@/wt/c park tui-ccc333 open sheet --waiting-on user --reason review --decision " + d1) {
+		t.Fatalf("linked park argv wrong: %v", f.writes())
+	}
+
+	// Selecting "new inline decision" from a non-empty open-decision picker opens the inline prompt.
+	const dNew = "2c5f39cb-3fb2-4e3f-8d94-3e4f0d1b2c3d"
+	orig := generateUUID
+	generateUUID = func() string { return dNew }
+	defer func() { generateUUID = orig }()
+	wantNew := "park tui-ccc333 open sheet 2 --waiting-on user --reason review --decision " + dNew + " --decision-kind question --decision-origin tasks-tui --decision-text Fresh review?"
+	f.on("/wt/c", wantNew, `{"id":"tui-ccc333","warnings":[]}`)
+	d.Key("p")
+	d.Type("open sheet 2")
+	d.Key("ctrl+u")
+	d.Key("ctrl+r")
+	d.Expect("reason: review")
+	d.Key("enter")
+	d.Expect("link open decision", "new inline decision")
+	d.Key("2")
+	d.Expect("decision question")
+	d.Type("Fresh review?")
+	d.Key("enter")
+	if !f.called(fakeKey("/wt/c", wantNew)) {
+		t.Fatalf("inline decision from picker argv wrong: %v", f.writes())
+	}
+}
+
+func TestParkHumanRequestInlineQuestionRetainsUUIDOnRetryAndApprovalRequiresPin(t *testing.T) {
+	const fixedUUID = "1b4e28ba-2fa1-4d2f-9c83-2d3f9c0a1b2c"
+	const sha = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	orig := generateUUID
+	generateUUID = func() string { return fixedUUID }
+	defer func() { generateUUID = orig }()
+
+	// 1. Inline question with failure + retry retains the exact generated UUID.
+	f := projectFake()
+	emptyShow := `{"task":{"id":"tui-aaa111","title":"A","status":"todo","priority":1,"parallel":false,"created":"2026-11-24T00:00:00Z","updated":"2026-11-24T00:00:00Z","body":""},"warnings":[]}`
+	f.on("/r/tui", "show tui-aaa111", emptyShow)
+	wantQ := "park tui-aaa111 wait on choice --waiting-on user --reason decision --decision " + fixedUUID + " --decision-kind question --decision-origin tasks-tui --decision-text Pick A or B?"
+	f.on("/r/tui", wantQ, &tasksctl.Error{Kind: "io", Detail: "transient lock timeout"})
+	d, app := transitions(t, f)
+	d.Key("p")
+	d.Type("wait on choice")
+	d.Key("ctrl+u")
+	d.Key("ctrl+r")
+	d.Key("ctrl+r")
+	d.Expect("reason: decision")
+	d.Key("enter")
+	d.Expect("decision question")
+	d.Type("Pick A or B?")
+	d.Key("enter")
+	d.Expect("[r] retry park", "1b4e28ba")
+	// Clear error on fake so retry succeeds with the EXACT same UUID!
+	f.mu.Lock()
+	delete(f.errors, fakeKey("/r/tui", wantQ))
+	f.replies[fakeKey("/r/tui", wantQ)] = `{"id":"tui-aaa111","warnings":[]}`
+	f.mu.Unlock()
+	d.Key("r")
+	if !logged(app, LevelInfo, "park tui-aaa111") {
+		t.Fatalf("retry park did not succeed: %+v", app.Messages())
+	}
+	if n := countCalls(f, fakeKey("/r/tui", wantQ)); n != 2 {
+		t.Fatalf("expected 2 calls with identical UUID on retry, got %d (%v)", n, f.writes())
+	}
+
+	// 2. Inline approval requires a valid pin (rejects incomplete pin, accepts digest pin).
+	wantA := "park tui-aaa111 wait approval --waiting-on user --reason approval --decision " + fixedUUID + " --decision-kind approval --decision-origin tasks-tui --decision-text Approve spec? --artifact-path docs/specs/s.md --artifact-sha256 " + sha
+	f.on("/r/tui", wantA, `{"id":"tui-aaa111","warnings":[]}`)
+	d.Key("p")
+	d.Type("wait approval")
+	d.Key("ctrl+u")
+	d.Key("ctrl+r")
+	d.Key("ctrl+r")
+	d.Key("ctrl+r")
+	d.Expect("reason: approval")
+	d.Key("enter")
+	d.Expect("approval request")
+	d.Type("Approve spec?")
+	d.Key("enter")
+	d.Expect("artifact pin")
+	d.Type("docs/specs/s.md")
+	d.Key("enter")
+	d.Expect("use repo:path@commit")
+	d.Type("@" + sha)
+	d.Key("enter")
+	if !f.called(fakeKey("/r/tui", wantA)) {
+		t.Fatalf("approval park argv wrong: %v", f.writes())
 	}
 }
 

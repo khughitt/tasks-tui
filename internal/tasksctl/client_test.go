@@ -321,3 +321,95 @@ func TestOpenListRetainsShelfCheckpointFields(t *testing.T) {
 		t.Fatalf("shelf lost: %+v", shelf)
 	}
 }
+
+type captureRunner struct {
+	reply string
+	calls [][]string
+	dirs  []string
+}
+
+func (c *captureRunner) Run(_ context.Context, dir string, args ...string) ([]byte, error) {
+	c.dirs = append(c.dirs, dir)
+	c.calls = append(c.calls, append([]string{}, args...))
+	return []byte(c.reply), nil
+}
+
+func TestParkStageBArgvAndShowDecisionsDecode(t *testing.T) {
+	ctx := context.Background()
+	cap := &captureRunner{reply: `{"id":"tui-111111","warnings":[]}`}
+	cli := &Client{R: cap}
+
+	// Agent park and non-request user park keep exact existing argv.
+	if _, err := cli.Park(ctx, "/wt", "tui-111111", ParkSpec{NextStep: "continue"}); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(cap.calls[0], []string{"park", "tui-111111", "continue"}) {
+		t.Fatalf("agent park argv = %v", cap.calls[0])
+	}
+	if _, err := cli.Park(ctx, "/wt", "tui-111111", ParkSpec{NextStep: "fix env", WaitingOnUser: true, Reason: "environment"}); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(cap.calls[1], []string{"park", "tui-111111", "fix env", "--waiting-on", "user", "--reason", "environment"}) {
+		t.Fatalf("non-request park argv = %v", cap.calls[1])
+	}
+
+	// Link-only human-request park passes --decision.
+	const d1 = "6f76bdab-e417-4ae7-81ce-09fc70d6487a"
+	if _, err := cli.Park(ctx, "/wt", "tui-111111", ParkSpec{NextStep: "review", WaitingOnUser: true, Reason: "review", DecisionID: d1}); err != nil {
+		t.Fatal(err)
+	}
+	wantLink := []string{"park", "tui-111111", "review", "--waiting-on", "user", "--reason", "review", "--decision", d1}
+	if !slices.Equal(cap.calls[2], wantLink) {
+		t.Fatalf("link park argv = %v, want %v", cap.calls[2], wantLink)
+	}
+
+	// Inline-open commit-pinned approval park passes all Stage B flags.
+	const commit = "0123456789abcdef0123456789abcdef01234567"
+	if _, err := cli.Park(ctx, "/wt", "tui-111111", ParkSpec{
+		NextStep:       "land after approval",
+		WaitingOnUser:  true,
+		Reason:         "approval",
+		DecisionID:     d1,
+		DecisionKind:   "approval",
+		DecisionOrigin: "tasks-tui",
+		DecisionText:   "Approve plan?",
+		ArtifactRepo:   "records",
+		ArtifactPath:   "tasks/docs/plans/p.md",
+		ArtifactCommit: commit,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	wantInline := []string{
+		"park", "tui-111111", "land after approval",
+		"--waiting-on", "user", "--reason", "approval",
+		"--decision", d1, "--decision-kind", "approval", "--decision-origin", "tasks-tui", "--decision-text", "Approve plan?",
+		"--artifact-repo", "records", "--artifact-path", "tasks/docs/plans/p.md", "--artifact-commit", commit,
+	}
+	if !slices.Equal(cap.calls[3], wantInline) {
+		t.Fatalf("inline approval argv = %v, want %v", cap.calls[3], wantInline)
+	}
+
+	// Decode show JSON carrying decisions[] and park.decision_id.
+	showRaw := `{
+		"task":{"id":"tui-111111","title":"T","status":"todo","priority":2,"parallel":false,"created":"2026-11-24T00:00:00Z","updated":"2026-11-24T00:00:00Z","body":""},
+		"park":{"at":"2026-11-24T00:00:00Z","next_step":"review","waiting_on":"user","reason":"review","decision_id":"6f76bdab-e417-4ae7-81ce-09fc70d6487a","session":"s","owner":"o","host":"h","worktree":"/wt"},
+		"decisions":[{
+			"id":"6f76bdab-e417-4ae7-81ce-09fc70d6487a","type":"decision","at":"2026-11-24T00:00:00Z","by":"keith",
+			"subject":{"scope":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
+			"data":{"kind":"question","origin":"scope","text":"Which layout?"},
+			"state":"open","resolution":null,"seen_scope":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","scope_changed_since_open":false,
+			"open_dependents":{"tasks":[],"complete":true,"unavailable_projects":[],"observed_at":"2026-11-24T00:00:00Z"}
+		}],
+		"warnings":[]
+	}`
+	showRes, err := (&Client{R: literalRunner(showRaw)}).Show(ctx, "/wt", "tui-111111")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if showRes.Park == nil || showRes.Park.DecisionID == nil || *showRes.Park.DecisionID != d1 {
+		t.Fatalf("park.decision_id not decoded: %+v", showRes.Park)
+	}
+	if len(showRes.Decisions) != 1 || showRes.Decisions[0].ID != d1 || showRes.Decisions[0].Data.Kind != "question" {
+		t.Fatalf("decisions not decoded: %+v", showRes.Decisions)
+	}
+}

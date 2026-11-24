@@ -11,16 +11,17 @@ type ClaimInfo struct {
 	Live     bool   `json:"live"`
 }
 type ParkInfo struct {
-	At        string  `json:"at"`
-	NextStep  string  `json:"next_step"`
-	WaitingOn string  `json:"waiting_on"`
-	Reason    *string `json:"reason"`
-	Needs     *string `json:"needs"`
-	Minutes   *int    `json:"minutes"`
-	Session   string  `json:"session"`
-	Owner     string  `json:"owner"`
-	Host      string  `json:"host"`
-	Worktree  string  `json:"worktree"`
+	At         string  `json:"at"`
+	NextStep   string  `json:"next_step"`
+	WaitingOn  string  `json:"waiting_on"`
+	Reason     *string `json:"reason"`
+	Needs      *string `json:"needs"`
+	Minutes    *int    `json:"minutes"`
+	DecisionID *string `json:"decision_id,omitempty"`
+	Session    string  `json:"session"`
+	Owner      string  `json:"owner"`
+	Host       string  `json:"host"`
+	Worktree   string  `json:"worktree"`
 }
 type Escalation struct {
 	Level   string `json:"level"`
@@ -208,8 +209,69 @@ type CurateWindow struct {
 	OlderThanDays int `json:"older_than_days"`
 }
 
+type DecisionSubject struct {
+	Task   *bool   `json:"task,omitempty"`
+	Scope  *string `json:"scope,omitempty"`
+	Repo   *string `json:"repo,omitempty"`
+	Path   *string `json:"path,omitempty"`
+	Commit *string `json:"commit,omitempty"`
+	SHA256 *string `json:"sha256,omitempty"`
+	Entry  *string `json:"entry,omitempty"`
+}
+
+type DecisionData struct {
+	Kind         string  `json:"kind"`
+	Origin       string  `json:"origin"`
+	Text         string  `json:"text"`
+	Source       *string `json:"source,omitempty"`
+	ScopeVerdict *string `json:"scope_verdict,omitempty"`
+}
+
+type ResolutionData struct {
+	Outcome   string  `json:"outcome"`
+	Text      string  `json:"text"`
+	Source    string  `json:"source"`
+	SeenScope *string `json:"seen_scope,omitempty"`
+}
+
+type LogicalResolution struct {
+	ID      string          `json:"id"`
+	Type    string          `json:"type"`
+	At      string          `json:"at"`
+	By      string          `json:"by"`
+	Subject DecisionSubject `json:"subject"`
+	Data    ResolutionData  `json:"data"`
+}
+
+type OpenDependentRow struct {
+	ID    string `json:"id"`
+	Title string `json:"title"`
+}
+
+type OpenDependents struct {
+	Tasks               []OpenDependentRow `json:"tasks"`
+	Complete            bool               `json:"complete"`
+	UnavailableProjects []string           `json:"unavailable_projects"`
+	ObservedAt          string             `json:"observed_at"`
+}
+
+type LogicalDecision struct {
+	ID                    string             `json:"id"`
+	Type                  string             `json:"type"`
+	At                    string             `json:"at"`
+	By                    string             `json:"by"`
+	Subject               DecisionSubject    `json:"subject"`
+	Data                  DecisionData       `json:"data"`
+	State                 string             `json:"state"`
+	Resolution            *LogicalResolution `json:"resolution"`
+	SeenScope             *string            `json:"seen_scope"`
+	ScopeChangedSinceOpen *bool              `json:"scope_changed_since_open"`
+	OpenDependents        OpenDependents     `json:"open_dependents"`
+}
+
 type ShowResult struct {
 	Actions    []ActionExplanation `json:"actions,omitempty"`
+	Decisions  []LogicalDecision   `json:"decisions,omitempty"`
 	Task       Task                `json:"task"`
 	SpecPath   *string             `json:"spec_path"`
 	PlanPath   *string             `json:"plan_path"`
@@ -255,7 +317,15 @@ type ListOpts struct {
 	SortUpdated bool
 }
 type ParkSpec struct {
-	NextStep      string
-	WaitingOnUser bool
-	Reason        string
+	NextStep       string
+	WaitingOnUser  bool
+	Reason         string
+	DecisionID     string
+	DecisionKind   string
+	DecisionOrigin string
+	DecisionText   string
+	ArtifactRepo   string
+	ArtifactPath   string
+	ArtifactCommit string
+	ArtifactSHA256 string
 }
