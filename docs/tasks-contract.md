@@ -95,6 +95,13 @@ the id is there, it takes the title, park and claim from that row. Otherwise it 
 | `show <id>` | Task view; edit form; `tasks-tui <id>` | `task.{id,title,status,priority,size,complexity,process,owner,created,started,updated,completed,tags,source,spec,plan,step,body,notes[]}`, `spec_path`, `plan_path`, `step_found`, `parent`, `children[]`, `depends_on[]`, `claim`, `park`, `escalation`, `periodic.{every,due}` |
 | `tags --project <p>` | task form | `tags[].tag`, for completion |
 
+The task view reads optional `show.actions[]` from the same detail call. It
+displays each action's actor and availability and all blocking reason codes with
+their identifiers where present. The client retains `signals`, the answer
+`subject`, and the curate `window`. Detail remains usable when the installed
+tracker omits the array. The Ready tab continues to use the tracker’s ready
+selection, and the usual commands handle writes.
+
 Every response's `warnings[]` is shown (see the guide's
 [Messages and warnings](guide.md#messages-and-warnings)), except the startup and
 form-tag lookups'.

@@ -130,3 +130,23 @@ func (t *Tag) UnmarshalJSON(raw []byte) error {
 	type plain Tag
 	return decodeInto(raw, (*plain)(t), "!tag", "meaning", "!count", "!projects")
 }
+
+func (a *ActionExplanation) UnmarshalJSON(raw []byte) error {
+	type plain ActionExplanation
+	if err := decodeInto(raw, (*plain)(a), "!action", "!actor", "!available", "!reasons", "!signals"); err != nil {
+		return err
+	}
+	switch a.Action {
+	case "answer":
+		return requireKeys(raw, "!subject")
+	case "curate":
+		return requireKeys(raw, "!window")
+	default:
+		return nil
+	}
+}
+
+func (e *ActionEvidence) UnmarshalJSON(raw []byte) error {
+	type plain ActionEvidence
+	return decodeInto(raw, (*plain)(e), "!code", "!evidence")
+}

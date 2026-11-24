@@ -198,6 +198,26 @@ func (v *taskView) content() string {
 		line("escalated", s.Warning.Render(e.Level)+"  "+s.Base.Render(e.At))
 	}
 	b.WriteString("\n")
+	if len(r.Actions) > 0 {
+		b.WriteString(s.Header.Render("actions") + "\n")
+		for _, action := range r.Actions {
+			availability := "available"
+			if !action.Available {
+				availability = "blocked"
+			}
+			fmt.Fprintf(&b, "  %s (%s) %s\n", action.Action, action.Actor, availability)
+			for _, reason := range action.Reasons {
+				fmt.Fprintf(&b, "    %s", reason.Code)
+				for _, key := range []string{"task", "resource", "host", "date", "status"} {
+					if value, ok := reason.Evidence[key].(string); ok {
+						fmt.Fprintf(&b, " %s", value)
+					}
+				}
+				b.WriteByte('\n')
+			}
+		}
+		b.WriteByte('\n')
+	}
 	if strings.TrimSpace(t.Body) != "" {
 		body, err := v.markdown(t.Body)
 		if err != nil {

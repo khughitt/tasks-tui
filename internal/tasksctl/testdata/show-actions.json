@@ -1,0 +1,120 @@
+{
+  "actions": [
+    {
+      "action": "pick_up",
+      "actor": "agent",
+      "available": false,
+      "reasons": [
+        {
+          "code": "dependency_open",
+          "evidence": {
+            "task": "alpha-000002"
+          }
+        },
+        {
+          "code": "dependency_unknown",
+          "evidence": {
+            "task": "zz-000001"
+          }
+        }
+      ],
+      "signals": []
+    },
+    {
+      "action": "assess",
+      "actor": "agent",
+      "available": true,
+      "reasons": [],
+      "signals": [
+        {
+          "code": "scope_unverified",
+          "evidence": {
+            "source": "process",
+            "task": "alpha-000001"
+          }
+        }
+      ]
+    },
+    {
+      "action": "curate",
+      "actor": "agent",
+      "available": false,
+      "reasons": [
+        {
+          "code": "decision_open",
+          "evidence": {
+            "note_index": 0,
+            "source": "latest_note",
+            "task": "alpha-000001",
+            "text": "keep or drop"
+          }
+        },
+        {
+          "code": "sample_recent",
+          "evidence": {
+            "updated": "2026-11-24T13:07:53Z"
+          }
+        }
+      ],
+      "signals": [],
+      "window": {
+        "older_than_days": 7
+      }
+    },
+    {
+      "action": "answer",
+      "actor": "human",
+      "available": true,
+      "reasons": [],
+      "signals": [],
+      "subject": {
+        "source": "latest_note",
+        "task": "alpha-000001",
+        "note_index": 0
+      }
+    }
+  ],
+  "task": {
+    "id": "alpha-000001",
+    "title": "Review the scope",
+    "status": "todo",
+    "priority": 2,
+    "parallel": false,
+    "lane": false,
+    "reviewed": false,
+    "awaiting_user": false,
+    "created": "2020-01-01T00:00:00Z",
+    "updated": "2026-11-24T13:07:53Z",
+    "depends": [
+      "alpha-000002",
+      "zz-000001"
+    ],
+    "body": "",
+    "notes": [
+      {
+        "at": "2026-11-24T13:07:53Z",
+        "by": "fixture",
+        "text": "scope: drop; proposal: keep or drop"
+      }
+    ]
+  },
+  "task_revision": "d2ab4f5cbc0fdbb4ba614c1047a2b2ed96581d4bc7b5df6bde17be2017b3a00b",
+  "needs_review": true,
+  "review_reason": "unassessed",
+  "depends_on": [
+    {
+      "id": "alpha-000002",
+      "title": "Finish prerequisite",
+      "status": "todo",
+      "updated": "2020-01-01T00:00:00Z",
+      "resolved": true
+    },
+    {
+      "id": "zz-000001",
+      "resolved": false
+    }
+  ],
+  "warnings": [
+    "dependency zz-000001 is unreachable"
+  ]
+}

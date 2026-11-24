@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -183,6 +184,35 @@ func TestShow(t *testing.T) {
 	}
 	if len(res.Task.Notes) == 0 || res.Task.Notes[0].Text == "" {
 		t.Fatalf("notes %+v", res.Task.Notes)
+	}
+}
+
+func TestActionExplanation(t *testing.T) {
+	runner := &recorder{fixture: "show-actions.json"}
+	result, err := (&Client{R: runner}).Show(context.Background(), "/repo", "alpha-000001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	original, err := os.ReadFile("testdata/show-actions.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := json.Marshal(result)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var want, got map[string]any
+	if err := json.Unmarshal(original, &want); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(encoded, &got); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got["actions"], want["actions"]) {
+		t.Fatalf("decoded actions = %v, want producer actions %v", got["actions"], want["actions"])
+	}
+	if len(runner.calls) != 1 || !slices.Equal(runner.calls[0], []string{"show", "alpha-000001"}) {
+		t.Fatalf("calls = %v", runner.calls)
 	}
 }
 

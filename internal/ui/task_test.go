@@ -3,6 +3,7 @@ package ui
 import (
 	"encoding/json"
 	"errors"
+	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -57,6 +58,51 @@ func TestTaskViewShowsFromCheckoutAndRendersBody(t *testing.T) {
 	d.Key("pgdown")
 	chord(t, d, app, "g", "g")
 	d.Expect("Do the thing")
+}
+
+func TestActionExplanation(t *testing.T) {
+	fixture, err := os.ReadFile("../tasksctl/testdata/show-actions.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var without map[string]json.RawMessage
+	if err := json.Unmarshal(fixture, &without); err != nil {
+		t.Fatal(err)
+	}
+	delete(without, "actions")
+	old, err := json.Marshal(without)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		name        string
+		payload     []byte
+		withActions bool
+	}{
+		{"producer", fixture, true},
+		{"older producer", old, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			f := newFake()
+			f.on("/r/alpha", "show alpha-000001", string(test.payload))
+			env := testEnv(f)
+			env.Roots["alpha"] = "/r/alpha"
+			tv := newTaskView(env, target{ID: "alpha-000001", Prefix: "alpha"})
+			app := New(env, Options{Stack: []view{tv}})
+			d := drive(t, app)
+			d.Expect("Review the scope")
+			if test.withActions {
+				d.Expect("pick_up", "agent", "blocked", "dependency_open", "alpha-000002", "dependency_unknown", "zz-000001", "answer", "human", "available")
+			} else if strings.Contains(tv.content(), "pick_up") {
+				t.Fatal("older producer reports an action")
+			}
+			d.Key("j")
+			chord(t, d, app, "g", "g")
+			if got := tv.current(); got == nil || got.ID != "alpha-000001" {
+				t.Fatalf("selection = %+v", got)
+			}
+		})
+	}
 }
 
 func TestTaskViewReportsMissingWorktreeNotice(t *testing.T) {

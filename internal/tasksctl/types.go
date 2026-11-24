@@ -180,19 +180,48 @@ type ParkedResult struct {
 	Tasks    []ParkedRow `json:"tasks"`
 	Warnings []string    `json:"warnings"`
 }
+type ActionExplanation struct {
+	Action    string           `json:"action"`
+	Actor     string           `json:"actor"`
+	Available bool             `json:"available"`
+	Reasons   []ActionEvidence `json:"reasons"`
+	Signals   []ActionEvidence `json:"signals"`
+	Subject   *AnswerSubject   `json:"subject,omitempty"`
+	Window    *CurateWindow    `json:"window,omitempty"`
+}
+
+type ActionEvidence struct {
+	Code     string         `json:"code"`
+	Evidence map[string]any `json:"evidence"`
+}
+
+type AnswerSubject struct {
+	Source    string `json:"source"`
+	Task      string `json:"task"`
+	NoteIndex *int   `json:"note_index,omitempty"`
+	Host      string `json:"host,omitempty"`
+	At        string `json:"at,omitempty"`
+	NextStep  string `json:"next_step,omitempty"`
+}
+
+type CurateWindow struct {
+	OlderThanDays int `json:"older_than_days"`
+}
+
 type ShowResult struct {
-	Task       Task         `json:"task"`
-	SpecPath   *string      `json:"spec_path"`
-	PlanPath   *string      `json:"plan_path"`
-	StepFound  *bool        `json:"step_found"`
-	DependsOn  []Dependency `json:"depends_on"`
-	Parent     *Relation    `json:"parent"`
-	Children   []Relation   `json:"children"`
-	Claim      *ClaimInfo   `json:"claim"`
-	Park       *ParkInfo    `json:"park"`
-	Escalation *Escalation  `json:"escalation"`
-	Periodic   *Periodic    `json:"periodic"`
-	Warnings   []string     `json:"warnings"`
+	Actions    []ActionExplanation `json:"actions,omitempty"`
+	Task       Task                `json:"task"`
+	SpecPath   *string             `json:"spec_path"`
+	PlanPath   *string             `json:"plan_path"`
+	StepFound  *bool               `json:"step_found"`
+	DependsOn  []Dependency        `json:"depends_on"`
+	Parent     *Relation           `json:"parent"`
+	Children   []Relation          `json:"children"`
+	Claim      *ClaimInfo          `json:"claim"`
+	Park       *ParkInfo           `json:"park"`
+	Escalation *Escalation         `json:"escalation"`
+	Periodic   *Periodic           `json:"periodic"`
+	Warnings   []string            `json:"warnings"`
 }
 
 func (s ShowResult) LiveClaim() *ClaimInfo { return liveClaim(s.Claim) }
