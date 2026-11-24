@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/khughitt/tasks-tui/internal/tasksctl"
 )
 
 func TestFixtureScrubber(t *testing.T) {
@@ -91,6 +93,38 @@ func TestFixtureScrubber(t *testing.T) {
 				}
 				if p["color"] != "#123AbC" || p["color_256"] != float64(42) {
 					t.Fatalf("color values must survive: %+v", p)
+				}
+			}
+			if tc.meta {
+				rawFixture, err := os.ReadFile(filepath.Join(checkoutRoot(t), "internal", "tasksctl", "testdata", "show-actions.json"))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var document map[string]any
+				if err := json.Unmarshal(rawFixture, &document); err != nil {
+					t.Fatal(err)
+				}
+				document["task"].(map[string]any)["source"] = "latest_note"
+				payload, err := json.Marshal(document)
+				if err != nil {
+					t.Fatal(err)
+				}
+				scrubbed, err := run(bytes.ReplaceAll(payload, []byte("alpha-"), []byte("real00-")))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var capture tasksctl.ShowResult
+				if err := json.Unmarshal(scrubbed, &capture); err != nil {
+					t.Fatal(err)
+				}
+				if capture.Task.Source == nil || *capture.Task.Source == "latest_note" {
+					t.Fatal("ordinary provenance was not redacted")
+				}
+				first, last := capture.Actions[0], capture.Actions[len(capture.Actions)-1]
+				if first.Action != "pick_up" || first.Actor != "agent" || first.Reasons[0].Code != "dependency_open" ||
+					first.Reasons[0].Evidence["task"] != "alpha-000002" ||
+					last.Subject == nil || last.Subject.Source != "latest_note" || last.Subject.Task != "alpha-000001" {
+					t.Fatalf("scrubbed action contract changed: %s", scrubbed)
 				}
 			}
 			if _, err := run([]byte(`{"unknown":"must refuse"}`)); err == nil || !strings.Contains(err.Error(), "unclassified") {

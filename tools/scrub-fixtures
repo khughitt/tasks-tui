@@ -46,8 +46,8 @@ WORKTREE = re.compile(r"(/[^\s\"';]*?)/\.worktrees/")
 # How a string under each key is rewritten. `keep` is vocabulary that identifies nothing
 # and `time` a timestamp; `layout` is free text where only ids, paths, and the host change.
 KEYS = {
-    "id": "id", "parent": "id", "depends": "id", "children": "id",
-    "prefix": "prefix", "projects": "prefix",
+    "id": "id", "parent": "id", "depends": "id", "children": "id", "task": "id", "wake_on": "id",
+    "prefix": "prefix", "projects": "prefix", "project": "prefix",
     "root": "path", "worktree": "path", "plan_path": "path", "spec_path": "path",
     "records": "path", "checkout": "path", "successor": "prefix",
     "name": "title", "purpose": "title",
@@ -55,11 +55,12 @@ KEYS = {
     "session": "session", "harness_session": "session",
     "source": "source", "host": "host", "tags": "tags", "step": "step",
     "title": "title", "body": "sentence", "text": "sentence", "next_step": "sentence",
-    "warnings": "layout", "detail": "layout",
+    "warnings": "layout", "detail": "layout", "resource": "title", "task_revision": "digest",
     **dict.fromkeys(["status", "size", "complexity", "process", "reason", "needs", "waiting_on", "phase",
-                     "agent", "model", "every", "kind", "harness_session_source", "plan", "spec", "color"], "keep"),
+                     "agent", "model", "every", "kind", "harness_session_source", "plan", "spec", "color",
+                     "action", "actor", "code", "action_source", "review_reason"], "keep"),
     **dict.fromkeys(["at", "created", "updated", "started", "completed", "seen", "last_activity",
-                     "last_done", "next_due", "defer", "date"], "time"),
+                     "last_done", "next_due", "defer", "date", "observed_at"], "time"),
 }
 REPORTED = {"keep", "layout"}
 
@@ -178,6 +179,8 @@ def rewrite(v, kind, key, layout, ident):
         return session(v)
     if kind == "source":
         return source(v, layout)
+    if kind == "digest":
+        return hashlib.sha256(v.encode()).hexdigest()
     if kind == "tags":
         return "from:" + layout.generic(v[5:]) if v.startswith("from:") else layout.ids(v)
     if kind == "step":
@@ -197,8 +200,11 @@ def rewrite(v, kind, key, layout, ident):
 def walk(v, layout, seen, key=None, ident=""):
     if isinstance(v, dict):
         seed = v["id"] if isinstance(v.get("id"), str) else ident
-        return {k: ("Project retired." if key == "retired" and k == "reason" and isinstance(x, str) and x
-                    else walk(x, layout, seen, k, seed)) for k, x in v.items()}
+        return {
+            k: ("Project retired." if key == "retired" and k == "reason" and isinstance(x, str) and x
+                else walk(x, layout, seen, "action_source" if key in ("subject", "evidence") and k == "source" else k, seed))
+            for k, x in v.items()
+        }
     if isinstance(v, list):
         return [walk(x, layout, seen, key, ident + str(i)) for i, x in enumerate(v)]
     if not isinstance(v, str):
